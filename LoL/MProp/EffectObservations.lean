@@ -66,7 +66,7 @@ class MPropPartialOrder (l : outParam (Type v)) [Monad m] [PartialOrder l] where
   μ : m PProp -> l
   μSur : { ι : l -> m PProp // μ.LeftInverse ι }
   μOrd {α : Type v} :
-    ∀ (f g : α -> m PProp), μ ∘ f <= μ ∘ g -> (μ $ · >>= f) ≤ (μ $ · >>= g)
+    ∀ (f g : α -> m PProp), μ ∘ f ≤ μ ∘ g -> (μ $ · >>= f) ≤ (μ $ · >>= g)
 
 instance OfMPropPartialOrdered {m : Type -> Type} {l : Type} [Monad m] [PartialOrder l] [MPropPartialOrder m l] : MPropOrdered m l where
   μ := MPropPartialOrder.μ

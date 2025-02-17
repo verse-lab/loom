@@ -4,7 +4,7 @@ universe u v w
 
 variable (m : Type u -> Type w) (w : Type u -> Type v)
 
-class PreOrderFunctor  where preord : (α : Type u) -> Preorder (w α)
+class PreOrderFunctor where preord : (α : Type u) -> Preorder (w α)
 instance [inst: (α : Type u) -> Preorder (w α)] : PreOrderFunctor w := ⟨inst⟩
 instance (α : Type u) [inst: PreOrderFunctor w] : Preorder (w α) := inst.preord α
 
@@ -21,4 +21,14 @@ export LawfulMonadLift (lift_pure lift_bind)
 alias EffectObservation := LawfulMonadLift
 
 class abbrev SpecMonad (m : Type u -> Type w) (w : Type u -> Type v) [Monad m] :=
-  MonadOrder w, MonadLiftT m w, LawfulMonadLift m w
+  MonadOrder w, MonadLiftT m w, EffectObservation m w
+
+/-
+  Spec for myM :
+    - (A + E -> State -> Prop) -> State -> Prop
+    - (A -> State -> Prop) -> State -> Prop + θ_tot
+    - (A -> State -> Prop) -> State -> Prop + θ_part
+
+    (A -> L) -> L
+
+-/
