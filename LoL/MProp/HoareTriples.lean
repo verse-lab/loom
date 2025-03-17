@@ -11,18 +11,26 @@ section
 variable [MProp m l]
 
 def wp (c : m α) (post : α -> l) : l := liftM (n := Cont l) c post
-
 def triple (pre : l) (c : m α) (post : α -> l) : Prop :=
   pre ≤ wp c post
 
 abbrev mtriple (pre : m PProp) (c : m α) (post : α -> m PProp) : Prop :=
   triple (MProp.μ pre) c (MProp.μ ∘ post)
 
+omit [Preorder l] in
+lemma wp_pure (x : α) (post : α -> l) : wp (m := m) (pure x) post = post x := by
+  simp [wp, liftM, lift_pure]
+  rfl
+
+lemma triple_pure (pre : l) (x : α) (post : α -> l) :
+  triple pre (pure (f := m) x) post <-> pre ≤ (post x)
+  := by
+    rw [triple, wp]; simp [liftM, lift_pure]; rfl
+
 lemma mtriple_pure (pre : m PProp) (x : α) (post : α -> m PProp) :
   mtriple pre (pure x) post <->
   MProp.μ pre ≤ MProp.μ (post x)
-  := by
-    rw [mtriple, triple, wp]; simp [liftM, lift_pure]; rfl
+  := by exact triple_pure (MProp.μ pre) x (MProp.μ ∘ post)
 end
 
 variable [MPropOrdered m l]
@@ -67,6 +75,7 @@ theorem Triple.forIn_list {α β}
     cases y <;> simp <;> solve_by_elim [(mtriple_pure ..).mpr, le_refl]
 end
 
+section
 variable [SemilatticeInf l] [MPropPartialOrder m l]
 
 def spec (pre : l) (post : α -> l) : Cont l α :=
@@ -94,3 +103,25 @@ lemma mtriple_mspec (pre : m PProp) (c : m α) (post : α -> m PProp) :
   mspec pre post ≤ wp c <-> mtriple pre c post := by apply triple_spec
 
 class abbrev MonadLogic (m : Type u -> Type v) (l : Type u) [Monad m] := Logic l, MPropPartialOrder m l
+end
+
+section
+variable [inst: SemilatticeSup l]
+
+local instance : PartialOrder l := inst.toPartialOrder
+
+variable [MPropPartialOrder m l]
+
+-- partial weakest precondition
+def pwp (c : m α) (post : α -> l) : l :=
+  wp c post ⊔ MProp.pure (m := m) (l := l) (∀ a, MProp.pure (m := m) True ≤ post a)
+
+omit [LawfulMonad m] in
+@[simp]
+lemma pwp_true (c : m α) : pwp c (fun _ => MProp.pure (m := m) True) = (MProp.pure (m := m) True) := by
+  simp [pwp]; apply MPropPartialOrder.μ_top
+
+
+
+
+end

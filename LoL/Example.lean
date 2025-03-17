@@ -33,6 +33,8 @@ abbrev myM := StateT Nat (ExceptT String Id)
 #gen_spec throwE (α : Type) (e : String) for MProp.lift (m := myM) <| throw (α := α) e
 #gen_spec pureE (α : Type) (x : α)       for MProp.lift (m := myM) <| pure x
 
+#print throwE
+
 def decr (n : Nat) : myM Unit := do
   let s <- get
   if n > s then throw "error"

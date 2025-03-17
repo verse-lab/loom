@@ -90,7 +90,7 @@ instance OfMPropPartialOrdered {m : Type u -> Type v} {l : Type u} [Monad m] [Pa
     <;> apply MPropPartialOrder.μ_ord_bind
     <;> simp_all only [le_refl]
 
-abbrev MProp.pure {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [Preorder l] [MPropOrdered m l]
+def MProp.pure {l : Type u} {m : Type u -> Type v} [Monad m] [Preorder l] [MPropOrdered m l]
   := MProp.μ ∘ Pure.pure (f := m)
 
 notation "⌜" p "⌝" => MProp.pure p
@@ -104,7 +104,7 @@ lemma MProp.μ_lift {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m
   MProp.μ (m := m) = (liftM (n := Cont l) · (MProp.pure (m := m))) := by
   funext x; simp [liftM, monadLift, MProp.lift, Function.comp]
   rw [MProp.bind (g := Pure.pure)]; simp
-  ext; simp [MProp.cancel]
+  ext; simp [MProp.cancel, MProp.pure]
 
 lemma MProp.lift_bind {α β} {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [Preorder l] [MPropOrdered m l]
   (x : m α) (f g : α -> Cont l β) :
