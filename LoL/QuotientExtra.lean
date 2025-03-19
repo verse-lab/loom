@@ -27,9 +27,9 @@ protected theorem fun_ind {α : Sort u} {β : Sort v} {s : Setoid α} {motive : 
   rw [qE]; apply ind
 
 
-theorem liftOnFun_correct {s : Setoid α} (q : γ -> α) (f : (γ -> α) → β) :
-  ((a b : γ -> α) → (∀ x, a x ≈ b x) → f a = f b) ->
-  Quotient.liftOnFun (fun x => Quotient.mk s (q x)) f = f q := by
+theorem liftOnFun_correct {s : Setoid α} {r : Setoid β} (q : γ -> α) (f : (γ -> α) → β) :
+  ((a b : γ -> α) → (∀ x, a x ≈ b x) → f a ≈ f b) ->
+  Quotient.liftOnFun (fun x => Quotient.mk s (q x)) f ≈ f q := by
   intro h
   apply h; simp [Quotient.rep]; intro y
   have h := fun x => Classical.choose_spec (@Quotient.exists_rep _ s x)

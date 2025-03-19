@@ -21,7 +21,8 @@ variable  [MPropPartialOrder m l]
 structure NonDetT (m : Type u -> Type v) (l : Type u)
   [Monad m] [PartialOrder l] [MPropPartialOrder m l] (α : Type u) where
   tp   : Type w
-  pre : tp -> l
+  tp₀  : Inhabited tp
+  pre  : tp -> l
   sem  : tp -> m α
 
 @[simp]
@@ -34,29 +35,33 @@ lemma pure_true_meet l : min l (MProp.pure (m := m) True) = l := by
   apply MPropPartialOrder.μ_top
 
 
-def NonDetT.pure (x : α) : NonDetT m l α := ⟨PUnit, fun _ => MProp.pure (m := m) True, fun _ => return x⟩
+def NonDetT.pure (x : α) : NonDetT m l α :=
+  ⟨PUnit, inferInstance, fun _ => MProp.pure (m := m) True, fun _ => return x⟩
 
 def NonDetT.bind (x : NonDetT m l α) (f : α → NonDetT m l β) : NonDetT m l β :=
   ⟨
     x.tp × ((out : α) -> (f out).tp),
+    by apply @instInhabitedProd _ _ x.tp₀ (@Pi.instInhabited _ _ (fun a => (f a).tp₀)),
     fun t => x.pre t.1 ⊓
       pwp (x.sem t.1) fun out => (f out).pre (t.2 out),
     fun t => x.sem t.1 >>= fun out => (f out).sem (t.2 out)
   ⟩
 
-def NonDetT.pick (τ : Type u) : NonDetT m l τ := ⟨τ, fun _ => MProp.pure (m := m) True, Pure.pure⟩
+def NonDetT.pick (τ : Type u) [Inhabited τ] : NonDetT m l τ :=
+  ⟨τ, inferInstance, fun _ => MProp.pure (m := m) True, Pure.pure⟩
 
-def NonDetT.assume (as : Prop) : NonDetT m l PUnit := ⟨PUnit, fun _ => MProp.pure (m := m) as, fun _ => return .unit⟩
+def NonDetT.assume (as : Prop) : NonDetT m l PUnit :=
+  ⟨PUnit, inferInstance, fun _ => MProp.pure (m := m) as, fun _ => return .unit⟩
 
 instance : Monad (NonDetT m l) where
   pure := .pure
   bind := .bind
 
 instance : MonadLift m (NonDetT m l) where
-  monadLift := fun x => ⟨PUnit, fun _ => MProp.pure (m := m) True, fun _ => x⟩
+  monadLift := fun x => ⟨PUnit, inferInstance, fun _ => MProp.pure (m := m) True, fun _ => x⟩
 
 class MonadInfNonDet (m : Type u → Type v) where
-  pick : (τ : Type u) → m τ
+  pick : (τ : Type u) -> [Inhabited τ] → m τ
   assume : Prop → m PUnit
 
 export MonadInfNonDet (pick assume)
@@ -65,15 +70,15 @@ instance : MonadInfNonDet (NonDetT m l) where
   pick   := .pick
   assume := .assume
 
-theorem pick_tp (τ : Type u) : (pick (m := NonDetT m l) τ).tp = τ := rfl
-theorem pick_pre (τ : Type u) : (pick (m := NonDetT m l) τ).pre = fun _ => MProp.pure (m := m) True := rfl
+theorem pick_tp (τ : Type u) [Inhabited τ] : (pick (m := NonDetT m l) τ).tp = τ := rfl
+theorem pick_pre (τ : Type u) [Inhabited τ] : (pick (m := NonDetT m l) τ).pre = fun _ => MProp.pure (m := m) True := rfl
 theorem assume_tp (as : Prop) : (assume (m := NonDetT m l) as).tp = PUnit := rfl
 theorem assume_pre (as : Prop) : (assume (m := NonDetT m l) as).pre = fun _ => MProp.pure (m := m) as := rfl
 theorem lift_tp {α : Type u} (x : m α) : (liftM (n := NonDetT m l) x).tp = PUnit := rfl
 theorem lift_pre {α : Type u} (x : m α) : (liftM (n := NonDetT m l) x).pre = fun _ => MProp.pure (m := m) True := rfl
 theorem lift_sem {α : Type u} (x : m α) : (liftM (n := NonDetT m l) x).sem = fun _ => x := rfl
 theorem assume_sem (as : Prop) : (assume (m := NonDetT m l) as).sem = fun _ => return .unit := rfl
-theorem pick_sem (τ : Type u) : (pick (m := NonDetT m l) τ).sem = Pure.pure := rfl
+theorem pick_sem (τ : Type u) [Inhabited τ] : (pick (m := NonDetT m l) τ).sem = Pure.pure := rfl
 
 def NonDetT.isMorphism {α : Type u} (x y : NonDetT m l α) (f : x.tp -> y.tp) : Prop :=
   (∀ t, x.pre t = y.pre (f t)) ∧
@@ -196,25 +201,50 @@ instance : Monad (LawfullNonDetT m l) where
   pure := LawfullNonDetT.pure
   bind := LawfullNonDetT.bind
 
+@[simp]
+lemma LawfullNonDetT.bind_quot : ∀ {α β} (x : NonDetT m l α) (f : α → NonDetT m l β),
+  LawfullNonDetT.bind ⟦x⟧ (⟦f ·⟧) = ⟦x.bind f⟧ := by
+    intros; unfold bind;
+    apply Quotient.sound; transitivity
+    apply Quotient.liftOnFun_correct
+    intros; apply bind_eq <;> solve_by_elim [Setoid.refl]
+    solve_by_elim [Setoid.refl]
+
+
+open Classical in
 instance [LawfulMonad m] : LawfulMonad (LawfullNonDetT m l) := by
   refine LawfulMonad.mk' _ ?_ ?_ ?_ (bind_pure_comp := ?_)
   { intros α x
     induction x using Quotient.ind
     rename_i nd; simp only [Functor.map, LawfullNonDetT.map, NonDetT.Setoid]
     simp only [Function.comp_id, Quotient.lift_mk, Quotient.eq]
-    exists (·.1); rcases nd with ⟨tp, pre, sem⟩
+    constructor
+    { exists (·.1); rcases nd with ⟨tp, pre, sem⟩
+      simp [NonDetT.bind, NonDetT.pure];
+      repeat' constructor <;> simp }
+    exists (fun x => (x, fun _ => .unit))
+    rcases nd with ⟨tp, pre, sem⟩
     simp [NonDetT.bind, NonDetT.pure];
-    repeat' constructor <;> try simp
-    { rintro ⟨_, _⟩; aesop }
-    rintro b; exists ⟨b, fun _ => .unit⟩ }
+    repeat' constructor <;> simp }
   { intros α β x f; simp [pure, LawfullNonDetT.pure, bind]
     simp [LawfullNonDetT.bind];
-    induction f using Quotient.fun_ind; simp
-    rw [Quotient.liftOnFun_correct]
-    { rename_i nd; simp only [NonDetT.Setoid, NonDetT.pure, NonDetT.bind]
-      simp only [meet_pure_true, Prod.forall, pure_bind]
-       } }
-  { sorry }
+    induction f using Quotient.fun_ind
+    apply Quotient.sound; transitivity
+    apply Quotient.liftOnFun_correct
+    { solve_by_elim [bind_eq, NonDetT.equiv_refl] }
+    rename_i nd; simp only [NonDetT.Setoid, NonDetT.pure, NonDetT.bind]
+    simp only [meet_pure_true, Prod.forall, pure_bind]
+    constructor <;> simp
+    { exists (·.2 x); constructor <;> simp }
+    exists (fun ndx => (.unit,
+      fun y =>
+        if h : x = y then
+          by rw [<-h]; refine ndx
+        else (nd y).tp₀.default))
+    constructor <;> simp }
+  { intros α β γ x f g; simp [pure, LawfullNonDetT.pure, bind]
+
+    }
   intros; sorry
 
 

@@ -90,17 +90,31 @@ instance OfMPropPartialOrdered {m : Type u -> Type v} {l : Type u} [Monad m] [Pa
     <;> apply MPropPartialOrder.μ_ord_bind
     <;> simp_all only [le_refl]
 
-def MProp.pure {l : Type u} {m : Type u -> Type v} [Monad m] [Preorder l] [MPropOrdered m l]
+def MProp.pure {l : Type u} {m : Type u -> Type v} [Monad m] [PartialOrder l] [inst : MPropPartialOrder m l]
   := MProp.μ ∘ Pure.pure (f := m)
 
-notation "⌜" p "⌝" => MProp.pure p
+macro "⌜" p:term "⌝" : term => `(MProp.pure (inst := by assumption) { prop := $p })
+
+@[app_unexpander MProp.pure] def unexpandPure : Lean.PrettyPrinter.Unexpander
+  | `($(_) { prop := $p:term }) => `(⌜$p:term⌝)
+  | `($(_) $p:term) => `(⌜$p:term⌝)
+  | _ => throw ()
+
+-- notation "⌜" p "⌝" => MProp.pure { prop := p }
 
 lemma MProp.pure_imp {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m]
   [PartialOrder l] [MPropPartialOrder m l]
-  (p₁ p₂ : Prop) : (p₁ -> p₂) -> MProp.pure (m := m) p₁ <= MProp.pure (m := m) p₂ := by
+  (p₁ p₂ : Prop) : (p₁ -> p₂) -> ⌜p₁⌝ <= ⌜p₂⌝ := by
   apply MPropPartialOrder.μ_ord_pure
 
-lemma MProp.μ_lift {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [Preorder l] [MPropOrdered m l] :
+lemma MProp.pure_intro {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m]
+  [PartialOrder l] [MPropPartialOrder m l]
+  (p : Prop) (h : l) : (⌜p⌝ <= h) = (p -> ⌜ True ⌝ <= h) := by
+    by_cases hp : p = False
+    { simp [hp]; apply MPropPartialOrder.μ_bot }
+    simp_all
+
+lemma MProp.μ_lift {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [PartialOrder l] [MPropPartialOrder m l] :
   MProp.μ (m := m) = (liftM (n := Cont l) · (MProp.pure (m := m))) := by
   funext x; simp [liftM, monadLift, MProp.lift, Function.comp]
   rw [MProp.bind (g := Pure.pure)]; simp

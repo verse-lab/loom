@@ -114,14 +114,35 @@ variable [MPropPartialOrder m l]
 
 -- partial weakest precondition
 def pwp (c : m α) (post : α -> l) : l :=
-  wp c post ⊔ MProp.pure (m := m) (l := l) (∀ a, MProp.pure (m := m) True ≤ post a)
+  wp c post ⊔ ⌜∀ a, ⌜True⌝ ≤ post a⌝
 
 omit [LawfulMonad m] in
 @[simp]
-lemma pwp_true (c : m α) : pwp c (fun _ => MProp.pure (m := m) True) = (MProp.pure (m := m) True) := by
+lemma pwp_true (c : m α) : pwp c (fun _ => ⌜True⌝) = ⌜True⌝ := by
   simp [pwp]; apply MPropPartialOrder.μ_top
 
+-- partial weakest precondition
+@[simp]
+lemma pwp_pure (x : α) (post : α -> l) :
+  pwp (pure (f := m) x) post = post x := by
+    simp [pwp, wp_pure]; rw [MProp.pure_intro]; solve_by_elim
 
+lemma pwp_bind {β} (x : m α) (f : α -> m β) (post : β -> l) :
+  pwp (x >>= f) post = pwp x (fun x => pwp (f x) post) := by
+  simp [pwp, wp_bind]; apply le_antisymm
+  { simp; constructor
+    { refine le_sup_of_le_left ?_
+      apply wp_cons <;> simp }
+    refine le_sup_of_le_right ?_
+    apply MProp.pure_imp; intros
+    solve_by_elim [le_sup_of_le_right, MProp.pure_imp] }
+  simp; constructor
+  { by_cases h : ∀ (a : β), ⌜True⌝ ≤ post a = False
+    { simp [*]; refine le_sup_of_le_left ?_
+      apply wp_cons <;> simp; intros
+      apply MPropPartialOrder.μ_bot }
+    simp_all; refine le_sup_of_le_right ?_
+    apply MPropPartialOrder.μ_top }
 
 
 end
