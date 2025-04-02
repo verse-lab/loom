@@ -7,20 +7,20 @@ universe u v w
 
 variable (m : Type v -> Type u)
 
-abbrev PProp : Type u := ULift Prop
+abbrev UProp : Type u := ULift Prop
 
-instance : Coe Prop PProp where
+instance : Coe Prop UProp where
   coe p := ⟨p⟩
 
-instance : Coe PProp Prop where
-  coe p := p.down
+-- instance : Coe UProp Prop where
+--   coe p := p.down
 
 
 class MProp [Monad m] (l : outParam (Type v)) where
-  μ : m PProp -> l
-  ι : l -> m PProp
+  μ : m UProp -> l
+  ι : l -> m UProp
   μ_surjective : μ.LeftInverse ι
-  bind : ∀ {α : Type v} (x : m α) (f g : α -> m PProp),
+  bind : ∀ {α : Type v} (x : m α) (f g : α -> m UProp),
     μ ∘ f = μ ∘ g ->
     μ (x >>= f) = μ (x >>= g)
 
@@ -52,7 +52,7 @@ instance (l : Type u) {m : Type u -> Type v} [Monad m] [LawfulMonad m] [MProp m 
 
 class MPropOrdered (l : outParam (Type v)) [Monad m] [Preorder l] extends MProp m l where
   μ_ord_bind {α : Type v} :
-    ∀ (f g : α -> m PProp), μ ∘ f <= μ ∘ g -> (μ $ · >>= f) ≤ (μ $ · >>= g)
+    ∀ (f g : α -> m UProp), μ ∘ f <= μ ∘ g -> (μ $ · >>= f) ≤ (μ $ · >>= g)
 
 lemma Cont.monotone_lift {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [Preorder l] [MPropOrdered m l] :
   ∀ {α : Type u} (x : m α), MProp.lift x |>.monotone := by
@@ -60,8 +60,8 @@ lemma Cont.monotone_lift {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMo
   apply MPropOrdered.μ_ord_bind; intro; simp [MProp.cancel, *]
 
 class MPropPartialOrder (l : outParam (Type v)) [Monad m] [PartialOrder l] where
-  μ : m PProp -> l
-  ι : l -> m PProp
+  μ : m UProp -> l
+  ι : l -> m UProp
   μ_surjective : μ.LeftInverse ι
   -- μ_pure_injective : ∀ (p : Prop), ι (μ (pure p)) = pure (f := m) p
   μ_top (x : l) : x <= μ (pure True)
@@ -69,7 +69,7 @@ class MPropPartialOrder (l : outParam (Type v)) [Monad m] [PartialOrder l] where
   -- μ_nontriv : μ (pure True) ≠ μ (pure False) -- pick_outcomes
   μ_ord_pure (p₁ p₂ : Prop) : (p₁ -> p₂) -> μ (pure p₁) ≤ μ (pure p₂)
   μ_ord_bind {α : Type v} :
-    ∀ (f g : α -> m PProp), μ ∘ f ≤ μ ∘ g ->
+    ∀ (f g : α -> m UProp), μ ∘ f ≤ μ ∘ g ->
       ∀ x : m α, μ (x >>= f) ≤ μ (x >>= g)
 
 instance OfMPropPartialOrdered {m : Type u -> Type v} {l : Type u} [Monad m] [PartialOrder l] [MPropPartialOrder m l] : MPropOrdered m l where

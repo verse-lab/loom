@@ -28,7 +28,7 @@ structure NonDetT' (m : Type u -> Type v) (l : Type u)
   inh (τ : α -> Type u) : (∀ a, Inhabited (τ a)) -> Inhabited (tp τ)
   pre_sem {τ τ' : α -> Type u} {_ : ∀ a, Inhabited (τ a)} { _ : ∀ a, Inhabited (τ' a)}
     (cp₁ : (a : α) -> τ a -> l) (cp₂ : (a : α) -> τ' a -> l)
-    (cs₁ : (a : α) -> τ a -> m PProp) (cs₂ : (a : α) -> τ' a -> m PProp) :
+    (cs₁ : (a : α) -> τ a -> m UProp) (cs₂ : (a : α) -> τ' a -> m UProp) :
     (∀ a, ⨅ t,  cp₁ a t ⇨ MProp.μ (cs₁ a t) <= ⨅ t, cp₂ a t ⇨ MProp.μ (cs₂ a t)) ->
     ⨅ t, pre cp₁ t ⇨ MProp.μ (sem cs₁ t) <=
     ⨅ t, pre cp₂ t ⇨ MProp.μ (sem cs₂ t)
@@ -153,7 +153,7 @@ instance : MonadInfNonDet (NonDetT' m l) where
 instance : LawfulMonad (NonDetT' m l) := by
   refine LawfulMonad.mk' _ ?_ ?_ ?_ <;> (intros; rfl)
 
-def NonDetT'.μ (x : NonDetT' m l PProp) : l :=
+def NonDetT'.μ (x : NonDetT' m l UProp) : l :=
   ⨅ t : x.tp (fun _ => PUnit),
     x.pre (fun _ _ => ⊤) t ⇨ MProp.μ (x.sem (fun a _ => Pure.pure a) t)
 

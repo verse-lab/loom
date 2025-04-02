@@ -1,7 +1,7 @@
 import LoL.MProp.EffectObservations
 import LoL.NonDetM
 
-instance : Nonempty PProp := inferInstance
+instance : Nonempty UProp := inferInstance
 
 instance : MPropPartialOrder Id Prop where
   μ := (·.down)

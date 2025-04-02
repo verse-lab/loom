@@ -16,7 +16,7 @@ def wp (c : m α) (post : α -> l) : l := liftM (n := Cont l) c post
 def triple (pre : l) (c : m α) (post : α -> l) : Prop :=
   pre ≤ wp c post
 
-abbrev mtriple (pre : m PProp) (c : m α) (post : α -> m PProp) : Prop :=
+abbrev mtriple (pre : m UProp) (c : m α) (post : α -> m UProp) : Prop :=
   triple (MProp.μ pre) c (MProp.μ ∘ post)
 
 omit [Preorder l] in
@@ -29,7 +29,7 @@ lemma triple_pure (pre : l) (x : α) (post : α -> l) :
   := by
     rw [triple, wp]; simp [liftM, lift_pure]; rfl
 
-lemma mtriple_pure (pre : m PProp) (x : α) (post : α -> m PProp) :
+lemma mtriple_pure (pre : m UProp) (x : α) (post : α -> m UProp) :
   mtriple pre (pure x) post <->
   MProp.μ pre ≤ MProp.μ (post x)
   := by exact triple_pure (MProp.μ pre) x (MProp.μ ∘ post)
@@ -55,15 +55,15 @@ lemma triple_bind {β} (pre : l) (x : m α) (cut : α -> l)
     intros; simp [triple, wp_bind]
     solve_by_elim [le_trans', wp_cons]
 
-lemma mtriple_bind {β} (pre : m PProp) (x : m α) (cut : α -> m PProp)
-  (f : α -> m β) (post : β -> m PProp) :
+lemma mtriple_bind {β} (pre : m UProp) (x : m α) (cut : α -> m UProp)
+  (f : α -> m β) (post : β -> m UProp) :
   mtriple pre x cut ->
   (∀ y, mtriple (cut y) (f y) post) ->
   mtriple pre (x >>= f) post := by apply triple_bind
 
 theorem triple_forIn_list {α β}
   {xs : List α} {init : β} {f : α → β → m (ForInStep β)}
-  (inv : List α → β → m PProp)
+  (inv : List α → β → m UProp)
   (hstep : ∀ hd tl b,
     mtriple
       (inv (hd :: tl) b)
@@ -76,7 +76,7 @@ theorem triple_forIn_list {α β}
     apply mtriple_bind; apply hstep; intros y
     cases y <;> simp <;> solve_by_elim [(mtriple_pure ..).mpr, le_refl]
 
-theorem μ_bind_wp (c : m α) (mpost : α -> m PProp) :
+theorem μ_bind_wp (c : m α) (mpost : α -> m UProp) :
   MProp.μ (l := l) (c >>= mpost) = wp c (MProp.μ ∘ mpost) := by
     simp [wp, liftM, monadLift, MProp.lift]; apply MProp.bind; ext; simp
     rw [MProp.μ_surjective]
@@ -88,9 +88,9 @@ section
 variable [SemilatticeInf l] [MPropPartialOrder m l]
 
 def spec (pre : l) (post : α -> l) : Cont l α :=
-  fun p => pre ⊓ MProp.pure (m := m) (post ≤ p)
+  fun p => pre ⊓ ⌜post ≤ p⌝
 
-def mspec (pre : m PProp) (post : α -> m PProp) : Cont l α :=
+def mspec (pre : m UProp) (post : α -> m UProp) : Cont l α :=
   spec (m := m) (MProp.μ pre) (MProp.μ ∘ post)
 
 lemma triple_spec (pre : l) (c : m α) (post : α -> l) :
@@ -108,7 +108,7 @@ lemma triple_spec (pre : l) (c : m α) (post : α -> l) :
     apply inf_le_of_right_le; apply le_trans'; apply MPropPartialOrder.μ_bot (m := m)
     apply MPropPartialOrder.μ_ord_pure; solve_by_elim
 
-lemma mtriple_mspec (pre : m PProp) (c : m α) (post : α -> m PProp) :
+lemma mtriple_mspec (pre : m UProp) (c : m α) (post : α -> m UProp) :
   mspec pre post ≤ wp c <-> mtriple pre c post := by apply triple_spec
 
 -- class abbrev MonadLogic (m : Type u -> Type v) (l : Type u) [Monad m] := Logic l, MPropPartialOrder m l
@@ -132,20 +132,20 @@ lemma falseE : ⌜False⌝ = ⊥ := by
   simp
 
 @[local simp]
-lemma compl_fun {α} (x y : α -> l) :
+private lemma compl_fun {α} (x y : α -> l) :
   (fun a => x a ⊔ y a)ᶜ = (fun a => (x a)ᶜ ⊓ (y a)ᶜ) := by simp [compl]
 
 @[local simp]
-lemma compl_fun' {α} (x y : α -> l) :
+private lemma compl_fun' {α} (x y : α -> l) :
   (fun a => x a ⊓ y a)ᶜ = (fun a => (x a)ᶜ ⊔ (y a)ᶜ) := by simp [compl]
 
 @[local simp]
-lemma compl_fun'' {α} (x : α -> l) :
+private lemma compl_fun'' {α} (x : α -> l) :
   (fun a => (x a)ᶜ) = xᶜ := by simp [compl]
 
 
 @[local simp]
-lemma compl_fun_true {α} :
+private lemma compl_fun_true {α} :
   (fun (_ : α) => ⊤)ᶜ = fun _ => (⊥ : l) := by simp [compl]
 
 def wlp (c : m α) (post : α -> l) : l := (wp c postᶜ)ᶜ ⊔ wp c post
