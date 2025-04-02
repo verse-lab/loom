@@ -122,4 +122,4 @@ class MPropDetertministic (l : outParam (Type v)) [Monad m] [CompleteLattice l] 
   /-- 😈 -/
   demonic {α ι : Type v} (c : m α) (p : ι -> α -> l) [Nonempty ι] : ⨅ i, MProp.lift c (p i) ≤ MProp.lift c (fun x => ⨅ i, p i x)
   /-- 😇 -/
-  angelic {α} (c : m α) (p q : α -> l) : MProp.lift c (p ⊔ q) ≤ MProp.lift c p ⊔ MProp.lift c q
+  angelic {α ι : Type v} (c : m α) (p : ι -> α -> l) [Nonempty ι] : MProp.lift c (fun x => ⨆ i, p i x) ≤ ⨆ i, MProp.lift c (p i)

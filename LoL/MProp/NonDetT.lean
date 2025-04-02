@@ -30,14 +30,14 @@ private lemma iInf_pi {α} {τ : α -> Type u} (p : (a : α) -> τ a -> l) [inst
     intro i; apply iInf_le_of_le (i a); simp
 
 structure NonDet (m : Type u -> Type v) (l : Type u) (α : Type u) where
-  tp   : Type u
-  seed : tp
-  pre  : tp -> l
-  sem  : tp -> m α
+  tp  : Type u
+  inh : Inhabited tp
+  pre : tp -> l
+  sem : tp -> m α
 
 structure NonDetCps (m : Type u -> Type v) (l : Type u) (α : Type u) where
   tpc : (α -> Type u) -> Type u
-  pre {τ : α -> Type u} (cont : (a : α) -> τ a -> l) : tpc τ -> l
+  pre {τ : α -> Type u}              (cont : (a : α) -> τ a -> l)   : tpc τ -> l
   sem {τ : α -> Type u} {β : Type u} (cont : (a : α) -> τ a -> m β) : tpc τ -> m β
 
 structure NonDetT (m : Type u -> Type v) {l : Type u} [Monad m] [CompleteBooleanAlgebra l] [MPropOrdered m l] (α : Type u)
@@ -57,7 +57,7 @@ structure NonDetT (m : Type u -> Type v) {l : Type u} [Monad m] [CompleteBoolean
 @[simp]
 def NonDetT.finally (x : NonDetT m α) : NonDet m l α := {
   tp := x.tpc (fun _ => PUnit)
-  seed := x.inh (fun _ => PUnit) (fun _ => ⟨.unit⟩) |>.default
+  inh := x.inh (fun _ => PUnit) (fun _ => ⟨.unit⟩)
   pre := fun t => x.pre ⊤ t
   sem := fun t => x.sem (fun _ => Pure.pure ·) t
 }
@@ -67,16 +67,18 @@ def NonDetT.tp (x : NonDetT m α) := x.finally.tp
 @[simp]
 def NonDet.run (x : NonDet m l α) (seed : x.tp) := x.sem seed
 def NonDetT.run (x : NonDetT m α) (seed : x.tp) := x.finally.run seed
+@[simp]
+def NonDet.seed (x : NonDet m l α) := x.inh.default
+def NonDetT.seed (x : NonDetT m α) := x.finally.seed
 
-def NonDetT.any (x : NonDetT m α) : m α := x.run x.finally.seed
+def NonDetT.any (x : NonDetT m α) : m α := x.run x.seed
 
 @[simp]
 def NonDet.validSeed (x : NonDet m l α) (pre : l) (seed : x.tp) := pre ≤ x.pre seed
 def NonDetT.validSeed (x : NonDetT m α) (pre : l) (seed : x.tp) := x.finally.validSeed pre seed
 
 @[simp]
-def NonDet.μ (x : NonDet m l UProp) : l :=
-  ⨅ t : x.tp, x.pre t ⇨ MProp.μ (m := m) (x.sem t)
+def NonDet.μ (x : NonDet m l UProp) : l :=  ⨅ t : x.tp, x.pre t ⇨ MProp.μ (x.sem t)
 
 def NonDetT.μ (x : NonDetT m UProp) : l := x.finally.μ
 
@@ -105,7 +107,6 @@ def NonDetT.bind (x : NonDetT m α) (f : α → NonDetT m β) : NonDetT m β := 
   sem_bind := by
     introv; simp [x.sem_bind, (f _).sem_bind];
 }
-
 
 def NonDetT.pick (α : Type u) [Inhabited α] : NonDetT m α := {
   tpc τ := (a : α) × τ a

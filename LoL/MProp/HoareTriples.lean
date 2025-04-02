@@ -114,6 +114,54 @@ lemma mtriple_mspec (pre : m UProp) (c : m α) (post : α -> m UProp) :
 -- class abbrev MonadLogic (m : Type u -> Type v) (l : Type u) [Monad m] := Logic l, MPropPartialOrder m l
 end
 
+section Determenism
+
+variable [inst: CompleteBooleanAlgebra l] [MPropOrdered m l]
+
+instance : SemilatticeInf l := inst.toSemilatticeInf
+
+lemma wp_and [MPropDetertministic m l] (c : m α) (post₁ post₂ : α -> l) :
+  wp c (fun x => post₁ x ⊓ post₂ x) = wp c post₁ ⊓ wp c post₂ := by
+  apply le_antisymm
+  { simp; constructor <;> apply wp_cons <;> simp }
+  have h := MPropDetertministic.demonic (l := l) (ι := ULift Bool) (c := c) (p := fun | .up true => post₁ | .up false => post₂)
+  simp at h
+  apply le_trans; apply le_trans'; apply h
+  { simp [wp]; constructor; exact inf_le_right
+    exact inf_le_left }
+  apply wp_cons (m := m); simp; intros; constructor
+  { refine iInf_le_of_le true ?_; simp }
+  refine iInf_le_of_le false ?_; simp
+
+lemma wp_iInf {ι : Type u} [Nonempty ι] [MPropDetertministic m l] (c : m α) (post : ι -> α -> l) :
+  wp c (fun x => ⨅ i, post i x) = ⨅ i, wp c (post i) := by
+    apply le_antisymm
+    { refine le_iInf ?_; intros i; apply wp_cons; intro y
+      exact iInf_le (fun i ↦ post i y) i }
+    apply MPropDetertministic.demonic
+
+lemma wp_or [MPropDetertministic m l] (c : m α) (post₁ post₂ : α -> l) :
+  wp c (fun x => post₁ x ⊔ post₂ x) = wp c post₁ ⊔ wp c post₂ := by
+  apply le_antisymm
+  { have h := MPropDetertministic.angelic (l := l) (ι := ULift Bool) (c := c) (p := fun | .up true => post₁ | .up false => post₂)
+    simp [-iSup_le_iff] at h
+    apply le_trans; apply le_trans'; apply h
+    { apply wp_cons (m := m); simp; intros; constructor
+      { refine le_iSup_of_le true ?_; simp }
+      refine le_iSup_of_le false ?_; simp }
+    simp [wp]; constructor; exact le_sup_right
+    exact le_sup_left }
+  simp; constructor <;> apply wp_cons <;> simp
+
+lemma wp_iSup {ι : Type u} [Nonempty ι] [MPropDetertministic m l] (c : m α) (post : ι -> α -> l) :
+  wp c (fun x => ⨆ i, post i x) = ⨆ i, wp c (post i) := by
+    apply le_antisymm
+    { apply MPropDetertministic.angelic }
+    refine iSup_le ?_; intros i; apply wp_cons; intro y
+    exact le_iSup (fun i ↦ post i y) i
+
+
+end Determenism
 section
 variable [inst: CompleteBooleanAlgebra l] [MPropOrdered m l]
 
@@ -149,32 +197,6 @@ private lemma compl_fun_true {α} :
   (fun (_ : α) => ⊤)ᶜ = fun _ => (⊥ : l) := by simp [compl]
 
 def wlp (c : m α) (post : α -> l) : l := (wp c postᶜ)ᶜ ⊔ wp c post
-
-lemma wp_and [MPropDetertministic m l] (c : m α) (post₁ post₂ : α -> l) :
-  wp c (fun x => post₁ x ⊓ post₂ x) = wp c post₁ ⊓ wp c post₂ := by
-  apply le_antisymm
-  { simp; constructor <;> apply wp_cons <;> simp }
-  have h := MPropDetertministic.demonic (l := l) (ι := ULift Bool) (c := c) (p := fun | .up true => post₁ | .up false => post₂)
-  simp at h
-  apply le_trans; apply le_trans'; apply h
-  { simp [wp]; constructor; exact inf_le_right
-    exact inf_le_left }
-  apply wp_cons (m := m); simp; intros; constructor
-  { refine iInf_le_of_le true ?_; simp }
-  refine iInf_le_of_le false ?_; simp
-
-lemma wp_iInf {ι : Type u} [Nonempty ι] [MPropDetertministic m l] (c : m α) (post : ι -> α -> l) :
-  wp c (fun x => ⨅ i, post i x) = ⨅ i, wp c (post i) := by
-    apply le_antisymm
-    { refine le_iInf ?_; intros i; apply wp_cons; intro y
-      exact iInf_le (fun i ↦ post i y) i }
-    apply MPropDetertministic.demonic (ι := ι) (m := m) (c := c) (p := post)
-
-lemma wp_or [MPropDetertministic m l] (c : m α) (post₁ post₂ : α -> l) :
-  wp c (fun x => post₁ x ⊔ post₂ x) = wp c post₁ ⊔ wp c post₂ := by
-  apply le_antisymm
-  { apply MPropDetertministic.angelic }
-  simp; constructor <;> apply wp_cons <;> simp
 
 @[simp]
 lemma wlp_true (c : m α) : wlp c (fun _ => ⊤) = ⊤ := by

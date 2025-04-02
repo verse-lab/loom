@@ -60,10 +60,10 @@ instance (σ : Type) (l : Type) (m : Type -> Type)
       simp [MProp.lift, MProp.ι, MProp.μ] at h
       apply h
     angelic := by
-      intros α c p q s;
+      intros α ι c p _ s;
       simp [MProp.lift, MProp.μ, MPropOrdered.μ]
       simp [bind, StateT.bind]; simp [MProp.ι, MPropOrdered.ι]
-      have h := inst'.angelic (α := α × σ) (c := c s) (p := fun x => p x.1 x.2) (q := fun x => q x.1 x.2)
+      have h := inst'.angelic (α := α × σ) (c := c s) (ι := ι) (p := fun i x => p i x.1 x.2)
       simp [MProp.lift, MProp.ι, MProp.μ] at h
       apply h
 
@@ -109,12 +109,13 @@ instance (σ : Type) (l : Type) (m : Type -> Type)
       simp [MPropOrdered.ι]
       apply h
   angelic := by
-      intros α c p q s;
+      intros α ι c p _ s;
       simp [MProp.lift, MProp.μ, MPropOrdered.μ]
       simp [bind, ReaderT.bind]
       simp [MPropOrdered.ι, MPropOrdered.μ_surjective, MPropOrdered.μ_surjective]
-      have h := inst'.angelic (α := α) (c := c s) (p := fun x => p x s) (q := fun x => q x s)
+      have h := inst'.angelic (α := α) (c := c s) (p := fun i x => p i x s)
       simp [MProp.lift, MProp.ι, MProp.μ, MProp.μ_surjective] at h
+      -- simp [MPropOrdered.ι]
       apply h
 
 abbrev Except.getD {ε α} (default : α)  : Except ε α -> α
@@ -197,37 +198,36 @@ instance MPropExceptDetertministic (ε : Type) (l : Type) (m : Type -> Type)
     apply le_of_eq; apply MProp.bind (m := m); ext a; cases a <;> simp
     simp [Except.getD, MProp.μ, iInf_const]; rw [inst.μ_surjective]; rfl
   angelic := by
-    intros α c p q
+    intros α ι c p _
     simp [MProp.lift, MProp.μ, MPropOrdered.μ]
     simp [bind, ExceptT.bind, ExceptT.mk]; unfold ExceptT.bindCont
-    simp [MProp.ι, MPropOrdered.ι]
-    simp [instMPropOrderedExceptTOfLawfulMonad, MPropExcept, MProp.ι]
+    simp [MPropOrdered.ι, MPropOrdered.ι]
+    simp [instMPropOrderedExceptTOfLawfulMonad, MPropExcept, MPropOrdered.ι]
     have h := inst'.angelic (α := Except ε α) (c := c)
-      (p := fun e =>
+      (p := fun i e =>
         match e with
-        | Except.ok a    => p a
-        | Except.error e => ⌜True⌝ )
-      (q := fun e =>
-        match e with
-        | Except.ok a    => q a
+        | Except.ok a    => p i a
         | Except.error e => ⌜True⌝ )
     simp [MProp.lift, MProp.ι, MProp.μ, MProp.μ_surjective] at h
-    have h₁ : ∀ p : α -> l,
-      MPropOrdered.μ (m := m) (do
+    have h₁ : ∀ p : ι -> α -> l,
+      ⨆ i,
+      (MPropOrdered.μ (m := m) (do
         bind (m := m) c fun a =>
-        Except.getD { down := True } <$>
+        Except.getD True <$>
             match a with
-            | Except.ok a => Except.ok <$> MPropOrdered.ι (p a)
-            | Except.error e => pure (Except.error e)) =
-      MPropOrdered.μ (m := m) (do
+            | Except.ok a => Except.ok <$> MPropOrdered.ι (p i a)
+            | Except.error e => pure (Except.error e))) =
+      ⨆ i,
+      MPropOrdered.μ (do
         bind (m := m) c fun a =>
         (MPropOrdered.ι $ match a with
-            | Except.ok a =>  (p a)
+            | Except.ok a =>  (p i a)
             | Except.error e => ⌜True⌝)) := by
-      intro p; apply MProp.bind (m := m); ext a; cases a <;> simp
+      intro p; congr; ext i; apply MProp.bind (m := m); ext a; cases a <;> simp
       simp [Except.getD, MProp.μ]; rw [inst.μ_surjective]; rfl
-    (repeat erw [h₁]); clear h₁; apply le_trans'; apply h
-    apply le_of_eq; congr; ext a; cases a <;> simp
+    (repeat1 erw [h₁]); clear h₁; apply le_trans'; apply h
+    apply le_of_eq; apply MProp.bind (m := m); ext a; cases a <;> simp
+    simp [Except.getD, MProp.μ, iInf_const]; rw [inst.μ_surjective, iSup_const]; rfl
 
 end PartialCorrectness
 
@@ -269,41 +269,40 @@ instance MPropExceptDetertministic (ε : Type) (l : Type) (m : Type -> Type)
             | Except.error e => ⌜False⌝)) := by
       intro p; congr; ext i; apply MProp.bind (m := m); ext a; cases a <;> simp
       simp [Except.getD, MProp.μ]; rw [inst.μ_surjective]; rfl
-    (repeat erw [h₁]); clear h₁; apply le_trans; apply h
+    (repeat1 erw [h₁]); clear h₁; apply le_trans; apply h
     apply le_of_eq; apply MProp.bind (m := m); ext a; cases a <;> simp
     simp [Except.getD, MProp.μ, iInf_const]; rw [inst.μ_surjective]; rfl
   angelic := by
-    intros α c p q
+    intros α ι c p _
     simp [MProp.lift, MProp.μ, MPropOrdered.μ]
     simp [bind, ExceptT.bind, ExceptT.mk]; unfold ExceptT.bindCont
     simp [MProp.ι, MPropOrdered.ι]
     simp [instMPropOrderedExceptTOfLawfulMonad, MPropExcept, MProp.ι]
     have h := inst'.angelic (α := Except ε α) (c := c)
-      (p := fun e =>
+      (p := fun i e =>
         match e with
-        | Except.ok a    => p a
+        | Except.ok a    => p i a
         | Except.error e => ⌜False⌝ )
-      (q := fun e =>
-        match e with
-        | Except.ok a    => q a
-        | Except.error e => ⌜ False ⌝ )
     simp [MProp.lift, MProp.ι, MProp.μ, MProp.μ_surjective] at h
-    have h₁ : ∀ p : α -> l,
-      MPropOrdered.μ (m := m) (do
+    have h₁ : ∀ p : ι -> α -> l,
+      ⨆ i,
+      (MPropOrdered.μ (m := m) (do
         bind (m := m) c fun a =>
-        Except.getD { down := False } <$>
+        Except.getD False <$>
             match a with
-            | Except.ok a => Except.ok <$> MPropOrdered.ι (p a)
-            | Except.error e => pure (Except.error e)) =
-      MPropOrdered.μ (m := m) (do
+            | Except.ok a => Except.ok <$> MPropOrdered.ι (p i a)
+            | Except.error e => pure (Except.error e))) =
+      ⨆ i,
+      MPropOrdered.μ (do
         bind (m := m) c fun a =>
         (MPropOrdered.ι $ match a with
-            | Except.ok a =>  (p a)
-            | Except.error e => ⌜ False ⌝)) := by
-      intro p; apply MProp.bind (m := m); ext a; cases a <;> simp
+            | Except.ok a =>  (p i a)
+            | Except.error e => ⌜False⌝)) := by
+      intro p; congr; ext i; apply MProp.bind (m := m); ext a; cases a <;> simp
       simp [Except.getD, MProp.μ]; rw [inst.μ_surjective]; rfl
     (repeat erw [h₁]); clear h₁; apply le_trans'; apply h
-    apply le_of_eq; congr; ext a; cases a <;> simp
+    apply le_of_eq; apply MProp.bind (m := m); ext a; cases a <;> simp
+    simp [Except.getD, MProp.μ, iInf_const]; rw [inst.μ_surjective, iSup_const]; rfl
 
 
 end TotalCorrectness
