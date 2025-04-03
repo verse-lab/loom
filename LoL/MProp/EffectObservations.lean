@@ -59,7 +59,7 @@ lemma MPropOrdered.cancel {m} {l : Type u} [Monad m] [PartialOrder l] [MPropOrde
   μ_surjective x
 
 @[reducible]
-instance OfMPropPartialOrdered {m : Type u -> Type v} {l : Type u} [Monad m] [PartialOrder l] [MPropOrdered m l] : MProp m l where
+instance OfMPropPartialOrdered {m : Type u -> Type v} {l : Type u} [Monad m] [PartialOrder l] [mprop : MPropOrdered m l] : MProp m l where
   μ := MPropOrdered.μ
   ι := MPropOrdered.ι
   μ_surjective := MPropOrdered.μ_surjective

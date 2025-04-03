@@ -3,9 +3,11 @@ import Mathlib.Order.CompleteBooleanAlgebra
 import Mathlib.Order.Lattice
 import Mathlib.Order.Basic
 import Aesop
+
 import LoL.QuotientExtra
 import LoL.Meta
-import LoL.MProp.HoareTriples
+import LoL.MProp.WP
+import LoL.MProp.WLP
 
 universe u v w
 
@@ -40,7 +42,7 @@ structure NonDetCps (m : Type u -> Type v) (l : Type u) (α : Type u) where
   pre {τ : α -> Type u}              (cont : (a : α) -> τ a -> l)   : tpc τ -> l
   sem {τ : α -> Type u} {β : Type u} (cont : (a : α) -> τ a -> m β) : tpc τ -> m β
 
-structure NonDetT (m : Type u -> Type v) {l : Type u} [Monad m] [CompleteBooleanAlgebra l] [MPropOrdered m l] (α : Type u)
+structure NonDetT (m : Type u -> Type v) {l : Type u} [Monad m] [CompleteBooleanAlgebra l] [mprop : MPropOrdered m l] (α : Type u)
   extends NonDetCps m l α where
   inh (τ : α -> Type u) : (∀ a, Inhabited (τ a)) -> Inhabited (tpc τ)
   pre_sem {τ τ' : α -> Type u} {_ : ∀ a, Inhabited (τ a)} { _ : ∀ a, Inhabited (τ' a)}
@@ -203,8 +205,6 @@ theorem pick_sem (τ : Type u) [Inhabited τ] τ' :
 
 end NonDetTSimplifications
 
-namespace DemonicNonDet
-
 instance : MPropOrdered (NonDetT m) l := {
   μ := NonDetT.μ
   ι := fun p => monadLift (m := m) (MProp.ι p)
@@ -219,7 +219,7 @@ instance : MPropOrdered (NonDetT m) l := {
     simp [Function.comp, Pi.hasLe, Pi.partialOrder, Pi.preorder, inferInstanceAs]
     intros le x
     simp [liftM, monadLift, MonadLift.monadLift, bind, NonDetT.bind, NonDetT.pure]
-    simp only [NonDetT.μ]
+    simp only [NonDetT.μ, NonDetT.finally]; dsimp
     apply x.pre_sem
     { solve_by_elim }
     { intro a; solve_by_elim [(f a).inh] }
@@ -228,8 +228,8 @@ instance : MPropOrdered (NonDetT m) l := {
 
 lemma NonDetT.wp_eq (c : NonDetT m α) post :
   wp c post =
-    ⨅ t : c.tpc (fun _ => PUnit),
-      c.pre ⊤ t ⇨ wp (c.sem (fun _ => Pure.pure ·) t) post := by
+    ⨅ t : c.tp,
+      c.finally.pre t ⇨ wp (c.finally.sem t) post := by
    simp [wp, liftM, monadLift, MProp.lift, MProp.μ, MPropOrdered.μ]
    simp [NonDetT.μ, bind, NonDetT.bind, MProp.ι, MPropOrdered.ι]
    simp [monadLift, MonadLift.monadLift]
@@ -265,86 +265,70 @@ lemma NonDetT.run_validSeed (x : NonDetT m α) (pre : l) (post : α -> l) (seed 
     simp [NonDetT.validSeed, triple, NonDetT.run, NonDetT.wp_eq]
     intro v h; apply le_trans'; apply h; simp [v]
 
-end DemonicNonDet
+section ExceptT
 
-namespace AngelicNonDet
+@[always_inline]
+instance (ε) [MonadExceptOf ε m] [Inhabited ε] : MonadExceptOf ε (NonDetT m) where
+  throw e  := liftM (m := m) (throw e)
+  /- TODO: fix me not sure how to implement it -/
+  tryCatch := fun _ c =>
+    have: Inhabited (NonDetT m _) := ⟨c default⟩
+    panic! "`try-catch` for nondetermenistic monad is not implemented"
 
-instance : MPropOrdered (NonDetT m) l := {
-  μ := NonDetT.μ
-  ι := fun p => monadLift (m := m) (MProp.ι p)
-  μ_surjective := by intro p; simp [NonDetT.μ, monadLift, MonadLift.monadLift]; rw [MPropOrdered.μ_surjective]; rw [@iInf_const]
-  μ_top := by intro x; simp [NonDetT.μ, pure, NonDetT.pure]; apply MPropOrdered.μ_top
-  μ_bot := by intro x; simp [NonDetT.μ, pure, NonDetT.pure, iInf_const]; apply MPropOrdered.μ_bot
-  μ_ord_pure := by
-    intro p₁ p₂ h; simp [NonDetT.μ, pure, NonDetT.pure, iInf_const]; apply MPropOrdered.μ_ord_pure
-    assumption
-  μ_ord_bind := by
-    intro α f g
-    simp [Function.comp, Pi.hasLe, Pi.partialOrder, Pi.preorder, inferInstanceAs]
-    intros le x
-    simp [liftM, monadLift, MonadLift.monadLift, bind, NonDetT.bind, NonDetT.pure]
-    simp only [NonDetT.μ]
-    apply x.pre_sem
-    { solve_by_elim }
-    { intro a; solve_by_elim [(f a).inh] }
-    intro a; solve_by_elim [(g a).inh]
-  }
+variable {ε : Type u}
 
-lemma NonDetT.wp_eq (c : NonDetT m α) post :
-  wp c post =
-    ⨅ t : c.tpc (fun _ => PUnit),
-      c.pre ⊤ t ⇨ wp (c.sem (fun _ => Pure.pure ·) t) post := by
-   simp [wp, liftM, monadLift, MProp.lift, MProp.μ, MPropOrdered.μ]
-   simp [NonDetT.μ, bind, NonDetT.bind, MProp.ι, MPropOrdered.ι]
-   simp [monadLift, MonadLift.monadLift]
-   simp [c.sem_bind, MProp.μ]; apply le_antisymm
-   { apply c.pre_sem <;> (try simp [iInf_const]) <;> solve_by_elim }
-   apply c.pre_sem <;> (try simp [iInf_const]) <;> solve_by_elim
+@[simp]
+def NonDetCps.toPart (c : NonDetCps (ExceptTTot ε m) l α) :
+  NonDetCps (ExceptTPart ε m) l α := {
+  tpc τ := c.tpc τ
+  pre cont := c.pre cont
+  sem cont t := (c.sem cont t).toPart }
 
-lemma MonadNonDet.wp_pick (τ : Type u) [Inhabited τ] (post : τ -> l) :
-  wp (pick (m := NonDetT m) τ) post = ⨅ t, post t := by
-    simp [NonDetT.wp_eq, pick_pre, pick_sem, wp_pure, pick_tpc]
-    apply le_antisymm <;> simp <;> intro i
-    { apply iInf_le_of_le ⟨i, .unit⟩; simp }
-    apply iInf_le_of_le i.fst; simp
+@[simp]
+private lemma himp_same_pre (x y z : l) :
+  (x ⇨ y) ⊓ (x ⇨ z) = x ⇨ y ⊓ z := by
+    simp [himp_eq, sup_inf_right]
 
-lemma MonadNonDet.wp_assume as (post : PUnit -> l) :
-  wp (assume (m := NonDetT m) as) post = ⌜as⌝ ⇨ post .unit := by
-    simp [NonDetT.wp_eq, pick_pre,wp_pure, assume_sem, assume_pre, assume_tpc]
-    apply le_antisymm
-    { apply iInf_le_of_le .unit; simp }
-    simp
+lemma wp_part_tot_aux
+  (c :  NonDetCps (ExceptTTot ε m) l α)
+  (wp_bot : noFailure m l)
+  pre_sem sem_bind inh
+  pre_sem' sem_bind' inh'
+  post :
+  let ct : NonDetT (ExceptTTot ε m) α :=
+    { c with pre_sem := pre_sem', sem_bind := sem_bind', inh := inh' }
+  let cp : NonDetT (ExceptTPart ε m) α :=
+    { c.toPart with pre_sem := pre_sem, sem_bind := sem_bind, inh := inh }
+  wp ct ⊤ ⊓ wp cp post = wp ct post := by
+    simp [NonDetT.wp_eq, NonDetT.tp, wp_part_eq_wlp (wp_bot := wp_bot)]
+    rw [← @iInf_inf_eq]; simp [wp_top_wlp]
 
-lemma NonDetT.lift (c : m α) post :
-  wp (liftM (n := NonDetT m) c) post = wp c post := by
-    simp [NonDetT.wp_eq, pick_pre, wp_pure, lift_sem, lift_pre, lift_tpc]
-    apply le_antisymm
-    { apply iInf_le_of_le (fun _ => .unit); simp }
-    simp
+lemma NonDetT.wp_part_tot
+  (ct : NonDetT (ExceptTTot ε m) α)
+  (cp : NonDetT (ExceptTPart ε m) α)
+  (wp_bot : noFailure m l)
+  post :
+  ct.toNonDetCps = cp.toNonDetCps ->
+  wp ct ⊤ ⊓ wp cp post = wp ct post := by
+    rcases ct with ⟨ct⟩; rcases cp with ⟨cp⟩
+    rintro rfl; apply wp_part_tot_aux (wp_bot := wp_bot)
 
-lemma NonDetT.run_validSeed (x : NonDetT m α) (pre : l) (post : α -> l) (seed : x.tp) :
-  x.validSeed pre seed ->
-  triple pre x post ->
-  triple pre (x.run seed) post := by
-    simp [NonDetT.validSeed, triple, NonDetT.run, NonDetT.wp_eq]
-    intro v h; apply le_trans'; apply h; simp [v]
 
-end AngelicNonDet
-
+end ExceptT
 
 end NonDetermenisticTransformer
 
 section Example
 
-open TotalCorrectness
 
-abbrev myM := NonDetT (StateT Nat (ExceptT String Id))
+abbrev myM := NonDetT (StateT Nat (ExceptTTot String Id))
 
 def ex : myM Unit :=
   do
     set 0
     let x <- get
     assume (x < 1)
+    throw "e"
 
 
 example (P : _ -> Prop) : P (ex.finally) := by
@@ -393,8 +377,8 @@ def ex'' : myM Unit :=
   do
     let x <- pick ℕ
     assume (x < 1)
-    let y <- pick ℕ
     let s <- get
+    let y <- pick ℕ
     assume (y < s)
     set (y - x)
 
