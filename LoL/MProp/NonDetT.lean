@@ -591,11 +591,6 @@ lemma NonDetT.wp_tot_wp_handler ε [Inhabited ε] (c : NonDetT (ExceptT ε m) α
     rw [<-wp_iInf]; congr; ext e; rcases e with (e|e) <;> simp
     apply le_antisymm; simp; refine iInf_le_of_le e ?_; simp
 
-
-
-
-
-
 end
 
 end NonDetermenisticTransformer
