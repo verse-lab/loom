@@ -534,18 +534,23 @@ private lemma meet_himp (x x' y z : l) :
   rintro rfl
   simp [himp_eq]; rw [@sup_inf_right]
 
-private lemma le_coml_sup (x y z : l) :
-  y <= x ⊔ z -> xᶜ <= yᶜ ⊔ z := by
-  intro h;
-  rw [sup_comm, <-himp_eq]; simp
-  rw [inf_comm, <-le_himp_iff, himp_eq]; simp
-  rwa [sup_comm]
-
 variable [MPropOrdered m l] [LawfulMonad m] [MPropDetertministic m l]
+
+lemma pre_part_pre_handler {ε} {τ : α -> Type u} (c : NonDetT (ExceptT ε m) α)
+  (post : (a : α) -> τ a -> l) t (hd : ε -> Prop):
+  [part| c.pre post t] =
+  c.pre (mprop := OfHd (hd := hd) (m := m) (l := l) (hdInst := ⟨⟩)) post t := by
+  erw [@c.pre_mono (cont := post) (τ := τ)] <;> try simp
+  intros; apply wlp_part_wlp_handler
+
+
+
+
 
 open Demonic in
 lemma NonDetT.wp_tot_part ε (c : NonDetT (ExceptT ε m) α) post :
-  [totl| wp c ⊤] ⊓ [part| wp c post] = [totl| wp c post] := by
+  [totl| wp c post] = [totl| wp c ⊤] ⊓ [part| wp c post] := by
+  symm
   open PartialCorrectness in rw [@NonDetT.wp_eq]
   open TotalCorrectness in repeat rw [@NonDetT.wp_eq]
   unfold NonDetT.tp
@@ -553,21 +558,7 @@ lemma NonDetT.wp_tot_part ε (c : NonDetT (ExceptT ε m) α) post :
   open TotalCorrectness in
   conv =>
     enter [1,1]; ext; rw [meet_himp]; rfl
-    erw [@c.pre_mono (cont := ⊤) (τ := fun _ => PUnit)]; rfl
-    tactic =>
-      introv; simp [wlp, wp_part_eq, wp_tot_eq]
-      apply le_antisymm <;> simp
-      { constructor
-        { apply le_coml_sup; rw [<-wp_or]; apply wp_cons
-          rintro (_|_) <;> simp }
-        refine le_sup_of_le_right ?_; apply wp_cons
-        rintro (_|_) <;> simp }
-      constructor
-      { apply le_coml_sup; rw [<-wp_or]; apply wp_cons
-        rintro (_|_) <;> simp }
-      rw [sup_comm, <-himp_eq]; simp [<-wp_and]
-      apply wp_cons; rintro (_|_) <;> simp
-    tactic => simp
+    tactic => symm; apply pre_part_pre_handler
   simp [_root_.wp_tot_part]
 
 set_option quotPrecheck false in
@@ -575,26 +566,35 @@ notation "[totlD|" t "]" => open TotalCorrectness Angelic in t
 set_option quotPrecheck false in
 notation "[partA|" t "]" => open PartialCorrectness Demonic in t
 
-lemma NonDetT.iwp_part_wp_tot_eq ε (c : NonDetT (ExceptT ε m) α) post
+lemma NonDetT.iwp_part_wp_tot ε (c : NonDetT (ExceptT ε m) α) post
   (wp_bot : ∀ α (c : m α), wp c ⊥ = ⊥)
   (wp_top : ∀ α (c : m α), wp c ⊤ = ⊤) :
-  [partA| iwp c post] = [totlD| wp c post] := by
+  [partA| wp c post] = [totlD| iwp c post] := by
     simp [iwp, Demonic.NonDetT.wp_eq, Angelic.NonDetT.wp_eq, compl_iInf, -compl_himp, himp_eq]
-    simp (disch := assumption) [wp_tot_eq_iwp_part]
-    simp [inf_comm]; congr; ext; congr 1
-    erw [@c.pre_mono (τ := fun _ => PUnit)] <;> try simp
-    introv; simp [wlp, wp_part_eq, wp_tot_eq]
-    apply le_antisymm <;> simp
-    { constructor
-      { apply le_coml_sup; rw [<-wp_or]; apply wp_cons
-        rintro (_|_) <;> simp }
-      rw [sup_comm, <-himp_eq]; simp [<-wp_and]
-      apply wp_cons; rintro (_|_) <;> simp }
-    constructor
-    { apply le_coml_sup; rw [<-wp_or]; apply wp_cons
-      rintro (_|_) <;> simp }
-    refine le_sup_of_le_right ?_; apply wp_cons
-    rintro (_|_) <;> simp
+    simp (disch := assumption) [wp_tot_eq_iwp_part, compl_iSup]
+    simp [sup_comm]; congr; ext; congr 1
+    simp; apply pre_part_pre_handler
+
+open Demonic in
+lemma NonDetT.wp_tot_wp_handler ε [Inhabited ε] (c : NonDetT (ExceptT ε m) α) :
+  [totl| wp c ⊤] =
+    ⨅ (ex : ε), have : IsHandler (· ≠ ex) := ⟨⟩; wp c ⊤ := by
+    simp [Demonic.NonDetT.wp_eq, Angelic.NonDetT.wp_eq, wp_except_handler_eq]
+    erw [iInf_comm (f := fun ex (t : c.tp) =>
+        c.pre (mprop := (OfHd (hd := (· ≠ ex)) (hdInst := ⟨⟩) ε l m)) ⊤ t ⇨
+        wp (m := m) (c.sem (fun x x_1 ↦ Pure.pure x) t) fun x ↦
+          match x with
+          | Except.ok x => ⊤
+          | Except.error e => MPropOrdered.pure (m := m) (¬e = ex))]
+    congr; ext t;
+    simp [himp_eq,<-pre_part_pre_handler, <-iInf_sup_eq]; congr
+    rw [<-wp_iInf]; congr; ext e; rcases e with (e|e) <;> simp
+    apply le_antisymm; simp; refine iInf_le_of_le e ?_; simp
+
+
+
+
+
 
 end
 

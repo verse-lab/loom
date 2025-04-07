@@ -195,6 +195,28 @@ lemma wp_tot_eq_iwp_part ε (c : ExceptT ε m α) (post : α -> l)
     apply le_trans'; apply wp_compl; simp [*]
     simp; apply wp_cons; rintro (_|_) <;> simp
 
+private lemma le_coml_sup (x y z : l) :
+  y <= x ⊔ z -> xᶜ <= yᶜ ⊔ z := by
+  intro h;
+  rw [sup_comm, <-himp_eq]; simp
+  rw [inf_comm, <-le_himp_iff, himp_eq]; simp
+  rwa [sup_comm]
+
+lemma wlp_part_wlp_handler ε (α : Type u) (c : ExceptT ε m α) (post : α → l) (hd : ε -> Prop) :
+  [part| wlp c post] =
+  wlp (mprop := OfHd (hd := hd) (m := m) (l := l) (hdInst := ⟨⟩)) c post := by
+    simp [wlp, wp_part_eq, wp_except_handler_eq]
+    apply le_antisymm <;> simp
+    { constructor
+      { apply le_coml_sup; rw [<-wp_or]; apply wp_cons
+        rintro (_|_) <;> simp }
+      rw [sup_comm, <-himp_eq]; simp [<-wp_and]
+      apply wp_cons; rintro (_|_) <;> simp }
+    constructor
+    { apply le_coml_sup; rw [<-wp_or]; apply wp_cons
+      rintro (_|_) <;> simp }
+    rw [sup_comm, <-himp_eq]; simp [<-wp_and]
+    apply wp_cons; rintro (_|_) <;> simp
 
 
 -- lemma wp_part_eq_wlp (c : ExceptTTot ε m α) (post : α -> l) :
