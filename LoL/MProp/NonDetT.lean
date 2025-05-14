@@ -11,6 +11,8 @@ import LoL.MProp.WLP
 
 universe u v w
 
+
+
 section NonDetermenisticTransformer
 
 variable {m : Type u -> Type v} {l : Type u} {α β : Type u} [Monad m] [inst: CompleteBooleanAlgebra l]
@@ -186,6 +188,7 @@ def NonDetT.assume  (as : Prop) : NonDetT m PUnit := {
     simp_all
 }
 
+
 instance : Monad (NonDetT m) where
   pure := .pure
   bind := .bind
@@ -277,7 +280,8 @@ namespace Demonic
 variable [MPropOrdered m l] [LawfulMonad m] [MPropDetertministic m l]
 
 @[simp]
-def NonDet.μ (x : NonDet m l UProp) : l :=  ⨅ t : x.tp, x.pre t ⇨ MProp.μ (x.sem t)
+def NonDet.μ (x : NonDet m l UProp) : l :=
+  ⨅ t : x.tp, x.pre t ⇨ MProp.μ (x.sem t)
 
 def NonDetT.μ (x : NonDetT m UProp) : l := NonDet.μ x.finally
 
@@ -511,7 +515,7 @@ def NonDetT.ite {α : Type u} (cnd : Prop) [instD : Decidable cnd] (thn : NonDet
 }
 
 variable [HasMProp m l] in
-@[simp↑ high]
+-- @[simp↑ high]
 lemma NonDetT.ite_eq {α : Type u} (x : NonDetT m α) (y : NonDetT m α) (cond : Prop) [dec : Decidable cond] :
   (if cond then x else y) = NonDetT.ite cond x y := by
     split_ifs with h
@@ -526,6 +530,23 @@ lemma NonDetT.ite_eq {α : Type u} (x : NonDetT m α) (y : NonDetT m α) (cond :
     cases dec <;> simp_all
     rcases y with ⟨⟨⟩⟩; simp [bite.snd]
     contradiction
+
+variable [HasMProp m l] in
+lemma NonDetT.ite_eq' {α : Type u} (x : NonDetT m α) (y : NonDetT m α) (cond : Prop) {dec' : Decidable cond} [dec : Decidable cond] :
+  (@_root_.ite _ cond dec' x y) = NonDetT.ite (instD := dec) cond x y := by
+    split_ifs with h
+    { have : cond = True := by simp_all
+      cases this;
+      simp [ite, decide]
+      cases dec <;> simp_all
+      rcases x with ⟨⟨⟩⟩; simp [bite.fst] }
+    have : cond = False := by simp_all
+    cases this;
+    simp [ite, decide]
+    cases dec <;> simp_all
+    rcases y with ⟨⟨⟩⟩; simp [bite.snd]
+    contradiction
+
 section
 
 private lemma meet_himp (x x' y z : l) :
@@ -574,6 +595,12 @@ lemma NonDetT.iwp_part_wp_tot ε (c : NonDetT (ExceptT ε m) α) post
     simp (disch := assumption) [wp_tot_eq_iwp_part, compl_iSup]
     simp [sup_comm]; congr; ext; congr 1
     simp; apply pre_part_pre_handler
+
+/-
+  ex : Int
+  ---
+  Inv => act (handler := (· ≠ ex)) Inv
+-/
 
 open Demonic in
 lemma NonDetT.wp_tot_wp_handler ε [Inhabited ε] (c : NonDetT (ExceptT ε m) α) :

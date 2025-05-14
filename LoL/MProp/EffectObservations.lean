@@ -1,4 +1,4 @@
-import Mathlib.Order.CompleteLattice
+import Mathlib.Order.CompleteLattice.Basic
 
 import LoL.MonadUtil
 import LoL.SpecMonad
@@ -129,11 +129,27 @@ lemma MProp.lift_bind {α β} {l : Type u} {m : Type u -> Type v} [Monad m] [Law
     intro fLg h; simp [Bind.bind]
     apply Cont.monotone_lift; intros h; apply fLg
 
+#check Lean.Expr.instantiate
+
+/-
+h∀ x, (H z ∗ h∀ y, P x y z)
+
+  instantiate #[Z] $ h∀ x, (H #1 ∗ h∀ y, P x y #2)
+  instantiate #[Z, ] $ (H #1 ∗ h∀ y, P x y #2)
+-/
+
+class MPropAngelicDetertministic (l : outParam (Type v)) [Monad m] [CompleteLattice l] [MPropOrdered m l] where
+  /-- 😈 -/
+  demonic {α ι : Type v} (c : m α) (p : ι -> α -> l) [Nonempty ι] : ⨅ i, MProp.lift c (p i) ≤ MProp.lift c (fun x => ⨅ i, p i x)
+  /-- 😇 -/
+  angelic {α ι : Type v} (c : m α) (p : ι -> α -> l) [Nonempty ι] : MProp.lift c (fun x => ⨆ i, p i x) ≤ ⨆ i, MProp.lift c (p i)
+
 class MPropDetertministic (l : outParam (Type v)) [Monad m] [CompleteLattice l] [MPropOrdered m l] where
   /-- 😈 -/
   demonic {α ι : Type v} (c : m α) (p : ι -> α -> l) [Nonempty ι] : ⨅ i, MProp.lift c (p i) ≤ MProp.lift c (fun x => ⨅ i, p i x)
   /-- 😇 -/
   angelic {α ι : Type v} (c : m α) (p : ι -> α -> l) [Nonempty ι] : MProp.lift c (fun x => ⨆ i, p i x) ≤ ⨆ i, MProp.lift c (p i)
+
 
 class HasMProp (m : Type v -> Type u) (l : outParam (Type v)) : Prop
 

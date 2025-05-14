@@ -6,26 +6,120 @@ import LoL.Meta
 
 universe u v w
 
+class Sample (α : Type u) (P : α -> Prop) where
+  gen : Array α
+  prop : ∀ a ∈ gen, P a
+
+
+
 structure NonDetM (α : Type u) where
-  tp : Type v
-  val : tp → α
+  tpc : (α -> Type u) -> Type v
+  pre (cont : (a : α) -> τ a -> Prop) : tpc τ -> Prop
+  val {β : Type u} (cont : (a : α) -> τ a -> β) : tpc τ → β
+  sample (cont : (a : α) -> τ a -> Prop) [samp : ∀ a : α, Sample (τ a) (cont a)] : Sample (tpc τ) (pre cont)
 
-variable {α : Type u} {β : Type v}
 
-def NonDetM.pure (x : α) : NonDetM α := ⟨Unit, fun _ => x⟩
 
-def NonDetM.bind (x : NonDetM α) (f : α → NonDetM β) : NonDetM β :=
-  ⟨Σ (t : x.tp), f (x.val t) |>.tp, fun b => f (x.val b.fst) |>.val b.snd⟩
+variable {α β : Type u}
+
+def NonDetM.pure (x : α) : NonDetM α := {
+  tpc := (· x),
+  pre := (· x),
+  val := (· x),
+
+  sample _ samp := samp x
+}
+
+def NonDetM.bind (x : NonDetM α) (f : α → NonDetM β) : NonDetM β := {
+  tpc := fun τ => x.tpc fun a => (f a).tpc τ,
+  pre cont := x.pre fun a ft => (f a).pre cont ft
+  val cont := x.val fun a ft => (f a).val cont ft
+
+  sample {τ} cont samp := by 
+    simp; apply @x.sample _ _ fun a => (f a).sample ..
+}
 
 instance : Monad NonDetM where
   pure := NonDetM.pure
   bind := NonDetM.bind
 
 
-abbrev NonDetM.choose (τ : Type u) : NonDetM τ := ⟨τ, id⟩
-abbrev NonDetM.assume (as : Prop) : NonDetM Unit := ⟨PLift as, fun _ => ()⟩
+def Array.pairs {β : α -> Type u} (a₁ : Array α) (a₂ : (a : α) -> Array (β a)) : Array ((a : α) × β a) := Id.run do
+  let mut res := #[]
+  for a in a₁ do 
+    for b in a₂ a do
+      res := res.push ⟨a, b⟩
+  return res
 
-def NonDetM.run (x : NonDetM α) [Inhabited x.tp] : α := x.val default
+
+abbrev NonDetM.pick (α : Type u) [samp : Sample α (fun _ => True)] : NonDetM α := {
+  tpc τ := (a : α) × τ a,
+  pre cont t := cont t.1 t.2,
+  val cont t := cont t.1 t.2,
+  sample cont samp' :=  {
+      gen := samp.gen.pairs fun a => samp' a |>.gen
+      prop := by 
+        rintro ⟨a, b⟩; simp
+        sorry
+    }
+}
+abbrev NonDetM.assume (as : Prop) [Decidable as] : NonDetM Unit := {
+  tpc := fun τ => τ (),
+  pre := fun cont t => as ∧ cont () t,
+  val := fun cont t => cont () t,
+
+  sample cont samp := {
+      gen := if as then samp () |>.gen else #[]
+      prop := by simp; intros; solve_by_elim [Sample.prop] 
+    }
+}
+
+abbrev NonDetM.pick_such_that (α : Type u) (p : α -> Prop) [samp : Sample α p] : NonDetM α := { 
+  tpc := fun τ => (a : α) × τ a,
+  pre cont t := p t.1 ∧ cont t.1 t.2,
+  val cont t := cont t.1 t.2,
+  sample cont samp' := {
+      gen := samp.gen.pairs fun a => samp' a |>.gen
+      prop := by 
+        rintro ⟨a, b⟩; simp
+        sorry
+    }
+}
+
+instance : Sample PUnit (fun _ => True) where
+  gen := #[.unit]
+  prop := by rintro ⟨⟩; simp
+
+instance : MonadLift NonDetM Array where 
+  monadLift n := 
+    let x := n.sample (τ := fun _ => PUnit) (fun _ _ => True) |>.gen 
+    x.map <| n.val (fun a _ => a)
+
+instance : Monad Array where
+  pure := Array.singleton
+  bind x f := Array.flatMap f x
+
+lemma lift_bind (x : NonDetM α) (f : α -> NonDetM β) : 
+  monadLift (n := Array) (x >>= f) = monadLift x >>= fun a => monadLift (f a) := by 
+  unfold monadLift; simp [instMonadLiftTOfMonadLift, MonadLift.monadLift]
+
+    
+  
+
+
+class MonadFunctor' (m m' : semiOutParam (Type u → Type v)) (n n' : Type u → Type w) where
+  /-- Lifts a monad morphism `f : {β : Type u} → m β → m β` to
+  `monadMap f : {α : Type u} → n α → n α`. -/
+  monadMap {α : Type u} : ({β : Type u} → m β → m' β) → n α → n' α
+
+#check IO.rand
+
+def liftNondet {α : Type u} 
+  {sampleM : Type u -> Type (u + 1)}
+  {mT : (Type u -> Type (u + 1)) -> (Type u -> Type w)}
+  [MonadFunctor' NonDetM sampleM (mT NonDetM.{u, u}) (mT sampleM)] 
+  (x : mT NonDetM α) : mT sampleM α := by sorry
+
 
 abbrev succ (x : Int) : NonDetM Int :=
   do
@@ -36,7 +130,7 @@ abbrev succ (x : Int) : NonDetM Int :=
     return y + z
 
 example (P : _ -> Prop) i : P ((succ i)) := by
-  dsimp [succ, bind, pure, NonDetM.choose, NonDetM.assume, NonDetM.pure, NonDetM.bind]
+  simp [succ, bind, pure, NonDetM.choose, NonDetM.assume, NonDetM.pure, NonDetM.bind]
   -- simp [StateT.bind, StateT.get, pure, NonDetM.pure, liftM, monadLift, MonadLift.monadLift]
   -- simp [succ', bind, pure, NonDetM.choose, NonDetM.assume, NonDetM.pure, NonDetM.bind, StateT.lift, StateT.pure]
 
@@ -49,11 +143,15 @@ abbrev succ' : StateT Int NonDetM Int :=
     NonDetM.assume (y > x)
     return y
 
-example (P : _ -> Prop) i : P ((succ' i).tp) := by
+
+#check Exists.choose
+example (P : _ -> Prop) i : P ((succ' i)) := by
   simp [succ', bind, pure, NonDetM.choose, NonDetM.assume, NonDetM.pure, NonDetM.bind]
+  -- simp [get]; simp [getThe]; simp [MonadStateOf.get]; unfold StateT.get
   simp [StateT.bind, StateT.get, pure, NonDetM.pure, liftM, monadLift, MonadLift.monadLift]
   simp [succ', bind, pure, NonDetM.choose, NonDetM.assume, NonDetM.pure, NonDetM.bind, StateT.lift, StateT.pure]
-
+  simp [get, getThe, MonadStateOf.get, StateT.get, pure, NonDetM.pure]
+  simp [set, StateT.set, pure, NonDetM.pure]
 
   sorry
 

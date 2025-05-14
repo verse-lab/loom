@@ -120,6 +120,15 @@ lemma wp_top_wlp (c : m α) (post : α -> l) :
   wp c ⊤ ⊓ wlp c post = wp c post := by
   rw [inf_comm, wlp_join_wp]; simp
 
+omit [MPropDetertministic m l] in
+lemma wlp_cons (c : m α) (post post' : α -> l) :
+  post <= post' ->
+  wlp c post <= wlp c post' := by
+    intro; unfold wlp iwp; simp; constructor
+    { refine le_sup_of_le_left ?_; simp; apply wp_cons; simp; solve_by_elim }
+    solve_by_elim [le_sup_of_le_right, wp_cons]
+
+
 lemma wp_top_iwp (c : m α) (post : α -> l) :
   wp c ⊥ = ⊥ ->
   wp c ⊤ ⊓ iwp c post = wp c post := by
@@ -222,17 +231,13 @@ lemma wlp_part_wlp_handler ε (α : Type u) (c : ExceptT ε m α) (post : α →
     rw [sup_comm, <-himp_eq]; simp [<-wp_and]
     apply wp_cons; rintro (_|_) <;> simp
 
+open TotalCorrectness in
+omit [MPropDetertministic m l] in
+lemma ExceptT.wp_lift (c : m α) (post : α -> l) :
+  wp (liftM (n := ExceptT ε m) c) post = wp (m := m) c post := by
+  simp [wp_tot_eq, liftM, monadLift, MonadLift.monadLift, ExceptT.lift, mk]
+  rw [map_eq_pure_bind, wp_bind]; simp [wp_pure]
 
--- lemma wp_part_eq_wlp (c : ExceptTTot ε m α) (post : α -> l) :
---   wp c.toPart post = wlp c post := by
---     simp [wlp, wp_tot_eq, wp_except_part_eq]
---     apply le_antisymm <;> try simp
---     { rw [sup_comm, <-himp_eq]; simp; erw [<-wp_and]
---       apply wp_cons; rintro (_|_) <;> simp }
---     constructor
---     { apply le_trans'; apply wp_compl; assumption
---       simp; apply wp_cons; rintro (_|_) <;> simp }
---     apply wp_cons; rintro (_|_) <;> simp
 
 -- end ExceptT
 

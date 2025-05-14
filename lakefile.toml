@@ -5,11 +5,11 @@ defaultTargets = ["LoL"]
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
-autoImplicit = false
 
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
+rev = "v4.20.0-rc5"
 
 [[lean_lib]]
 name = "LoL"
