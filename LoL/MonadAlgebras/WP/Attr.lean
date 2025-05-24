@@ -1,5 +1,5 @@
 import Lean
-import LoL.MonadAlgebras.WPGen.Basic
+import LoL.MonadAlgebras.WP.Gen
 
 -- This file is based on
 -- https://github.com/AeneasVerif/aeneas/blob/6ff714176180068bd3873af759d26a7053f4a795/backends/lean/Aeneas/Progress/Init.lean

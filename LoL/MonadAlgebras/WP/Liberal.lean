@@ -1,14 +1,13 @@
 import Mathlib.Order.CompleteBooleanAlgebra
 
-import LoL.MonadAlgebras.Instances
-import LoL.MonadAlgebras.WP
+import LoL.MonadAlgebras.Defs
+import LoL.MonadAlgebras.WP.Basic
 
-universe u v w
+import LoL.MonadAlgebras.Instances.Basic
+import LoL.MonadAlgebras.Instances.ExceptT
 
 variable {m : Type u -> Type v} [Monad m] [LawfulMonad m] {α : Type u} {l : Type u}
 variable [inst: CompleteBooleanAlgebra l] [mprop: MPropOrdered m l]
-
-instance : SemilatticeInf l := inst.toSemilatticeInf
 
 attribute [simp] trueE falseE
 @[local simp]
@@ -49,7 +48,7 @@ lemma wp_wlp (c : m α) (post : α -> l) :
     simp [wlp, wp]
 
 section Determenism
-variable [MPropDetertministic m l]
+variable [MPropDet m l]
 
 lemma wlp_and (c : m α) (post₁ post₂ : α -> l) :
   wlp c (fun x => post₁ x ⊓ post₂ x) = wlp c post₁ ⊓ wlp c post₂ := by
@@ -94,6 +93,7 @@ lemma wlp_bind {β} (x : m α) (f : α -> m β) (post : β -> l) :
   rw [sup_comm]; simp [<-himp_eq, <-wp_and]
   apply wp_cons; simp
 
+
 lemma wlp_himp (c : m α) (post post' : α -> l) :
   wp c (fun x => post' x ⇨ post x) = wlp c post' ⇨ wp c post := by
     rw [himp_eq, wlp]; simp [himp_eq, wp_or]
@@ -119,14 +119,13 @@ lemma wp_top_wlp (c : m α) (post : α -> l) :
   wp c ⊤ ⊓ wlp c post = wp c post := by
   rw [inf_comm, wlp_join_wp]; simp
 
-omit [MPropDetertministic m l] in
+omit [MPropDet m l] in
 lemma wlp_cons (c : m α) (post post' : α -> l) :
   post <= post' ->
   wlp c post <= wlp c post' := by
     intro; unfold wlp iwp; simp; constructor
     { refine le_sup_of_le_left ?_; simp; apply wp_cons; simp; solve_by_elim }
     solve_by_elim [le_sup_of_le_right, wp_cons]
-
 
 lemma wp_top_iwp (c : m α) (post : α -> l) :
   wp c ⊥ = ⊥ ->
@@ -141,37 +140,12 @@ lemma wp_top_iwp (c : m α) (post : α -> l) :
   rw [<-compl_inf_eq_bot (a := post)]
   erw [wp_and]; simp; solve_by_elim
 
--- abbrev wpHandleWith {ε} (hd : ε -> Prop) [IsHandler hd] (c : ExceptT ε m α) post := wp c post
-
-
-omit [MPropDetertministic m l] in
-lemma wp_except_handler_eq ε (hd : ε -> Prop) [IsHandler hd] (c : ExceptT ε m α) post :
-  wp c post = wp (m := m) c (fun | .ok x => post x | .error e => ⌜hd e⌝) := by
-    simp [wp, liftM, monadLift, MProp.lift]
-    simp [OfHd, MPropExcept, Functor.map, ExceptT.map, ExceptT.mk]
-    rw [map_eq_pure_bind]; apply MPropOrdered.bind; ext a; cases a <;> simp [Except.getD]
-
-
-open PartialCorrectness in
-omit [MPropDetertministic m l] in
-lemma wp_part_eq ε (c : ExceptT ε m α) post :
-  wp c post = wp (m := m) c (fun | .ok x => post x | .error _ => ⊤) := by
-    simp [wp_except_handler_eq]
-
-open TotalCorrectness in
-omit [MPropDetertministic m l] in
-lemma wp_tot_eq ε (c : ExceptT ε m α) post :
-  wp c post = wp (m := m) c (fun | .ok x => post x | .error _ => ⊥) := by
-    simp [wp_except_handler_eq]
-
 set_option quotPrecheck false in
-notation "[totl|" t "]" => open TotalCorrectness in t
+notation "[totl|" t "]" => open ExceptionAsFailure in t
 set_option quotPrecheck false in
-notation "[part|" t "]" => open PartialCorrectness in t
+notation "[part|" t "]" => open ExceptionAsSuccess in t
 set_option quotPrecheck false in
 notation "[handler" hd "|" t "]" => have : IsHandler hd := ⟨⟩; t
-
-#check fun x => fun x => x
 
 lemma wp_tot_part ε (c : ExceptT ε m α) post :
   [totl| wp c ⊤] ⊓ [part| wp c post] = [totl| wp c post] := by
@@ -191,8 +165,6 @@ lemma wp_compl'  (c : m α) post (wp_bot : ∀ α (c : m α), wp c ⊥ = ⊥) :
   have : wp c post = ⊤ ⊓ wp c post := by simp
   rw [this, <-le_himp_iff, himp_eq]; rw [← @compl_inf, <-wp_and]; simp
   solve_by_elim
-
-
 
 lemma wp_tot_eq_iwp_part ε (c : ExceptT ε m α) (post : α -> l)
    (wp_bot : ∀ α (c : m α), wp c ⊥ = ⊥)
@@ -227,15 +199,3 @@ lemma wlp_part_wlp_handler ε (α : Type u) (c : ExceptT ε m α) (post : α →
       rintro (_|_) <;> simp }
     rw [sup_comm, <-himp_eq]; simp [<-wp_and]
     apply wp_cons; rintro (_|_) <;> simp
-
-open TotalCorrectness in
-omit [MPropDetertministic m l] in
-lemma ExceptT.wp_lift (c : m α) (post : α -> l) :
-  wp (liftM (n := ExceptT ε m) c) post = wp (m := m) c post := by
-  simp [wp_tot_eq, liftM, monadLift, MonadLift.monadLift, ExceptT.lift, mk]
-  rw [map_eq_pure_bind, wp_bind]; simp [wp_pure]
-
-
--- end ExceptT
-
--- end Determenism

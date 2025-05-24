@@ -5,6 +5,46 @@ import LoL.SpecMonad
 
 universe u v w
 
+/- Prop embedding into PartialOrder -/
+
+open Classical in
+noncomputable def LE.pure {l : Type u} [inst: LE l] [OrderTop l] [OrderBot l] : Prop -> l := fun p =>
+  if p then ⊤ else ⊥
+
+macro "⌜" p:term "⌝" : term => `(LE.pure $p)
+
+@[app_unexpander LE.pure] def unexpandPure : Lean.PrettyPrinter.Unexpander
+  | `($(_) $p:term) => `(⌜$p:term⌝)
+  | _ => throw ()
+
+@[simp]
+lemma trueE (l : Type v) [inst: LE l] [OrderTop l] [OrderBot l] : ⌜True⌝ = (⊤ : l) := by
+  simp [LE.pure]
+
+@[simp]
+lemma falseE (l : Type v) [inst: LE l] [OrderTop l] [OrderBot l] : ⌜False⌝ = (⊥ : l) := by
+  simp [LE.pure]
+
+open Classical in
+lemma LE.pure_imp {l : Type u} [inst: LE l] [OrderTop l] [OrderBot l]
+  (p₁ p₂ : Prop) : (p₁ -> p₂) -> ⌜p₁⌝ <= (⌜p₂⌝ : l) := by
+  simp [LE.pure]; split <;> aesop
+
+@[simp]
+lemma LE.pure_intro {l : Type u} [inst: LE l] [OrderTop l] [OrderBot l]
+  (p : Prop) (h : l) : (⌜p⌝ <= h) = (p -> ⊤ <= h) := by
+    simp [LE.pure]; split <;> aesop
+
+@[simp]
+lemma pure_intro_l {l : Type u} [CompleteLattice l] (x y : l) :
+  (x ⊓ ⌜ p ⌝ <= y) = (p -> x <= y) := by
+  by_cases h : p <;> simp [h, trueE, falseE]
+
+@[simp]
+lemma pure_intro_r {l : Type u} [CompleteLattice l] (x y : l) :
+  (⌜ p ⌝ ⊓ x <= y) = (p -> x <= y) := by
+  by_cases h : p <;> simp [h, trueE, falseE]
+
 variable (m : Type v -> Type u)
 
 class MProp [Monad m] (l : outParam (Type v)) where
@@ -20,7 +60,7 @@ abbrev MProp.lift {m : Type u -> Type v} {l : Type u} [Monad m] [MProp m l] :
 instance (l : Type u) {m : Type u -> Type v} [Monad m] [MProp m l] : MonadLiftT m (Cont l) where
   monadLift := MProp.lift
 
-instance (l : Type u) {m : Type u -> Type v} [Monad m] [LawfulMonad m] [MProp m l] : LawfulMonadLift m (Cont l) where
+instance EffectObservationOfMProp (l : Type u) {m : Type u -> Type v} [Monad m] [LawfulMonad m] [MProp m l] : LawfulMonadLift m (Cont l) where
   lift_pure := by
     intro α x; simp [monadLift, pure]; unfold MProp.lift; simp [map_pure, MProp.pure]
   lift_bind := by
@@ -52,34 +92,6 @@ lemma Cont.monotone_lift {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMo
   unfold Cont.monotone; intros; simp [MProp.lift]; rw [map_eq_pure_bind, map_eq_pure_bind]
   apply MPropOrdered.μ_ord_bind; intro; simp [MPropOrdered.μ_ord_pure, *]
 
-open Classical in
-noncomputable def LE.pure {l : Type u} [inst: LE l] [OrderTop l] [OrderBot l] : Prop -> l := fun p =>
-  if p then ⊤ else ⊥
-
-macro "⌜" p:term "⌝" : term => `(LE.pure $p)
-
-@[app_unexpander LE.pure] def unexpandPure : Lean.PrettyPrinter.Unexpander
-  | `($(_) $p:term) => `(⌜$p:term⌝)
-  | _ => throw ()
-
-
-lemma trueE (l : Type v) [inst: LE l] [OrderTop l] [OrderBot l] : ⌜True⌝ = (⊤ : l) := by
-  simp [LE.pure]
-
-
-
-lemma falseE (l : Type v) [inst: LE l] [OrderTop l] [OrderBot l] : ⌜False⌝ = (⊥ : l) := by
-  simp [LE.pure]
-
-open Classical in
-lemma LE.pure_imp {l : Type u} [inst: LE l] [OrderTop l] [OrderBot l]
-  (p₁ p₂ : Prop) : (p₁ -> p₂) -> ⌜p₁⌝ <= (⌜p₂⌝ : l) := by
-  simp [LE.pure]; split <;> aesop
-
-lemma LE.pure_intro {l : Type u} [inst: LE l] [OrderTop l] [OrderBot l]
-  (p : Prop) (h : l) : (⌜p⌝ <= h) = (p -> ⊤ <= h) := by
-    simp [LE.pure]; split <;> aesop
-
 @[simp]
 lemma MProp.μ_eq {m l} [Monad m] [PartialOrder l] [MPropOrdered m l] : MProp.μ (m := m) = MPropOrdered.μ (m := m) := by rfl
 
@@ -89,9 +101,18 @@ lemma MProp.lift_bind {α β} {l : Type u} {m : Type u -> Type v} [Monad m] [Law
     (lift x >>= f) ≤ (lift x >>= g) := by
     intro fLg h; simp [Bind.bind]
     apply Cont.monotone_lift; intros h; apply fLg
+/-- Class for deterministic monadic algebras -/
+class MPropDet (l : outParam (Type v)) [Monad m] [CompleteLattice l] [MPropOrdered m l] where
+  /-- Demonic determinism -/
+  demonic {α : Type v} (c : m α) (p₁ p₂ : α -> l) :
+    MProp.lift c p₁ ⊔ MProp.lift c p₂ ≥ MProp.lift c (fun x => p₁ x ⊔ p₂ x)
+  /-- Angelic determinism -/
+  angelic {α : Type v} (c : m α) (p₁ p₂ : α -> l) :
+    MProp.lift c p₁ ⊓ MProp.lift c p₂ ≤ MProp.lift c (fun x => p₁ x ⊓ p₂ x)
 
-class MPropDetertministic (l : outParam (Type v)) [Monad m] [CompleteLattice l] [MPropOrdered m l] where
-  /-- 😈 -/
-  demonic {α ι : Type v} (c : m α) (p : ι -> α -> l) [Nonempty ι] : ⨅ i, MProp.lift c (p i) ≤ MProp.lift c (fun x => ⨅ i, p i x)
-  /-- 😇 -/
-  angelic {α ι : Type v} (c : m α) (p : ι -> α -> l) [Nonempty ι] : MProp.lift c (fun x => ⨆ i, p i x) ≤ ⨆ i, MProp.lift c (p i)
+/-- Class for partiall correctness monadic algebras -/
+class MPropPartial (m : Type u -> Type v) [Monad m] [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.MonoBind m]
+  [CompleteLattice l] [MPropOrdered m l] where
+  csup_lift {α : Type u} (xc : Set (m α)) (post : α -> l) :
+    Lean.Order.chain xc ->
+    ⨅ x ∈ xc, MProp.lift x post <= MProp.lift (Lean.Order.CCPO.csup xc) post

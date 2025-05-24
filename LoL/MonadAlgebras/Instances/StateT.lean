@@ -1,0 +1,66 @@
+import LoL.MonadAlgebras.Defs
+
+
+instance (σ : Type u) (l : Type u) (m : Type u -> Type v)
+  [PartialOrder l]
+  [Monad m] [LawfulMonad m] [inst: MPropOrdered m l] : MPropOrdered (StateT σ m) (σ -> l) where
+  μ := (MPropOrdered.μ $ (fun fs => fs.1 fs.2) <$> · ·)
+  μ_ord_pure := by intro f; ext s₁; simp [pure, StateT.pure, MPropOrdered.μ_ord_pure]
+  μ_ord_bind := by
+    intros α f g
+    simp [Function.comp, Pi.hasLe, Pi.partialOrder, Pi.preorder, inferInstanceAs]; intros le x s
+    have leM := @inst.μ_ord_bind (α × σ) (fun as => (fun fs => fs.1 fs.2) <$> f as.1 as.2) (fun as => (fun fs => fs.1 fs.2) <$> g as.1 as.2)
+    simp only [Function.comp, Pi.hasLe, <-map_bind] at leM
+    apply leM; simp only [implies_true, le]
+
+
+instance (σ : Type u) (l : Type u) (m : Type u -> Type v)
+  [CompleteLattice l]
+  [Monad m] [LawfulMonad m] [inst: MPropOrdered m l] [inst': MPropDet m l]
+   : MPropDet (StateT σ m) (σ -> l) where
+    angelic := by
+      intros α c p₁ p₂ s;
+      simp [MProp.lift, MProp.μ, MPropOrdered.μ, Functor.map, StateT.map]
+      have h := inst'.angelic (α := α × σ) (c := c s) (p₁ := fun x => p₁ x.1 x.2) (p₂ := fun x => p₂ x.1 x.2)
+      simp [MProp.lift, MProp.μ] at h
+      apply h
+    demonic := by
+      intros α c p₁ p₂ s;
+      simp [MProp.lift, MProp.μ, MPropOrdered.μ, Functor.map, StateT.map]
+      have h := inst'.demonic (α := α × σ) (c := c s) (p₁ := fun x => p₁ x.1 x.2) (p₂ := fun x => p₂ x.1 x.2)
+      simp [MProp.lift, MProp.μ] at h
+      apply h
+
+instance [Monad m] [inst : ∀ α, Lean.Order.CCPO (m α)] : Lean.Order.CCPO (StateT ε m α) := by
+  unfold StateT
+  infer_instance
+instance [Monad m] [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.MonoBind m] : Lean.Order.MonoBind (StateT ε m) where
+  bind_mono_left h₁₂ _ := by
+    simp [bind, StateT.bind]
+    apply Lean.Order.MonoBind.bind_mono_left (m := m)
+    apply h₁₂
+  bind_mono_right h₁₂ _ := by
+    simp [bind, StateT.bind]
+    apply Lean.Order.MonoBind.bind_mono_right (m := m)
+    intro x; apply h₁₂
+
+lemma MProp.lift_StateT [Monad m] [LawfulMonad m] [PartialOrder l] [inst: MPropOrdered m l] (x : StateT σ m α) :
+  MProp.lift x post = fun s => MProp.lift (x s) (fun xs => post xs.1 xs.2) := by
+    simp [MProp.lift, Functor.map, MPropOrdered.μ, StateT.map]
+
+open Lean.Order in
+instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MPropOrdered m l]
+  [∀ α, CCPO (m α)] [MonoBind m]
+  [MPropPartial m] : MPropPartial (StateT σ m) where
+  csup_lift {α} chain := by
+    intro post hchain
+    simp [instCCPOStateTOfMonad_loL, CCPO.csup, MProp.lift_StateT]
+    rw [@Pi.le_def]; simp; unfold fun_csup; intro s
+    apply le_trans'
+    apply MPropPartial.csup_lift (m := m)
+    { simp [Lean.Order.chain]; rintro x y f cf rfl g cg rfl
+      cases (hchain f g cf cg)
+      { left; solve_by_elim }
+      right; solve_by_elim }
+    repeat rw [@iInf_subtype']
+    refine iInf_mono' ?_; simp [Membership.mem, Set.Mem]; aesop
