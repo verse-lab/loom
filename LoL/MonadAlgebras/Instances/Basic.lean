@@ -43,7 +43,7 @@ namespace PartialCorrectness
 
 scoped instance : MPropOrdered DevM Prop where
   μ := fun x => match x with
-    | .res x => ⌜x⌝
+    | .res x => x
     | .dev => ⊤
   μ_ord_pure := by simp [LE.pure]
   μ_ord_bind {α} f g := by

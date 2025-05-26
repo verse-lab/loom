@@ -181,18 +181,27 @@ namespace TotalCorrectness
 variable [∀ α, CCPO (m α)] [MonoBind m]
 
 lemma repeat_inv (f : Unit -> β -> m (ForInStep β)) [WellFoundedRelation β]
-  (inv : β -> l) (doneWith : β -> l)
+  (inv : ForInStep β -> l)
   init :
-    (∀ b, triple (inv b) (f () b) (fun | .yield b' => inv b' ⊓ ⌜ WellFoundedRelation.rel b' b ⌝ | .done b' => inv b' ⊓ doneWith b')) ->
-    triple (inv init) (Loop.forIn.loop f init) (fun b => inv b ⊓ doneWith b) := by
+   (∀ b, triple (inv (.yield b)) (f () b) (fun | .yield b' => inv (.yield b') ⊓ ⌜ WellFoundedRelation.rel b' b ⌝ | .done b' => inv (.done b'))) ->
+   triple (inv (.yield init)) (Loop.forIn.loop f init) (fun b => inv (.done b)) := by
   intro hstep
   apply WellFounded.induction (r := WellFoundedRelation.rel)
-    (C := fun init => triple (inv init) (Loop.forIn.loop f init) (fun b => inv b ⊓ doneWith b))
+    (C := fun init => triple (inv (.yield init)) (Loop.forIn.loop f ( init)) (fun b => inv (.done b)))
   { apply WellFoundedRelation.wf }
   intro b ih; unfold Loop.forIn.loop; simp [triple, wp_bind]; apply le_trans
   apply hstep; apply wp_cons; rintro (_|_) <;> simp [wp_pure]
   solve_by_elim
 
+
+lemma repeat_inv_split (f : Unit -> β -> m (ForInStep β)) [WellFoundedRelation β]
+  (inv : β -> l) (doneWith : β -> l)
+  init :
+    (∀ b, triple (inv b) (f () b) (fun | .yield b' => inv b' ⊓ ⌜ WellFoundedRelation.rel b' b ⌝ | .done b' => inv b' ⊓ doneWith b')) ->
+    triple (inv init) (Loop.forIn.loop f init) (fun b => inv b ⊓ doneWith b) := by
+  intro hstep
+  apply repeat_inv f (fun | .yield b => inv b | .done b => inv b ⊓ doneWith b) init
+  apply hstep
 
 end TotalCorrectness
 

@@ -43,7 +43,6 @@ syntax "while_some" ident ":|" term
   "on_done" termBeforeDo
   "do" doSeq : doElem
 macro_rules
-  | `(doElem| let $x:ident :| $t) => `(doElem| let $x:ident <- pickSuchThat _ (fun $x => $t))
   | `(doElem| while $t
               invariant $inv_yield
               on_done $inv_done do $seq:doSeq) =>

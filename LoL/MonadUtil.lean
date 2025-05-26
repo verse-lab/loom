@@ -3,21 +3,6 @@ import Mathlib.Order.Lattice
 
 universe u v w
 
-class MonadTransformer (t : (Type u -> Type v) -> (Type u -> Type w)) where
-  isMonad {m} [Monad m] : Monad (t m)
-  monadLiftT {m} [Monad m] : {α : Type u} -> m α -> t m α
-  monadMapT {m n} [Monad m] [Monad n] [inst : MonadLiftT m n] {α : Type u} : t m α -> t n α
-  monad_map_lift {m n} [Monad m] [Monad n] [MonadLiftT m n] {α : Type u} (x : m α) :
-    (monadMapT $ monadLiftT x) = (monadLiftT $ monadLift (n := n) x)
-
-export MonadTransformer (monadLiftT monadMapT)
-
-instance (t : (Type u -> Type v) -> (Type u -> Type w)) (m : Type u -> Type v) [MonadTransformer t] [Monad m] :
-  Monad (t m) := MonadTransformer.isMonad
-
-instance (t : (Type u -> Type v) -> (Type u -> Type w)) [MonadTransformer t] (m : Type u -> Type v) [Monad m] :
-  MonadFunctor m (t m) where
-   monadMap := fun f => monadMapT (inst := ⟨f⟩)
 
 abbrev Cont (t : Type v) (α : Type u) := (α -> t) -> t
 
@@ -44,4 +29,3 @@ instance (t : Type v) [Preorder t] : Monad (W t) where
 -- class Logic (t : Type u) extends SemilatticeInf t where
 --   sat : t -> Prop
 --   sat_monotone : ∀ {p₁ p₂ : t}, p₁ ≤ p₂ -> sat p₁ -> sat p₂
-class abbrev Logic (t : Type u) := SemilatticeInf t

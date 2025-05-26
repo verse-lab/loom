@@ -1,6 +1,6 @@
 -- import LoL.Meta
-import LoL.MonadAlgebras.NonDetDevT.Extract
-import LoL.MonadAlgebras.WPGen.Tactic
+import LoL.MonadAlgebras.NonDetT.Extract
+import LoL.MonadAlgebras.WP.Tactic
 
 instance {α : Type u} (p : α -> Prop) [Findable p] : Decidable (∃ a, p a) := by
   apply decidable_of_bool (Findable.find p).isSome
@@ -114,7 +114,6 @@ def spmv'' (x_ind : Array' (Array' ℕ)) (x_val : Array' (Array' ℤ)) : NonDetT
     decreasing x_ind.sum (·.size) - arrInd.sum id do
     invariant fun acc : Array' ℤ =>
       (∀ i < arrInd.size, acc.get i = (x_val.get i).sumUpTo (arrInd.get i))
-
     let i :| i < arrInd.size ∧ arrInd.get i < (x_ind.get i).size
     let ind := arrInd.get i
     let val := x_val.get i |>.get ind
