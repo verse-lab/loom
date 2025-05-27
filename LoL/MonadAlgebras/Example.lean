@@ -2,6 +2,8 @@
 import LoL.MonadAlgebras.NonDetT.Extract
 import LoL.MonadAlgebras.WP.Tactic
 
+import LoL.Meta
+
 open PartialCorrectness DemonicChoice
 
 @[spec, wpSimp]
@@ -23,7 +25,7 @@ instance [Repr α] [FinEnum α] : Repr (α -> Bool) where
   reprPrec p := fun n => Repr.reprPrec (FinEnum.toList α |>.map fun x => (x, p x)) n
 
 instance : Repr (ℕ -> Bool) where
-  reprPrec p := fun n => Repr.reprPrec (0 |> fun x => (x, p x)) n
+  reprPrec p := fun n => Repr.reprPrec (List.range 10 |>.map fun x => (x, p x)) n
 
 
 class Collection (α : outParam (Type)) (κ : Type) where
@@ -57,22 +59,22 @@ def Collection.toSet (k₀ : κ) : NonDetT (StateT (α -> Bool) DevM) Unit := do
     modify (fun s a' => if a' = a then true else s a')
     pure ()
 
-def Collection.toSet' [ToString κ] (k₀ : κ) : NonDetT (StateT (α -> Bool) DevM) Unit := do
-  let mut k := k₀
-  while ¬ Collection.isEmpty k
-  invariant fun (s : α -> Bool) => ∀ x, Collection.mem x k₀ <-> s x ∨ Collection.mem x k
-  on_done fun (_ : α -> Bool) => ∀ x, ¬ Collection.mem x k
-  do
-    dbg_trace k
-    dbg_trace decide $ ¬ Collection.isEmpty k
-    let a :| Collection.mem a k
-    k := del a k
-    modify (fun s a' => if a' = a then true else s a')
-
-
-/-- info: DevM.res ((), [(0, false), (1, true), (2, true), (3, false)]) -/
+/--
+info: DevM.res
+  ((),
+   [(0, false),
+    (1, true),
+    (2, true),
+    (3, false),
+    (4, false),
+    (5, true),
+    (6, false),
+    (7, false),
+    (8, false),
+    (9, false)])
+-/
 #guard_msgs in
-#eval Collection.toSet [(1 : Fin 4),(2 : Fin 4)] |>.run.run (fun _ => False)
+#eval Collection.toSet [1,2,5] |>.run.run (fun _ => False)
 
 lemma Collection.toSet_correct (k : κ) :
   triple (fun s => ∀ x, ¬ s x) (Collection.toSet k) (fun _ s => ∀ x, Collection.mem x k <-> s x) := by

@@ -238,7 +238,7 @@ macro "extract_step" : tactic =>
       | eapply ExtractNonDet.assume'
       | eapply ExtractNonDet.pickSuchThat'
       | eapply ExtractNonDet.pickSuchThat_weak
-      | eapply ExtractNonDet.if)
+      | split)
 
 macro "extract_tactic" : tactic =>
   `(tactic| repeat' (intros; extract_step <;> try dsimp))
