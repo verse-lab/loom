@@ -54,7 +54,7 @@ def Collection.toSet (k₀ : κ) : NonDetT (StateT (α -> Bool) DevM) Unit := do
   let mut k := k₀
   while ¬ Collection.isEmpty k
   invariant fun (s : α -> Bool) => ∀ x, Collection.mem x k₀ <-> s x ∨ Collection.mem x k
-  on_done fun (_ : α -> Bool) => ∀ x, ¬ Collection.mem x k do
+  on_done ⌜∀ x, ¬ Collection.mem x k⌝ do
     let a :| Collection.mem a k
     k := del a k
     modify (fun s a' => if a' = a then true else s a')
@@ -121,35 +121,15 @@ variable (size_eq : mInd.size = mVal.size)
 variable (size_eq' : ∀ i < mInd.size, (mInd[i]!).size = (mVal[i]!).size)
 include size_eq size_eq'
 
--- set_option linter.unusedVariables false in
--- abbrev withNameGadget {α : Type*} (n : Lean.Name) (a : α) : α := a
-
--- def unveilName : Lean.Elab.Tactic.TacticM Unit := do
---   let goal <- Lean.Elab.Tactic.getMainTarget
---   match_expr goal with
---   | withNameGadget _ n _ => do
---     let .some n := n.name? | throwError "{n} is not a name"
---     Lean.Elab.Tactic.withMainContext do
---       Lean.Elab.Tactic.evalTactic (← `(tactic| unfold withNameGadget))
---     (<- Lean.Elab.Tactic.getMainGoal).setTag n
---   | _ => pure ()
-
--- -- add_aesop_rule (by unveil_name)
-
--- attribute [aesop safe tactic (pattern := withNameGadget _ _)] unveilName
-
--- example : withNameGadget `a False ∧ True := by
---   aesop
 
 def spmv : NonDetT (StateT (Array ℤ) DevM) Unit := do
   let mut arrInd : Array ℕ := Array.replicate mInd.size 0
   while_some i :| i < arrInd.size ∧ arrInd[i]! < mInd[i]!.size
-    invariant fun acc : Array ℤ =>
-      (acc.size = mVal.size) ∧
-      (arrInd.size = mVal.size) ∧
-      (∀ i < arrInd.size, acc[i]! = (mVal[i]!).sumUpTo (fun j x => x * v[mInd[i]![j]!]!) (arrInd[i]!)) ∧
-      (∀ i < arrInd.size, arrInd[i]! <= (mInd[i]!).size )
-    on_done fun _ : Array ℤ => ∀ i < arrInd.size, arrInd[i]! = (mInd[i]!).size do
+  invariant ⌜arrInd.size = mVal.size⌝
+  invariant ⌜∀ i < arrInd.size, arrInd[i]! <= (mInd[i]!).size⌝
+  invariant (·.size = mVal.size)
+  invariant (∀ i < arrInd.size, ·[i]! = mVal[i]!.sumUpTo (fun j x => x * v[mInd[i]![j]!]!) arrInd[i]!)
+  on_done ⌜∀ i < arrInd.size, arrInd[i]! = mInd[i]!.size⌝ do
     let ind := arrInd[i]!
     let vInd := mInd[i]![ind]!
     let mVal := mVal[i]![ind]!
@@ -157,13 +137,12 @@ def spmv : NonDetT (StateT (Array ℤ) DevM) Unit := do
     modify (·.modify i (· + val))
     arrInd := arrInd.modify i (· + 1)
 
-
 lemma spmv_correct :
   triple
     (fun acc => ⌜acc.size = mVal.size ∧ ∀ i : ℕ, acc[i]! = 0⌝)
       (spmv mInd mVal v)
     (fun _ acc =>
-      ⌜∀ i < mInd.size, acc[i]! = (mVal[i]!).sumUpTo (fun j x => x * v[mInd[i]![j]!]!) (mInd[i]!).size⌝) := by
+      ⌜∀ i < mInd.size, acc[i]! = mVal[i]!.sumUpTo (fun j x => x * v[mInd[i]![j]!]!) mInd[i]!.size⌝) := by
     unfold spmv; mwp
     { intro arrInd
       mwp; aesop }

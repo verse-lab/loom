@@ -12,18 +12,26 @@ section
 variable {m : Type u -> Type v} [Monad m] [LawfulMonad m] {α : Type u} {l : Type u} [CompleteLattice l] [MPropOrdered m l]
 
 set_option linter.unusedVariables false in
-def invariantGadget {invType : Type w} (inv : invType) : m PUnit := pure .unit
+def invariantGadget {invType : Type u} (inv : List invType) [CompleteLattice invType] [MPropOrdered m invType] : m PUnit := pure .unit
 
+declare_syntax_cat invariantClause
+declare_syntax_cat invariants
+syntax "invariant" term linebreak : invariantClause
 
-macro "invariant" t:term : term => `(invariantGadget $t)
+syntax (invariantClause linebreak)* : invariants
+
+@[simp]
+abbrev invariants (f : List l) := f.foldr (·⊓·) ⊤
+
+-- macro "invariant" t:term : invariantClause => `(invariantGadget $t)
 
 
 set_option linter.unusedVariables false in
-def onDoneGadget {invType : Type w} (inv : invType) : m PUnit := pure .unit
+def onDoneGadget {invType : Type u} (inv : invType) [CompleteLattice invType] [MPropOrdered m invType] : m PUnit := pure .unit
 
 
 set_option linter.unusedVariables false in
-def assertGadget {l : Type w} (h : l) : m PUnit := pure .unit
+def assertGadget {l : Type u} (h : l) [CompleteLattice l] [MPropOrdered m l] : m PUnit := pure .unit
 
 macro "assert" t:term : term => `(assertGadget $t)
 
@@ -34,21 +42,22 @@ macro "decreasing" t:term : term => `(decreasingGadget $t)
 
 syntax "let" ident ":|" term : doElem
 syntax "while" term
-  "invariant" term
+  (invariantClause)*
   "on_done" termBeforeDo
   "do" doSeq : doElem
 syntax "while_some" ident ":|" termBeforeDo "do" doSeq : doElem
 syntax "while_some" ident ":|" term
-  "invariant" term
+  (invariantClause)*
   "on_done" termBeforeDo
   "do" doSeq : doElem
 macro_rules
   | `(doElem| while $t
-              invariant $inv_yield
+              $[invariant $inv:term
+              ]*
               on_done $inv_done do $seq:doSeq) =>
       `(doElem|
         for _ in Lean.Loop.mk do
-          invariantGadget $inv_yield
+          invariantGadget [ $[$inv:term],* ]
           onDoneGadget $inv_done
           if $t then
             $seq:doSeq
@@ -65,7 +74,8 @@ macro_rules
           $[$seq:doElem]*)
     | _ => Lean.Macro.throwError "while_some expects a sequence of do-elements"
   | `(doElem| while_some $x:ident :| $t
-              invariant $inv_yield
+              $[invariant $inv:term
+              ]*
               on_done $inv_done do
                 $seq:doSeq) =>
     match seq with
@@ -74,7 +84,7 @@ macro_rules
     | `(doSeq| { $[$seq:doElem]* }) =>
       `(doElem|
         for _ in Lean.Loop.mk do
-          invariantGadget $inv_yield
+          invariantGadget [ $[$inv:term],* ]
           onDoneGadget $inv_done
           if ∃ $x:ident, $t then
             let $x :| $t
@@ -167,27 +177,28 @@ theorem triple_forIn_deacreasing {β} {measure : β -> ℕ}
 
 noncomputable
 def WPGen.forWithInvariant {xs : Std.Range} {init : β} {f : ℕ → β → m (ForInStep β)}
-  (inv : ℕ → β → l) :
+  (inv : ℕ → β → List l) :
     xs.step = 1 ->
     xs.start <= xs.stop ->
     WPGen (forIn xs init (fun i b => do invariantGadget (inv i b); (f i b))) := by
     intro stp _
     apply spec_triple_invs (invs :=
-      (∀ i b, triple (inv i b) (f i b) (fun | .yield b' => inv (i + 1) b' | .done b' => inv xs.stop b')));
-    intros h; apply triple_forIn_range_step1 inv; simp [invariantGadget, stp]; apply h
+      (∀ i b, triple (invariants (inv i b)) (f i b) (fun | .yield b' => invariants (inv (i + 1) b') | .done b' => invariants (inv xs.stop b'))));
+    intros h; apply triple_forIn_range_step1 (fun i b => (inv i b).foldr (·⊓·) ⊤); simp [invariantGadget, stp]; apply h
     all_goals solve_by_elim
 
 noncomputable
 def WPGen.forWithInvariantDecreasing {β} {measure : β -> ℕ}
   {init : β} {f : β → m (ForInStep β)}
-  (inv : β → l) :
+  (inv : β → List l) :
     WPGen (forIn [0:mb] init (fun _ b => do decreasingGadget (measure b); invariantGadget (inv b); f b)) := by
   apply spec_triple_invs (invs :=
     mb = measure init ∧
-    (∀ b, measure b <= measure init -> triple (inv b) (f b) (fun | .yield b' => inv b' ⊓ ⌜measure b' < measure b⌝ | .done b' => ⌜ measure b' = 0 ⌝ ⊓ inv b')))
+    (∀ b, measure b <= measure init -> triple (invariants (inv b)) (f b) (fun | .yield b' => invariants (inv b') ⊓ ⌜measure b' < measure b⌝ | .done b' => ⌜ measure b' = 0 ⌝ ⊓ invariants (inv b'))))
   simp only [and_imp]; intros eq h; simp only [eq]
-  apply triple_forIn_deacreasing inv; simp [invariantGadget, decreasingGadget]
-  all_goals solve_by_elim
+  apply triple_forIn_deacreasing (fun b => invariants (inv b)); simp [invariantGadget, decreasingGadget]
+  solve_by_elim
+
 end
 variable {m : Type u -> Type v} [Monad m] [LawfulMonad m] {α : Type u} {l : Type u} [CompleteBooleanAlgebra l] [MPropOrdered m l]
 

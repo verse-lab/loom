@@ -196,13 +196,13 @@ lemma MonadNonDet.wp_forIn {β : Type u} (init : β) (f : Unit -> β -> NonDetT 
 noncomputable
 def WPGen.forWithInvariantLoop [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.MonoBind m] {β}
   {init : β} {f : Unit -> β → NonDetT m (ForInStep β)}
-  (inv : β → l) (on_done' : β → l) :
+  (inv : β → List l) (on_done' : β → l) :
     WPGen (forIn Lean.Loop.mk init (fun u b => do
         invariantGadget (inv b)
         onDoneGadget (on_done' b)
         f u b)) := by
   apply WPGen.spec_triple_invs (invs :=
-    (∀ b, triple (inv b) (f () b) (fun | .yield b' => inv b' | .done b' => inv b' ⊓ on_done' b')))
+    (∀ b, triple (invariants (inv b)) (f () b) (fun | .yield b' => invariants (inv b') | .done b' => invariants (inv b') ⊓ on_done' b')))
   intro h; simp [invariantGadget, onDoneGadget]
   solve_by_elim [MonadNonDet.wp_forIn]
 
@@ -327,13 +327,13 @@ lemma MonadNonDet.wp_forIn {β : Type u} (init : β) (f : Unit -> β -> NonDetT 
 noncomputable
 def WPGen.forWithInvariantLoop [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.MonoBind m] {β}
   {init : β} {f : Unit -> β → NonDetT m (ForInStep β)}
-  (inv : β → l) (on_done' : β → l) :
+  (inv : β → List l) (on_done' : β → l) :
     WPGen (forIn Lean.Loop.mk init (fun u b => do
         invariantGadget (inv b)
         onDoneGadget (on_done' b)
         f u b)) := by
   apply WPGen.spec_triple_invs (invs :=
-    (∀ b, triple (inv b) (f () b) (fun | .yield b' => inv b' | .done b' => inv b' ⊓ on_done' b')))
+    (∀ b, triple (invariants (inv b)) (f () b) (fun | .yield b' => invariants (inv b') | .done b' => invariants (inv b') ⊓ on_done' b')))
   intro h; simp [invariantGadget, onDoneGadget]
   solve_by_elim [MonadNonDet.wp_forIn]
 
@@ -465,13 +465,13 @@ lemma MonadNonDet.wp_forIn {β : Type u} (init : β) [WellFoundedRelation β] (f
 noncomputable
 def WPGen.forWithInvariantLoop [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.MonoBind m] {β} [WellFoundedRelation β]
   {init : β} {f : Unit -> β → NonDetT m (ForInStep β)}
-  (inv : β → l) (on_done' : β → l) :
+  (inv : β → List l) (on_done' : β → l) :
     WPGen (forIn Lean.Loop.mk init (fun u b => do
         invariantGadget (inv b)
         onDoneGadget (on_done' b)
         f u b)) := by
   apply WPGen.spec_triple_invs (invs :=
-    (∀ b, triple (inv b) (f () b) (fun | .yield b' => inv b' ⊓ ⌜ WellFoundedRelation.rel b' b ⌝ | .done b' => inv b' ⊓ on_done' b')))
+    (∀ b, triple (invariants (inv b)) (f () b) (fun | .yield b' => invariants (inv b') ⊓ ⌜ WellFoundedRelation.rel b' b ⌝ | .done b' => invariants (inv b') ⊓ on_done' b')))
   intro h; simp [invariantGadget, onDoneGadget]
   solve_by_elim [MonadNonDet.wp_forIn]
 
@@ -596,13 +596,13 @@ lemma MonadNonDet.wp_forIn {β : Type u} (init : β) (f : Unit -> β -> NonDetT 
 noncomputable
 def WPGen.forWithInvariantLoop [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.MonoBind m] {β}
   {init : β} {f : Unit -> β → NonDetT m (ForInStep β)}
-  (inv : β → l) (on_done' : β → l) :
+  (inv : β → List l) (on_done' : β → l) :
     WPGen (forIn Lean.Loop.mk init (fun u b => do
         invariantGadget (inv b)
         onDoneGadget (on_done' b)
         f u b)) := by
   apply WPGen.spec_triple_invs (invs :=
-    (∀ b, triple (inv b) (f () b) (fun | .yield b' => inv b' | .done b' => inv b' ⊓ on_done' b')))
+    (∀ b, triple (invariants (inv b)) (f () b) (fun | .yield b' => invariants (inv b') | .done b' => invariants (inv b') ⊓ on_done' b')))
   intro h; simp [invariantGadget, onDoneGadget]
   solve_by_elim [MonadNonDet.wp_forIn]
 

@@ -65,7 +65,7 @@ macro "wpgen" : tactic => `(tactic| (
   repeat' wpgen_step
   ))
 
-macro "mwp" : tactic => `(tactic| ((try dsimp); wpgen <;> try simp only [logicSimp, wpSimp]))
+macro "mwp" : tactic => `(tactic| ((try dsimp); wpgen <;> try simp only [logicSimp, wpSimp, invariants, List.foldr]))
 
 attribute [spec high, wpSimp] WPGen.forWithInvariantDecreasing WPGen.if
 attribute [spec, wpSimp] WPGen.bind WPGen.pure WPGen.assert WPGen.forWithInvariant WPGen.map
