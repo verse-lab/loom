@@ -29,7 +29,7 @@ open PartialCorrectness DemonicChoice
 --   return u
 
 @[spec, loomWpSimp]
-def WPGen.pickSuchThat : WPGen (pickSuchThat τ p : NonDetT DevM τ) := by
+def WPGen.pickSuchThat : WPGen (pickSuchThat τ p : NonDetT DivM τ) := by
   refine ⟨fun post => ∀ t, p t -> post t, True, ?_⟩
   intro post _; apply le_of_eq;
   simp [MonadNonDet.wp_pickSuchThat, loomLogicSimp]

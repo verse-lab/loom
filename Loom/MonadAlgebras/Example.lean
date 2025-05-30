@@ -9,12 +9,12 @@ import Loom.Meta
 open PartialCorrectness DemonicChoice
 
 @[spec, loomWpSimp]
-def WPGen.modify f : WPGen (l := α -> Prop) (modify f : NonDetT (StateT α DevM) PUnit) := by
+def WPGen.modify f : WPGen (l := α -> Prop) (modify f : NonDetT (StateT α DivM) PUnit) := by
   refine ⟨fun post s => post .unit (f s), True, ?_⟩
   intro post _; apply le_of_eq; rfl
 
 @[spec, loomWpSimp]
-def WPGen.pickSuchThat : WPGen (pickSuchThat τ p : NonDetT (StateT α DevM) τ) := by
+def WPGen.pickSuchThat : WPGen (pickSuchThat τ p : NonDetT (StateT α DivM) τ) := by
   refine ⟨fun post s => ∀ t, p t -> post t s, True, ?_⟩
   intro post _; apply le_of_eq;
   simp [MonadNonDet.wp_pickSuchThat, loomLogicSimp]; aesop
@@ -51,7 +51,7 @@ instance [DecidableEq α] : Collection α (List α) where
   isEmpty := (List.isEmpty ·)
   isEmpty_prop := by simp [List.eq_nil_iff_forall_not_mem]
 
-def Collection.toSet (k₀ : κ) : NonDetT (StateT (α -> Bool) DevM) Unit := do
+def Collection.toSet (k₀ : κ) : NonDetT (StateT (α -> Bool) DivM) Unit := do
   let mut k := k₀
   while ¬ Collection.isEmpty k
   invariant fun (s : α -> Bool) => ∀ x, Collection.mem x k₀ <-> s x ∨ Collection.mem x k
@@ -62,7 +62,7 @@ def Collection.toSet (k₀ : κ) : NonDetT (StateT (α -> Bool) DevM) Unit := do
     pure ()
 
 /--
-info: DevM.res
+info: DivM.res
   ((),
    [(0, false),
     (1, true),
@@ -124,7 +124,7 @@ variable (size_eq' : ∀ i < mInd.size, (mInd[i]!).size = (mVal[i]!).size)
 include size_eq size_eq'
 
 
-def spmv : NonDetT (StateT (Array α) DevM) Unit := do
+def spmv : NonDetT (StateT (Array α) DivM) Unit := do
   let mut arrInd : Array ℕ := Array.replicate mInd.size 0
   while_some i :| i < arrInd.size ∧ arrInd[i]! < mInd[i]!.size
   invariant ⌜arrInd.size = mVal.size⌝
@@ -161,6 +161,6 @@ def mValTest : Array (Array ℤ) :=
 def vTest : Array ℤ :=
   #[10,20,30,40, 50]
 
-/-- info: DevM.res ((), #[1400, 2600]) -/
+/-- info: DivM.res ((), #[1400, 2600]) -/
 #guard_msgs in
 #eval spmv mIndTest mValTest vTest |>.run.run #[0,0]

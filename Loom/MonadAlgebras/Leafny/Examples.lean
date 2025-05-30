@@ -61,7 +61,7 @@ method Collection.toSet (mut k : κ) return (s : α -> Bool)
       aesop
 
 /--
-info: DevM.res
+info: DivM.res
   ⟨[(0, false),
     (1, true),
     (2, true),

@@ -14,32 +14,32 @@ instance : MPropDet Id Prop where
     intros α c p q;
     simp [MProp.lift, MProp.μ, MPropOrdered.μ]
 
-inductive DevM (α : Type u) where
+inductive DivM (α : Type u) where
   | res (x : α)
-  | dev
+  | div
 
-instance : Monad DevM where
-  pure := DevM.res
+instance : Monad DivM where
+  pure := DivM.res
   bind := fun x y => match x with
-    | DevM.res x => y x
-    | DevM.dev => DevM.dev
+    | DivM.res x => y x
+    | DivM.div => DivM.div
 
 class CCPOBot (m : Type u -> Type v) [∀ α, Lean.Order.CCPO (m α)] where
   compBot {α} : m α
   prop {α} : @compBot α = Lean.Order.bot
 
-instance : LawfulMonad DevM := by
+instance : LawfulMonad DivM := by
   refine LawfulMonad.mk' _ ?_ ?_ ?_
   { introv; cases x <;> rfl }
   { introv; rfl }
   introv; cases x <;> rfl
 
-noncomputable instance : Lean.Order.CCPO (DevM α) := inferInstanceAs (Lean.Order.CCPO (Lean.Order.FlatOrder .dev))
-instance : CCPOBot DevM where
-  compBot := .dev
+noncomputable instance : Lean.Order.CCPO (DivM α) := inferInstanceAs (Lean.Order.CCPO (Lean.Order.FlatOrder .div))
+instance : CCPOBot DivM where
+  compBot := .div
   prop := by simp [Lean.Order.bot, Lean.Order.CCPO.csup,Lean.Order.flat_csup]
 
-instance : Lean.Order.MonoBind DevM where
+instance : Lean.Order.MonoBind DivM where
   bind_mono_left := by
     rintro _ _ (_|_) _ _ (_|_) <;> solve_by_elim
   bind_mono_right := by
@@ -48,22 +48,22 @@ instance : Lean.Order.MonoBind DevM where
 namespace PartialCorrectness
 
 
-scoped instance : MPropOrdered DevM Prop where
+scoped instance : MPropOrdered DivM Prop where
   μ := fun x => match x with
     | .res x => x
-    | .dev => ⊤
+    | .div => ⊤
   μ_ord_pure := by simp [LE.pure]
   μ_ord_bind {α} f g := by
     rintro h (_|_) <;> simp
     solve_by_elim
 
-instance : MPropDet DevM Prop where
+instance : MPropDet DivM Prop where
   demonic := by
     rintro _ (_|_) <;> simp [MProp.lift, MPropOrdered.μ, Functor.map, LE.pure]
   angelic := by
     rintro _ (_|_) <;> simp [MProp.lift, MPropOrdered.μ, Functor.map, LE.pure]
 
-instance : MPropPartial DevM where
+instance : MPropPartial DivM where
   csup_lift {α} chain := by
     intro post hchain
     simp [Lean.Order.CCPO.csup, Lean.Order.flat_csup]
@@ -77,16 +77,16 @@ end PartialCorrectness
 
 namespace TotalCorrectness
 
-scoped instance : MPropOrdered DevM Prop where
+scoped instance : MPropOrdered DivM Prop where
   μ := fun x => match x with
     | .res x => ⌜x⌝
-    | .dev => ⊥
+    | .div => ⊥
   μ_ord_pure := by simp [LE.pure]
   μ_ord_bind {α} f g := by
     rintro h (_|_) <;> simp
     solve_by_elim
 
-instance : MPropDet DevM Prop where
+instance : MPropDet DivM Prop where
   angelic := by
     rintro _ (_|_) <;> simp [MProp.lift, MPropOrdered.μ, Functor.map, LE.pure]
   demonic := by

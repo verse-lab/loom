@@ -11,7 +11,7 @@ import Loom.MonadAlgebras.NonDetT.Basic
 
 universe u v w
 
-open ExceptionAsFailure Lean.Order
+open Lean.Order
 
 inductive AccFrom (p : Nat -> Prop) : Nat -> Prop
     | now : p i -> AccFrom p i
@@ -398,12 +398,12 @@ macro "extractable_tactic" : tactic =>
 
 namespace TotalCorrectness.DemonicChoice
 
-lemma NonDetDevT.extract_refines_wp (s : NonDetT m α) (inst : ExtractNonDet Findable s) :
+lemma ExtractNonDet.extract_refines_wp (s : NonDetT m α) (inst : ExtractNonDet Findable s) :
   wp s post ⊓ s.prop ⊤ <= wp s.extract post := by
   unhygienic induction inst
   { simp [wp_pure, NonDetT.extract] }
   { simp [NonDetT.wp_vis, NonDetT.prop]; rw [inf_comm, wlp_join_wp]
-    simp [NonDetT.extract, wp_bind, ExceptT.wp_lift]
+    simp [NonDetT.extract, wp_bind]
     apply wp_cons; aesop (add norm inf_comm) }
   { simp [NonDetT.wp_pickCont, NonDetT.prop, NonDetT.extract]; split
     { have := Findable.find_none (p := p) (by simpa);
@@ -430,35 +430,26 @@ lemma NonDetDevT.extract_refines_wp (s : NonDetT m α) (inst : ExtractNonDet Fin
   intro b; apply le_trans'; apply a_ih_1; simp [hprop]
   simp [NonDetT.wp_eq_wp]
 
-lemma NonDetDevT.extract_refines (pre : l) (s : NonDetT m α) (inst : ExtractNonDet Findable s) :
+lemma ExtractNonDet.extract_refines (pre : l) (s : NonDetT m α) (inst : ExtractNonDet Findable s) :
   triple pre s post ->
   pre <= s.prop ⊤ ->
   triple pre s.extract post := by
-  intro tr imp; apply le_trans'; apply NonDetDevT.extract_refines_wp
+  intro tr imp; apply le_trans'; apply ExtractNonDet.extract_refines_wp
   simp; aesop
 
 end TotalCorrectness.DemonicChoice
-
-noncomputable
-abbrev _root_.NonDetT.prop_part : {α : Type u} -> (s : NonDetT m α) -> Cont l α
-  | _, .pure x => Pure.pure x
-  | _, .vis x f => fun post => wlp x fun y => NonDetT.prop (f y) post
-  | _, .pickCont _ p f => fun post =>
-    (⨅ t, ⌜p t⌝ ⇨ NonDetT.prop (f t) post)
-  | _, .repeatCont _ f cont =>
-    fun post => ⌜ ∀ b, ⊤ <= (f b).prop ⊤ ∧ ⊤ <= (cont b).prop post ⌝
 
 namespace PartialCorrectness.DemonicChoice
 
 variable [MPropPartial m]
 
 
-lemma NonDetDevT.extract_refines_wp (s : NonDetT m α) (inst : ExtractNonDet WeakFindable s) :
+lemma ExtractNonDet.extract_refines_wp (s : NonDetT m α) (inst : ExtractNonDet WeakFindable s) :
   wp s post ⊓ s.prop ⊤ <= wp s.extractWeak post := by
   unhygienic induction inst
   { simp [wp_pure, NonDetT.extractWeak] }
   { simp [NonDetT.wp_vis, NonDetT.prop]; rw [inf_comm, wlp_join_wp]
-    simp [NonDetT.extractWeak, wp_bind, ExceptT.wp_lift]
+    simp [NonDetT.extractWeak, wp_bind]
     apply wp_cons; aesop (add norm inf_comm) }
   { simp [NonDetT.wp_pickCont, NonDetT.prop, NonDetT.extractWeak]; split
     simp [CCPOBot.prop, wp_bot]
@@ -482,11 +473,55 @@ lemma NonDetDevT.extract_refines_wp (s : NonDetT m α) (inst : ExtractNonDet Wea
   intro b; apply le_trans'; apply a_ih_1; simp [hprop]
   simp [NonDetT.wp_eq_wp]
 
-lemma NonDetDevT.extract_refines (pre : l) (s : NonDetT m α) (inst : ExtractNonDet WeakFindable s) :
+lemma ExtractNonDet.extract_refines (pre : l) (s : NonDetT m α) (inst : ExtractNonDet WeakFindable s) :
   triple pre s post ->
   pre <= s.prop ⊤ ->
   triple pre s.extractWeak post := by
-  intro tr imp; apply le_trans'; apply NonDetDevT.extract_refines_wp
+  intro tr imp; apply le_trans'; apply ExtractNonDet.extract_refines_wp
   simp; aesop
+
+noncomputable
+def _root_.ExtractNonDet.prop {α : Type u} (s : NonDetT m α) :  ExtractNonDet WeakFindable s -> l
+  | .pure x => ⊤
+  | .vis x f ex => wlp x fun y => (ex y).prop
+  | .pickSuchThat _ p f ex => (⨅ t, ⌜p t⌝ ⇨ (ex t).prop)
+  | .assume p _ ex => ⌜p .unit⌝ ⊓ (ex .unit).prop
+  | .repeatCont _ f cont ex ex' => ⌜ ∀ b, ⊤ <= (ex b).prop ∧ ⊤ <= (ex' b).prop⌝
+
+lemma ExtractNonDet.extract_refines_wp_weak (s : NonDetT m α) (inst : ExtractNonDet WeakFindable s) :
+  wp s post ⊓ inst.prop <= wp s.extractWeak post := by
+  unhygienic induction inst
+  { simp [wp_pure, NonDetT.extractWeak] }
+  { simp [NonDetT.wp_vis, ExtractNonDet.prop]; rw [inf_comm, wlp_join_wp]
+    simp [NonDetT.extractWeak, wp_bind]
+    apply wp_cons; aesop (add norm inf_comm) }
+  { simp [NonDetT.wp_pickCont, ExtractNonDet.prop, NonDetT.extractWeak]; split
+    simp [CCPOBot.prop, wp_bot]
+    rw [← @iInf_inf_eq]; simp [meet_himp _ _ _ _ rfl]
+    rename_i y _
+    refine iInf_le_of_le y ?_
+    have := WeakFindable.find_some_p (p := p) (by assumption)
+    simp [this]; apply a_ih }
+  { simp [NonDetT.wp_pickCont, ExtractNonDet.prop, NonDetT.extractWeak]
+    have: ∀ a : PUnit.{u_1 + 1}, a = .unit := by aesop
+    simp [this, iInf_const, iSup_const]; apply le_trans'; apply a_ih
+    simp; constructor
+    { rw [<-inf_assoc]; apply inf_le_of_left_le; rw [<-le_himp_iff] }
+    rw [<-inf_assoc]; exact inf_le_right }
+  rw [NonDetT.wp_repeatCont, NonDetT.extractWeak, NonDetT.extractGen, wp_bind, ExtractNonDet.prop]
+  simp; intro hprop inv hinv; apply le_trans'; apply wp_cons; rotate_right
+  { apply (triple_spec ..).mpr; apply repeat_inv
+    intro b; apply le_trans'; apply a_ih; simp [hprop]
+    simp [NonDetT.wp_eq_wp, hinv] }
+  intro b; apply le_trans'; apply a_ih_1; simp [hprop]
+  simp [NonDetT.wp_eq_wp]
+
+lemma ExtractNonDet.extract_refines_triple_weak (pre : l) (s : NonDetT m α) (inst : ExtractNonDet WeakFindable s) :
+  triple pre s post ->
+  pre <= inst.prop ->
+  triple pre s.extractWeak post := by
+  intro tr imp; apply le_trans'; apply ExtractNonDet.extract_refines_wp_weak
+  simp; aesop
+
 
 end PartialCorrectness.DemonicChoice
