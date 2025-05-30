@@ -57,7 +57,7 @@ scoped instance : MPropOrdered DivM Prop where
     rintro h (_|_) <;> simp
     solve_by_elim
 
-instance : MPropDet DivM Prop where
+scoped instance : MPropDet DivM Prop where
   demonic := by
     rintro _ (_|_) <;> simp [MProp.lift, MPropOrdered.μ, Functor.map, LE.pure]
   angelic := by
@@ -86,7 +86,7 @@ scoped instance : MPropOrdered DivM Prop where
     rintro h (_|_) <;> simp
     solve_by_elim
 
-instance : MPropDet DivM Prop where
+scoped instance : MPropDet DivM Prop where
   angelic := by
     rintro _ (_|_) <;> simp [MProp.lift, MPropOrdered.μ, Functor.map, LE.pure]
   demonic := by
