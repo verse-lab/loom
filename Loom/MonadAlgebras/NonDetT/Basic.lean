@@ -484,16 +484,15 @@ end DemonicChoice
 namespace AngelicChoice
 
 noncomputable
-def   NonDetT.wp : {α : Type u} -> NonDetT m α -> Cont l α
+def   NonDetT.wp {l : Type u} [CompleteLattice l] [MPropOrdered m l] : {α : Type u} -> NonDetT m α -> Cont l α
   | _, .pure ret => pure ret
   | _, .vis x f => fun post => _root_.wp x fun a => wp (f a) post
   | _, .pickCont _ p f => fun post => ⨆ a, ⌜p a⌝ ⊓ wp (f a) post
-  | _, .repeatCont init f cont => fun post => ⨆ (inv : ForInStep _ -> l),
-    ⌜ ∀ b, (inv (ForInStep.yield b)) <= wp (f b) inv⌝ ⊓
+  | _, .repeatCont init f cont => fun post => ⨆ (inv : ForInStep _ -> l) (wf : WellFoundedRelation _),
+    ⌜ ∀ b, (inv (ForInStep.yield b)) <= wp (f b) (fun | .yield b' => inv (.yield b') ⊓ ⌜ wf.rel b' b ⌝ | .done b' => inv (.done b'))⌝ ⊓
     spec (inv (.yield init)) (fun b => inv (.done b)) (fun b => wp (cont b) post)
 
-omit [MPropOrdered m l] in
-lemma spec_mono {α : Type u} (pre : l) (post : α -> l) (f g : α -> l) :
+lemma spec_mono {α : Type u} {l : Type u} [CompleteLattice l] (pre : l) (post : α -> l) (f g : α -> l) :
   (∀ a, f a <= g a) ->
   spec pre post f <= spec pre post g := by
     unfold spec; intro
@@ -501,15 +500,15 @@ lemma spec_mono {α : Type u} (pre : l) (post : α -> l) (f g : α -> l) :
     refine LE.pure_imp (post ≤ f) (post ≤ g) ?_
     intro h a; apply le_trans; apply h a; solve_by_elim
 
-lemma NonDetT.wp_mono [LawfulMonad m] {α : Type u} (x : NonDetT m α) (f g : α -> l) :
+lemma NonDetT.wp_mono [LawfulMonad m] {α : Type u} {l : Type u} [CompleteLattice l] [MPropOrdered m l] (x : NonDetT m α) (f g : α -> l) :
   (∀ a, f a <= g a) ->
   NonDetT.wp x f <= NonDetT.wp x g := by
     intro h; induction x
     <;> simp [NonDetT.wp, pure, h, -le_himp_iff, -iSup_le_iff]
     <;> try solve_by_elim [wp_cons, le_iSup_of_le, inf_le_inf_left, iSup_mono]
-    apply iSup_mono; intro inv
+    apply iSup_mono; intro inv; apply iSup_mono; intro wf
     solve_by_elim [wp_cons, spec_mono, inf_le_inf_left]
-lemma NonDetT.wp_bind [LawfulMonad m] {α β : Type u} (x : NonDetT m α) (f : α -> NonDetT m β)
+lemma NonDetT.wp_bind [LawfulMonad m] {α β : Type u} {l : Type u} [CompleteLattice l] [MPropOrdered m l] (x : NonDetT m α) (f : α -> NonDetT m β)
   (post : β -> l):
   NonDetT.wp (x.bind f) post = NonDetT.wp x (fun x => NonDetT.wp (f x) post) := by
     unhygienic induction x
@@ -559,8 +558,8 @@ lemma NonDetT.wp_pickCont {τ : Type u} p (f : τ → NonDetT m α) post :
 
 @[simp]
 lemma NonDetT.wp_repeatCont {α : Type u} (init : α) (f : α -> NonDetT m (ForInStep α)) (cont : α -> NonDetT m β) post :
-  _root_.wp (NonDetT.repeatCont init f cont) post = ⨆ (inv : ForInStep _ -> l),
-    ⌜ ∀ b, (inv (ForInStep.yield b)) <= wp (f b) inv⌝ ⊓
+  _root_.wp (NonDetT.repeatCont init f cont) post = ⨆ (inv : ForInStep _ -> l) (wf : WellFoundedRelation _),
+    ⌜ ∀ b, (inv (ForInStep.yield b)) <= wp (f b) (fun | .yield b' => inv (.yield b') ⊓ ⌜ wf.rel b' b ⌝ | .done b' => inv (.done b'))⌝ ⊓
     spec (inv (.yield init)) (fun b => inv (.done b)) (fun b => wp (cont b) post) := by
   simp [NonDetT.wp_eq_wp]; rfl
 
@@ -580,25 +579,26 @@ lemma MonadNonDet.wp_pickSuchThat {τ : Type u} (p : τ → Prop) post :
   simp [MonadNonDet.pickSuchThat, NonDetT.pickSuchThat]
 
 lemma MonadNonDet.wp_repeat {α : Type u} (init : α) (f : α -> NonDetT m (ForInStep α)) post :
-  _root_.wp (MonadNonDet.rep (m := NonDetT m) init f) post = ⨆ (inv : ForInStep _ -> l),
-    ⌜ ∀ b, (inv (ForInStep.yield b)) <= wp (f b) inv⌝ ⊓
+  _root_.wp (MonadNonDet.rep (m := NonDetT m) init f) post = ⨆ (inv : ForInStep _ -> l) (wf : WellFoundedRelation _),
+    ⌜ ∀ b, (inv (ForInStep.yield b)) <= wp (f b) (fun | .yield b' => inv (.yield b') ⊓ ⌜ wf.rel b' b ⌝ | .done b' => inv (.done b'))⌝ ⊓
     spec (inv (.yield init)) (fun b => inv (.done b)) post := by
   simp [MonadNonDet.rep, NonDetT.repeat, NonDetT.wp, pure, NonDetT.wp_eq_wp]
 
 instance [MonadNonDet m] : ForIn m Lean.Loop Unit where
   forIn {β} _ _ init f := @MonadNonDet.rep m _ β init (f ())
 
-lemma MonadNonDet.wp_forIn {β : Type u} (init : β) (f : Unit -> β -> NonDetT m (ForInStep β))
+lemma MonadNonDet.wp_forIn {β : Type u} (init : β) [WellFoundedRelation β] (f : Unit -> β -> NonDetT m (ForInStep β))
   (inv : β -> l) (on_done' : β -> l) :
-  (∀ b, inv b <= wp (f () b) (fun | .yield b' => inv b' | .done b' => inv b' ⊓ on_done' b')) ->
+  (∀ b, inv b <= wp (f () b) (fun | .yield b' => inv b' ⊓ ⌜ WellFoundedRelation.rel b' b ⌝ | .done b' => inv b' ⊓ on_done' b')) ->
   triple (inv init) (forIn (m := NonDetT m) Lean.Loop.mk init f) (fun b => inv b ⊓ on_done' b) := by
   intro hstep; simp [triple]; erw [MonadNonDet.wp_repeat]
   refine le_iSup_of_le (fun | .yield b' => inv b' | .done b' => inv b' ⊓ on_done' b') ?_
+  simp; refine le_iSup_of_le ?_ ?_; assumption
   simp [spec, hstep]
 
 @[loomWpSimp, spec]
 noncomputable
-def WPGen.forWithInvariantLoop [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.MonoBind m] {β}
+def WPGen.forWithInvariantLoop [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.MonoBind m] {β} [WellFoundedRelation β]
   {init : β} {f : Unit -> β → NonDetT m (ForInStep β)}
   (inv : β → List l) (on_done' : β → l) :
     WPGen (forIn Lean.Loop.mk init (fun u b => do
@@ -606,7 +606,7 @@ def WPGen.forWithInvariantLoop [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.Mono
         onDoneGadget (on_done' b)
         f u b)) := by
   apply WPGen.spec_triple_invs (invs :=
-    (∀ b, triple (invariants (inv b)) (f () b) (fun | .yield b' => invariants (inv b') | .done b' => invariants (inv b') ⊓ on_done' b')))
+    (∀ b, triple (invariants (inv b)) (f () b) (fun | .yield b' => invariants (inv b') ⊓ ⌜ WellFoundedRelation.rel b' b ⌝ | .done b' => invariants (inv b') ⊓ on_done' b')))
   intro h; simp [invariantGadget, onDoneGadget]
   solve_by_elim [MonadNonDet.wp_forIn]
 
