@@ -315,11 +315,20 @@ lemma ExceptionAsFailure.ExceptT.wp_lift (c : m α) (post : α -> l) :
   wp (liftM (n := ExceptT ε m) c) post = wp (m := m) c post := by
   apply ExceptT.wp_lift_hd
 
+
+lemma StateT.wp_eq (c : StateT σ m α) (post : α -> σ -> l) :
+  wp c post = fun s => wp (m := m) (c s) (fun xs => post xs.1 xs.2) := by
+  simp [wp, liftM, monadLift, MProp.lift_StateT, MonadLift.monadLift, StateT.lift];
+
 lemma StateT.wp_lift (c : m α) (post : α -> σ -> l) :
   wp (liftM (n := StateT σ m) c) post = fun s => wp (m := m) c (post · s) := by
   simp [wp, liftM, monadLift, MProp.lift_StateT, MonadLift.monadLift, StateT.lift];
   have liftE : ∀ α, MProp.lift (m := m) (α := α) = wp := by intros; ext; simp [wp, liftM, monadLift]
   ext s; rw [map_eq_pure_bind, liftE, liftE, wp_bind]; simp [wp_pure]
+
+lemma ReaderT.wp_eq (c : ReaderT σ m α) (post : α -> σ -> l) :
+  wp c post = fun s => wp (m := m) (c s) (post · s) := by
+  simp [wp, liftM, monadLift, MProp.lift_ReaderT, MonadLift.monadLift];
 
 lemma ReaderT.wp_lift (c : m α) (post : α -> σ -> l) :
   wp (liftM (n := ReaderT σ m) c) post = fun s => wp (m := m) c (post · s) := by
