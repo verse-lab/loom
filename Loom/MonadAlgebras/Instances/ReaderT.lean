@@ -58,7 +58,7 @@ lemma MProp.lift_ReaderT [Monad m] [LawfulMonad m] [CompleteLattice l] [inst: MP
   MProp.lift x post = fun s => MProp.lift (x s) (fun xs => post xs s) := by
     simp [MProp.lift, Functor.map, MPropOrdered.μ]
 
-open Lean.Order in
+open Lean.Order
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MPropOrdered m l]
   [∀ α, CCPO (m α)] [MonoBind m]
   [MPropPartial m] : MPropPartial (ReaderT σ m) where
@@ -74,3 +74,12 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MPropOrdere
       right; solve_by_elim }
     repeat rw [@iInf_subtype']
     refine iInf_mono' ?_; simp [Membership.mem, Set.Mem]; aesop
+
+attribute [-simp] le_bot_iff in
+instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MPropOrdered m l]
+  [∀ α, CCPO (m α)]  [MonoBind m]
+  [MPropTotal m] : MPropTotal (ReaderT σ m) where
+  bot_lift := by
+    simp [MProp.lift_ReaderT, bot, instCCPOReaderTOfMonad_loom, CCPO.csup, fun_csup]
+    intros; intro; simp;
+    apply MPropTotal.bot_lift (m := m)

@@ -55,7 +55,7 @@ lemma MProp.lift_StateT [Monad m] [LawfulMonad m] [CompleteLattice l] [inst: MPr
   MProp.lift x post = fun s => MProp.lift (x s) (fun xs => post xs.1 xs.2) := by
     simp [MProp.lift, Functor.map, MPropOrdered.μ, StateT.map]
 
-open Lean.Order in
+open Lean.Order
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MPropOrdered m l]
   [∀ α, CCPO (m α)] [MonoBind m]
   [MPropPartial m] : MPropPartial (StateT σ m) where
@@ -71,3 +71,12 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MPropOrdere
       right; solve_by_elim }
     repeat rw [@iInf_subtype']
     refine iInf_mono' ?_; simp [Membership.mem, Set.Mem]; aesop
+
+attribute [-simp] le_bot_iff in
+instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MPropOrdered m l]
+  [∀ α, CCPO (m α)]  [MonoBind m]
+  [MPropTotal m] : MPropTotal (StateT σ m) where
+  bot_lift := by
+    simp [MProp.lift_StateT, bot, instCCPOStateTOfMonad_loom, CCPO.csup, fun_csup]
+    intros; intro; simp;
+    apply MPropTotal.bot_lift (m := m)

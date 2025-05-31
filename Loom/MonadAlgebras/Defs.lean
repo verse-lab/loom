@@ -110,9 +110,15 @@ class MPropDet (l : outParam (Type v)) [Monad m] [CompleteLattice l] [MPropOrder
   angelic {α : Type v} (c : m α) (p₁ p₂ : α -> l) :
     MProp.lift c p₁ ⊓ MProp.lift c p₂ ≤ MProp.lift c (fun x => p₁ x ⊓ p₂ x)
 
-/-- Class for partiall correctness monadic algebras -/
-class MPropPartial (m : Type u -> Type v) [Monad m] [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.MonoBind m]
+/-- Class for partial correctness monadic algebras -/
+class MPropPartial (m : Type u -> Type v) [Monad m] [∀ α, Lean.Order.CCPO (m α)]
   [CompleteLattice l] [MPropOrdered m l] where
   csup_lift {α : Type u} (xc : Set (m α)) (post : α -> l) :
     Lean.Order.chain xc ->
     ⨅ x ∈ xc, MProp.lift x post <= MProp.lift (Lean.Order.CCPO.csup xc) post
+
+/-- Class for total correctness monadic algebras -/
+class MPropTotal (m : Type u -> Type v) [Monad m] [∀ α, Lean.Order.CCPO (m α)]
+  [CompleteLattice l] [MPropOrdered m l] where
+  bot_lift {α : Type u} (post : α -> l) :
+    MProp.lift (Lean.Order.bot : m α) post <= ⊥

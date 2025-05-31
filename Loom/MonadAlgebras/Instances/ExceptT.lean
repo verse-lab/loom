@@ -169,3 +169,11 @@ instance (hd : ε -> _) [IsHandler hd] [_root_.CompleteLattice l] [Monad m] [Law
   csup_lift {α} chain := by
     intro post hchain; simp [MProp.lift_ExceptT]
     solve_by_elim [MPropPartial.csup_lift (m := m)]
+
+attribute [-simp] le_bot_iff in
+instance (hd : ε -> _) [IsHandler hd] [_root_.CompleteLattice l] [Monad m] [LawfulMonad m] [inst: MPropOrdered m l]
+  [∀ α, CCPO (m α)] [MonoBind m]
+  [MPropTotal m] : MPropTotal (ExceptT ε m) where
+  bot_lift := by
+    intro post hchain; simp [MProp.lift_ExceptT]
+    solve_by_elim [MPropTotal.bot_lift (m := m)]

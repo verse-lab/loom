@@ -202,6 +202,16 @@ lemma repeat_inv_split (f : Unit -> β -> m (ForInStep β)) [WellFoundedRelation
   apply repeat_inv f (fun | .yield b => inv b | .done b => inv b ⊓ doneWith b) init
   apply hstep
 
+variable [MPropTotal m]
+
+omit [LawfulMonad m] [MonoBind m] in
+attribute [-simp] le_bot_iff in
+@[simp]
+lemma wp_bot :
+  wp (bot : m α) = fun _ => (⊥ : l) := by
+  ext post; refine eq_bot_iff.mpr ?_
+  simp [wp, liftM, monadLift]; apply  MPropTotal.bot_lift
+
 end TotalCorrectness
 
 theorem triple_forIn_list {α β}

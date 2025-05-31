@@ -358,6 +358,13 @@ macro "extractable_step" : tactic =>
 macro "extractable_tactic" : tactic =>
   `(tactic| repeat' (intros; extractable_step; try dsimp))
 
+noncomputable
+def ExtractNonDet.prop {α : Type u} (s : NonDetT m α) :  ExtractNonDet WeakFindable s -> l
+  | .pure x => ⊤
+  | .vis x f ex => wlp x fun y => (ex y).prop
+  | .pickSuchThat _ p f ex => ⨅ t ∈ WeakFindable.find p, (ex t).prop
+  | .assume p _ ex => ⌜p .unit⌝ ⊓ (ex .unit).prop
+
 namespace DemonicChoice
 
 omit [MonoBind m] in
@@ -392,14 +399,6 @@ lemma ExtractNonDet.extract_refines (pre : l) (s : NonDetT m α) (inst : Extract
   triple pre s.extract post := by
   intro tr imp; apply le_trans'; apply ExtractNonDet.extract_refines_wp
   simp; aesop
-
-noncomputable
-def _root_.ExtractNonDet.prop {α : Type u} (s : NonDetT m α) :  ExtractNonDet WeakFindable s -> l
-  | .pure x => ⊤
-  | .vis x f ex => wlp x fun y => (ex y).prop
-  | .pickSuchThat _ p f ex => ⨅ t ∈ WeakFindable.find p, (ex t).prop
-  | .assume p _ ex => ⌜p .unit⌝ ⊓ (ex .unit).prop
-
 
 variable [MPropPartial m]
 
@@ -445,3 +444,24 @@ lemma ExtractNonDet.extract_refines_triple_weak (pre : l) (s : NonDetT m α) (in
   simp; aesop
 
 end DemonicChoice
+
+namespace AngelicChoice
+
+variable [MPropTotal m]
+omit [MonoBind m] in
+lemma ExtractNonDet.extract_refines_wp_weak (s : NonDetT m α) (inst : ExtractNonDet WeakFindable s) :
+  wp s.extractWeak post ⊓ inst.prop <= wp s post := by
+  unhygienic induction inst
+  { simp [wp_pure, NonDetT.extractWeak] }
+  { simp [NonDetT.wp_vis, ExtractNonDet.prop, NonDetT.extractWeak, wp_bind]; rw [inf_comm, wlp_join_wp]
+    apply wp_cons; aesop (add norm inf_comm) }
+  { simp [NonDetT.wp_pickCont, ExtractNonDet.prop, NonDetT.extractWeak]; split
+    { simp [*, CCPOBot.prop, TotalCorrectness.wp_bot] }
+    simp [*]; apply le_iSup_of_le; simp; constructor; rotate_left
+    apply a_ih; rename_i h; simp [x.find_some_p h] }
+  simp [NonDetT.wp_pickCont, ExtractNonDet.prop, NonDetT.extractWeak, LE.pure];
+  split_ifs <;> simp; apply le_iSup_of_le
+  apply a_ih
+
+
+end AngelicChoice

@@ -92,4 +92,9 @@ scoped instance : MPropDet DivM Prop where
   demonic := by
     rintro _ (_|_) <;> simp [MProp.lift, MPropOrdered.μ, Functor.map, LE.pure]
 
+instance : MPropTotal DivM where
+  bot_lift := by
+    rintro _ _; simp [MProp.lift, MPropOrdered.μ, Functor.map, LE.pure]
+    rw [<-CCPOBot.prop]; simp
+
 end TotalCorrectness
