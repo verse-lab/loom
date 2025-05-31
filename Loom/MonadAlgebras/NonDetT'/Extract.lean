@@ -463,5 +463,13 @@ lemma ExtractNonDet.extract_refines_wp_weak (s : NonDetT m α) (inst : ExtractNo
   split_ifs <;> simp; apply le_iSup_of_le
   apply a_ih
 
+omit [MonoBind m] in
+lemma ExtractNonDet.extract_refines_triple (pre : l) (s : NonDetT m α) (inst : ExtractNonDet WeakFindable s) :
+  triple pre s.extractWeak post ->
+  pre <= inst.prop ->
+  triple pre s post := by
+  intro tr imp; apply le_trans'; apply ExtractNonDet.extract_refines_wp_weak <;> solve_by_elim
+  simp; aesop
+
 
 end AngelicChoice
