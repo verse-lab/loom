@@ -385,6 +385,7 @@ lemma ExtractNonDet.extract_refines_wp (s : NonDetT m α) (inst : ExtractNonDet 
   { rw [<-inf_assoc, <-le_himp_iff]; exact inf_le_left }
   refine inf_le_of_right_le ?_; exact inf_le_left
 
+omit [MonoBind m] in
 lemma ExtractNonDet.extract_refines (pre : l) (s : NonDetT m α) (inst : ExtractNonDet Findable s) :
   triple pre s post ->
   pre <= s.prop ⊤ ->
