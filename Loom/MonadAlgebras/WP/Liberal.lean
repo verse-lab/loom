@@ -219,3 +219,7 @@ omit [MPropDet m l] in
 lemma ReaderT.wlp_eq (c : ReaderT σ m α) (post : α -> σ -> l) :
   wlp c post = fun s => wlp (m := m) (c s) (post · s) := by
   simp [wlp, ReaderT.wp_eq]; rfl
+
+lemma ExceptT.wlp_eq (c : ExceptT ε m α) (post : α -> l) :
+  [totl| wlp c post] = [part| wlp c post] := by
+  rw [wlp_part_wlp_handler]
