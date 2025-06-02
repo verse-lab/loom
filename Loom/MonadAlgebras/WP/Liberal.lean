@@ -27,8 +27,13 @@ private lemma compl_fun'' {α} (x : α -> l) :
 private lemma compl_fun_true {α} :
   (fun (_ : α) => ⊤)ᶜ = fun _ => (⊥ : l) := by simp [compl]
 
+abbrev iwp (c : m α) : Cont l α := Cont.inv (wp c)
+
+omit [LawfulMonad m] in
 @[simp]
-abbrev iwp (c : m α) (post : α -> l) : l := (wp c postᶜ)ᶜ
+lemma iwp_eq (c : m α) (post : α -> l) :
+  iwp c post = (wp c postᶜ)ᶜ := by
+    simp [iwp, Cont.inv]
 
 def wlp (c : m α) (post : α -> l) : l := iwp c post ⊔ wp c post
 
@@ -166,16 +171,16 @@ lemma wp_compl'  (c : m α) post (wp_bot : ∀ α (c : m α), wp c ⊥ = ⊥) :
   rw [this, <-le_himp_iff, himp_eq]; rw [← @compl_inf, <-wp_and]; simp
   solve_by_elim
 
-lemma wp_tot_eq_iwp_part ε (c : ExceptT ε m α) (post : α -> l)
-   (wp_bot : ∀ α (c : m α), wp c ⊥ = ⊥)
-   (wp_top : ∀ α (c : m α), wp c ⊤ = ⊤) :
-   [totl| wp c post] = [part| iwp c post] := by
-    simp only [iwp, wp_tot_eq, wp_part_eq]
-    apply le_antisymm <;> try simp
-    { apply le_trans; apply wp_compl'; simp [*]
-      simp; apply wp_cons; rintro (_|_) <;> simp }
-    apply le_trans'; apply wp_compl; simp [*]
-    simp; apply wp_cons; rintro (_|_) <;> simp
+-- lemma wp_tot_eq_iwp_part ε (c : ExceptT ε m α) (post : α -> l)
+--    (wp_bot : ∀ α (c : m α), wp c ⊥ = ⊥)
+--    (wp_top : ∀ α (c : m α), wp c ⊤ = ⊤) :
+--    [totl| wp c post] = [part| iwp c post] := by
+--     simp only [iwp, wp_tot_eq, wp_part_eq]
+--     apply le_antisymm <;> try simp
+--     { apply le_trans; apply wp_compl'; simp [*]
+--       simp; apply wp_cons (x := c); rintro (_|_) <;> simp }
+--     apply le_trans'; apply wp_compl; simp [*]
+--     simp; apply wp_cons; rintro (_|_) <;> simp
 
 private lemma le_coml_sup (x y z : l) :
   y <= x ⊔ z -> xᶜ <= yᶜ ⊔ z := by

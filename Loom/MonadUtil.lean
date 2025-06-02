@@ -1,5 +1,5 @@
 import Mathlib.Order.Basic
-import Mathlib.Order.Lattice
+import Mathlib.Order.CompleteLattice.Basic
 
 universe u v w
 
@@ -9,6 +9,9 @@ abbrev Cont (t : Type v) (α : Type u) := (α -> t) -> t
 instance (t : Type v) : Monad (Cont t) where
   pure x := fun f => f x
   bind x f := fun g => x (fun a => f a g)
+
+def Cont.inv {t : Type v} {α : Type u} [BooleanAlgebra t] (wp : Cont t α) : Cont t α :=
+  fun f => (wp fun x => (f x)ᶜ)ᶜ
 
 @[simp]
 def Cont.monotone {t : Type v} {α : Type u} [Preorder t] (wp : Cont t α) :=
