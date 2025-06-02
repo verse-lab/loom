@@ -109,6 +109,15 @@ instance MPropExceptHdDet (hd : ε -> Prop)
     apply le_of_eq;rw [map_eq_pure_bind]; apply MProp.bind (m := m); ext a; cases a <;> simp
     simp [Except.getD, MProp.μ, iInf_const]
 
+instance
+  [CompleteLattice l] [inst: MPropOrdered m l] [IsHandler (fun (_ : ε) => True)]
+  [inst': NoFailure m] : NoFailure (ExceptT ε m) where
+  noFailure := by
+    rintro _ c
+    rw (occs := [2]) [<-inst'.noFailure (c := c)]
+    simp [MProp.lift, MPropOrdered.μ, Functor.map, LE.pure, ExceptT.map, ExceptT.mk, OfHd, MPropExcept]
+    rw [map_eq_pure_bind]; apply MPropOrdered.bind; ext (_|_) <;> simp
+
 
 end ExeceptHandler
 

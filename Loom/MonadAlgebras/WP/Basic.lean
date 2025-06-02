@@ -49,6 +49,12 @@ lemma triple_bind {β} (pre : l) (x : m α) (cut : α -> l)
     intros; simp [triple, wp_bind]
     solve_by_elim [le_trans', wp_cons]
 
+omit [LawfulMonad m] in
+@[simp]
+lemma wp_top (c : m α) [NoFailure m] :
+  wp c (fun _ => ⊤) = ⊤ := by
+    simp [wp, liftM, monadLift, NoFailure.noFailure]
+
 end
 
 section
@@ -149,13 +155,13 @@ namespace PartialCorrectness
 
 variable [∀ α, CCPO (m α)] [MonoBind m] [MPropPartial m]
 
-omit [LawfulMonad m] in
+omit [MonoBind m] [LawfulMonad m] in
 lemma wp_csup (xc : Set (m α)) (post : α -> l) :
   Lean.Order.chain xc ->
   ⨅ c ∈ xc, wp c post ≤ wp (Lean.Order.CCPO.csup xc) post := by
   apply MPropPartial.csup_lift
 
-omit [LawfulMonad m] in
+omit [MonoBind m] [LawfulMonad m] in
 lemma wp_bot :
   wp (bot : m α) = fun _ => (⊤ : l) := by
   ext post; refine eq_top_iff.mpr ?_

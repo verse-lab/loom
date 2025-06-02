@@ -163,6 +163,12 @@ lemma NonDetT.wp_iInf {ι : Type u} {α : Type u} {l : Type u} [CompleteBooleanA
   { erw [_root_.wp_iInf] }
   rw [iInf_psigma', iInf_comm]; congr!; simp [iInf_psigma']
 
+instance [NoFailure m] : NoFailure (NonDetT m) where
+  noFailure := by
+    intro α c
+    have : MProp.lift c = wp c := by rfl
+    rw [this, NonDetT.wp_eq_wp]; clear this
+    induction c <;> simp [NonDetT.wp, pure, *]
 
 end DemonicChoice
 

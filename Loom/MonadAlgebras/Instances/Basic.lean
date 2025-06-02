@@ -73,6 +73,10 @@ instance : MPropPartial DivM where
       solve_by_elim }
     solve_by_elim
 
+instance : NoFailure DivM where
+  noFailure := by
+    rintro _ (_|_) <;> simp [MProp.lift, MPropOrdered.μ, Functor.map, LE.pure]
+
 end PartialCorrectness
 
 namespace TotalCorrectness

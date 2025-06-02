@@ -123,3 +123,7 @@ class MPropTotal (m : Type u -> Type v) [Monad m] [∀ α, Lean.Order.CCPO (m α
   [CompleteLattice l] [MPropOrdered m l] where
   bot_lift {α : Type u} (post : α -> l) :
     MProp.lift (Lean.Order.bot : m α) post <= ⊥
+
+class NoFailure (m : Type u -> Type v) [Monad m] [CompleteLattice l] [MPropOrdered m l] where
+  noFailure {α : Type u} (c : m α) :
+    MProp.lift c (fun _ => ⊤) = ⊤

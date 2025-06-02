@@ -83,3 +83,8 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MPropOrdere
     simp [MProp.lift_ReaderT, bot, instCCPOReaderTOfMonad_loom, CCPO.csup, fun_csup]
     intros; intro; simp;
     apply MPropTotal.bot_lift (m := m)
+
+instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MPropOrdered m l]
+  [inst': NoFailure m] : NoFailure (ReaderT σ m) where
+  noFailure := by
+    intro _ _; simp [MProp.lift_ReaderT, inst'.noFailure]; rfl
