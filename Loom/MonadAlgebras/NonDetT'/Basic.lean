@@ -172,11 +172,10 @@ instance [NoFailure m] : NoFailure (NonDetT m) where
 
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
   [inst: MPropOrdered m l] :
-  MPropLift m l (NonDetT m) l (fun p => p) where
-    ι_mon := by simp [Monotone, LE.le]
+  MPropLiftT m l (NonDetT m) l where
     μ_lift := by
-      simp [liftM, monadLift, MonadLift.monadLift, MPropOrdered.μ, NonDetT.μ, NonDetT.wp,
-        pure, wp, MProp.lift]
+      intros; simp [liftM, monadLift, MonadLift.monadLift, MPropOrdered.μ, NonDetT.μ, NonDetT.wp,
+        pure, wp, MProp.lift, Functor.map, NonDetT.wp, NonDetT.bind]
 
 end DemonicChoice
 
@@ -267,11 +266,10 @@ lemma MonadNonDet.wp_pickSuchThat {τ : Type u} (p : τ → Prop) post :
 
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
   [inst: MPropOrdered m l] :
-  MPropLift m l (NonDetT m) l (fun p => p) where
-    ι_mon := by simp [Monotone, LE.le]
+  MPropLiftT m l (NonDetT m) l where
     μ_lift := by
-      simp [liftM, monadLift, MonadLift.monadLift, MPropOrdered.μ, NonDetT.μ, NonDetT.wp,
-        pure, wp, MProp.lift]
+      intros; simp [liftM, monadLift, MonadLift.monadLift, MPropOrdered.μ, NonDetT.μ, NonDetT.wp,
+        pure, wp, MProp.lift, Functor.map, NonDetT.wp, NonDetT.bind]
 
 end AngelicChoice
 

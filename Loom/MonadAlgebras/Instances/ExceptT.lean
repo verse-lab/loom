@@ -122,15 +122,11 @@ instance
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
   [IsHandler (ε := ε) hd]
   [inst: MPropOrdered m l] :
-  MPropLift m l (ExceptT ε m) l (fun p => p) where
-    ι_mon := by simp [Monotone, LE.le]
+  MPropLiftT m l (ExceptT ε m) l where
     μ_lift := by
-      intro x;
-      have h := MProp.lift_ExceptT (hd := hd) (c := liftM (n := ExceptT ε m) x) (post := fun p => p)
-      simp [MProp.lift] at h;
-      simp [h, liftM, monadLift, MonadLift.monadLift, Functor.map, MPropOrdered.μ, OfHd, MPropExcept]
-      simp [ExceptT.map, ExceptT.lift, ExceptT.mk]
-
+      intros; simp [MProp.lift_ExceptT];
+      simp [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]
+      simp [ExceptT.map, ExceptT.lift, ExceptT.mk, MProp.lift]
 
 end ExeceptHandler
 

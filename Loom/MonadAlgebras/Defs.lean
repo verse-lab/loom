@@ -128,37 +128,49 @@ class NoFailure (m : Type u -> Type v) [Monad m] [CompleteLattice l] [MPropOrder
   noFailure {α : Type u} (c : m α) :
     MProp.lift c (fun _ => ⊤) = ⊤
 
+class LogicLift (l : semiOutParam (Type u)) ( k : Type u) [lift : MonadLiftT (Cont l) (Cont k)] [CompleteLattice l] [CompleteLattice k] where
+  lift_top {α : Type u} :
+    liftM (m := Cont l) (n := Cont k) (fun (_ : α -> l) => ⊤) = ⊤
+  lift_bot {α : Type u} :
+    liftM (m := Cont l) (n := Cont k) (fun (_ : α -> l) => ⊥) = ⊥
+
+
+instance [CompleteLattice l] : LogicLift l l where
+  lift_top := by simp [liftM, monadLift, MonadLift.monadLift]; intros; rfl
+  lift_bot := by simp [liftM, monadLift, MonadLift.monadLift]; intros; rfl
+
+instance {l σ : Type u} [CompleteLattice l] : LogicLift l (σ -> l) where
+  lift_top := by simp [liftM, monadLift, MonadLift.monadLift]; intros; rfl
+  lift_bot := by simp [liftM, monadLift, MonadLift.monadLift]; intros; rfl
+
+
 class MPropLift
   (m : semiOutParam (Type u -> Type v)) (l : semiOutParam (Type u)) [Monad m] [CompleteLattice l] [MPropOrdered m l]
   (n : (Type u -> Type w)) (k : outParam (Type u)) [Monad n] [CompleteLattice k] [MPropOrdered n k]
-  [MonadLiftT m n] (ι : outParam (l -> k))
+  [MonadLiftT m n] [cl : MonadLift (Cont l) (Cont k)]
   where
-    [ι_mon : Monotone ι]
-    μ_lift (x : m l) : MPropOrdered.μ (ι <$> liftM (n := n) x) = ι (MPropOrdered.μ x)
+    μ_lift (x : m α) : MProp.lift (liftM (n := n) x) f = liftM (n := Cont k) (MProp.lift x) f
 
-class TPropT
+class MPropLiftT
   (m : (Type u -> Type v)) (l : (Type u)) [Monad m] [CompleteLattice l] [MPropOrdered m l]
   (n : (Type u -> Type w)) (k : outParam (Type u)) [Monad n] [CompleteLattice k] [MPropOrdered n k]
-  [MonadLiftT m n] (ι : outParam (l -> k))
+  [MonadLiftT m n] [cl : MonadLiftT (Cont l) (Cont k)]
   where
-    [ι_mon : Monotone ι]
-    μ_lift (x : m l) : MPropOrdered.μ (ι <$> liftM (n := n) x) = ι (MPropOrdered.μ x)
+    μ_lift (x : m α) : MProp.lift (liftM (n := n) x) f = liftM (n := Cont k) (MProp.lift x) f
 
-instance TPropTRefl [Monad m] [CompleteLattice l] [LawfulMonad m] [MPropOrdered m l] :
-  TPropT m l m l (fun p => p) where
-    ι_mon := by simp [Monotone]
+
+instance MPropLiftTRefl [Monad m] [CompleteLattice l] [LawfulMonad m] [MPropOrdered m l] :
+  MPropLiftT m l m l where
     μ_lift := by simp
 
-instance TPropTrans
+instance MPropLiftTTrans
   [Monad m] [CompleteLattice l] [LawfulMonad m] [MPropOrdered m l]
-  [Monad n] [CompleteLattice k] [LawfulMonad n] [MPropOrdered n k] [MonadLiftT m n] (ι : l -> k)
-  [LawfulMonadLiftT m n]
-  [Monad p] [CompleteLattice q] [LawfulMonad p] [MPropOrdered p q] [MonadLift n p] (ι' : k -> q)
-  [LawfulMonadLift n p]
-  [inst': TPropT m l n k ι] [inst: MPropLift n k p q ι'] :
-  TPropT m l p q (ι' ∘ ι) where
-    ι_mon := by simp [Monotone]; intros; solve_by_elim [inst.ι_mon, inst'.ι_mon];
+  [Monad n] [CompleteLattice k] [LawfulMonad n] [MPropOrdered n k] [MonadLiftT m n]
+  [MonadLiftT (Cont l) (Cont k)]
+  [Monad p] [CompleteLattice q] [LawfulMonad p] [MPropOrdered p q] [MonadLift n p]
+  [MonadLift (Cont k) (Cont q)]
+  [inst': MPropLiftT m l n k] [inst: MPropLift n k p q] :
+  MPropLiftT m l p q where
     μ_lift := by
-      simp only [comp_map]; intro x
-      rw [<-lift_map (x := x), liftM]
-      simp [instMonadLiftTOfMonadLift]; erw [inst.μ_lift, <-inst'.μ_lift, <-lift_map]; rfl
+      intros; simp [liftM, instMonadLiftTOfMonadLift];
+      erw [inst.μ_lift]; congr!; ext; apply inst'.μ_lift

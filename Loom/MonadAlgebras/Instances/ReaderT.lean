@@ -90,10 +90,7 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MPropOrdere
     intro _ _; simp [MProp.lift_ReaderT, inst'.noFailure]; rfl
 
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MPropOrdered m l] :
-  MPropLift m l (ReaderT σ m) (σ -> l) (fun p _ => p) where
-    ι_mon := by simp [Monotone, LE.le]; aesop
+  MPropLiftT m l (ReaderT σ m) (σ -> l) where
     μ_lift := by
-      intro x;
-      have h := MProp.lift_ReaderT (x := liftM (n := ReaderT σ m) x) (post := fun p _ => p)
-      simp [MProp.lift] at h;
-      simp [h, liftM, monadLift, MonadLift.monadLift, Functor.map, MPropOrdered.μ]
+      intros; simp [MProp.lift_ReaderT]; ext;
+      simp [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]

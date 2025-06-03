@@ -29,6 +29,9 @@ instance (t : Type v) [Preorder t] : Monad (W t) where
   pure x := ⟨fun f => f x, by solve_by_elim⟩
   bind x f := ⟨fun g => x.wp (fun a => (f a).wp g), by simp; intros; solve_by_elim [W.wp_montone]⟩
 
+instance {l σ : Type u} : MonadLift (Cont l) (Cont (σ -> l)) where
+  monadLift x := fun f s => x (f · s)
+
 -- class Logic (t : Type u) extends SemilatticeInf t where
 --   sat : t -> Prop
 --   sat_monotone : ∀ {p₁ p₂ : t}, p₁ ≤ p₂ -> sat p₁ -> sat p₂

@@ -383,9 +383,12 @@ lemma ReaderT.wp_lift (c : m α) (post : α -> σ -> l) :
   wp (liftM (n := ReaderT σ m) c) post = fun s => wp (m := m) c (post · s) := by
   simp [wp, liftM, monadLift, MProp.lift_ReaderT, MonadLift.monadLift, StateT.lift]
 
--- lemma MPropLift.wp_lift [Monad n] [CompleteLattice k] [MPropOrdered n k] [MonadLiftT m n]
---   [MPropLift m l n k ι] :
---   wp (liftM (n := n) c) post = ι (wp (m := m) c (fun x => ι (post x))) := by sorry
+omit [LawfulMonad m] in
+lemma MPropLift.wp_lift [Monad n] [CompleteLattice k] [MPropOrdered n k] [MonadLiftT m n]
+  [MonadLiftT (Cont l) (Cont k)]
+  [MPropLiftT m l n k] (c : m α) (post : α -> k):
+  wp (liftM (n := n) c) post = liftM (n := Cont k) (m := Cont l) (wp c) post := by
+  apply MPropLiftT.μ_lift
 
 end Lift
 
@@ -393,13 +396,19 @@ section ExceptT
 
 variable [inst: CompleteLattice l] [MPropOrdered m l] [IsHandler (ε := ε) hd]
 
-lemma ExceptT.wp_throw (post : α -> l) (e : ε) :
-  wp (throw (m := ExceptT ε m) e) post = ⌜hd e⌝ := by
-    simp [wp_except_handler_eq, throw, throwThe, MonadExceptOf.throw, mk, wp_pure]
+lemma ExceptT.wp_throw (e : ε) :
+  wp (α := α) (throw (m := ExceptT ε m) e) = fun _ => ⌜hd e⌝ := by
+    ext; simp [wp_except_handler_eq, throw, throwThe, MonadExceptOf.throw, mk, wp_pure]
 
--- lemma MPropLift.wp_throw
---   [Monad n] [CompleteLattice k] [MPropOrdered n k] [MonadLiftT m n]
---   [MPropLift (ExceptT ε m) l n k ι] :
+lemma MPropLift.wp_throw
+  [Monad n] [CompleteLattice k] [MPropOrdered n k] [MonadLiftT m n]
+  [MonadLiftT (ExceptT ε m) n]
+  [MonadLiftT (Cont l) (Cont k)]
+  [LogicLift l k]
+  [MPropLiftT (ExceptT ε m) l n k] :
+    wp (liftM (n := n) (throw (m := ExceptT ε m) e)) post = ⌜hd e⌝ := by
+    rw [MPropLift.wp_lift, ExceptT.wp_throw]
+    simp only [LE.pure, monadLift_self]; split <;> simp [LogicLift.lift_bot, LogicLift.lift_top]
 
 
 end ExceptT
