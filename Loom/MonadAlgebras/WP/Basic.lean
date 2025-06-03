@@ -383,7 +383,26 @@ lemma ReaderT.wp_lift (c : m α) (post : α -> σ -> l) :
   wp (liftM (n := ReaderT σ m) c) post = fun s => wp (m := m) c (post · s) := by
   simp [wp, liftM, monadLift, MProp.lift_ReaderT, MonadLift.monadLift, StateT.lift]
 
+-- lemma MPropLift.wp_lift [Monad n] [CompleteLattice k] [MPropOrdered n k] [MonadLiftT m n]
+--   [MPropLift m l n k ι] :
+--   wp (liftM (n := n) c) post = ι (wp (m := m) c (fun x => ι (post x))) := by sorry
+
 end Lift
+
+section ExceptT
+
+variable [inst: CompleteLattice l] [MPropOrdered m l] [IsHandler (ε := ε) hd]
+
+lemma ExceptT.wp_throw (post : α -> l) (e : ε) :
+  wp (throw (m := ExceptT ε m) e) post = ⌜hd e⌝ := by
+    simp [wp_except_handler_eq, throw, throwThe, MonadExceptOf.throw, mk, wp_pure]
+
+-- lemma MPropLift.wp_throw
+--   [Monad n] [CompleteLattice k] [MPropOrdered n k] [MonadLiftT m n]
+--   [MPropLift (ExceptT ε m) l n k ι] :
+
+
+end ExceptT
 
 -- section StrongestPostcondition
 

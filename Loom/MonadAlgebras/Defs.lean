@@ -128,10 +128,37 @@ class NoFailure (m : Type u -> Type v) [Monad m] [CompleteLattice l] [MPropOrder
   noFailure {α : Type u} (c : m α) :
     MProp.lift c (fun _ => ⊤) = ⊤
 
-class TProp
-  (m : Type u -> Type v) (l : Type u) [Monad m] [CompleteLattice l] [MPropOrdered m l]
-  (n : Type u -> Type w) (k : outParam (Type u)) [Monad n] [CompleteLattice k] [MPropOrdered n k]
+class MPropLift
+  (m : semiOutParam (Type u -> Type v)) (l : semiOutParam (Type u)) [Monad m] [CompleteLattice l] [MPropOrdered m l]
+  (n : (Type u -> Type w)) (k : outParam (Type u)) [Monad n] [CompleteLattice k] [MPropOrdered n k]
   [MonadLiftT m n] (ι : outParam (l -> k))
   where
     [ι_mon : Monotone ι]
     μ_lift (x : m l) : MPropOrdered.μ (ι <$> liftM (n := n) x) = ι (MPropOrdered.μ x)
+
+class TPropT
+  (m : (Type u -> Type v)) (l : (Type u)) [Monad m] [CompleteLattice l] [MPropOrdered m l]
+  (n : (Type u -> Type w)) (k : outParam (Type u)) [Monad n] [CompleteLattice k] [MPropOrdered n k]
+  [MonadLiftT m n] (ι : outParam (l -> k))
+  where
+    [ι_mon : Monotone ι]
+    μ_lift (x : m l) : MPropOrdered.μ (ι <$> liftM (n := n) x) = ι (MPropOrdered.μ x)
+
+instance TPropTRefl [Monad m] [CompleteLattice l] [LawfulMonad m] [MPropOrdered m l] :
+  TPropT m l m l (fun p => p) where
+    ι_mon := by simp [Monotone]
+    μ_lift := by simp
+
+instance TPropTrans
+  [Monad m] [CompleteLattice l] [LawfulMonad m] [MPropOrdered m l]
+  [Monad n] [CompleteLattice k] [LawfulMonad n] [MPropOrdered n k] [MonadLiftT m n] (ι : l -> k)
+  [LawfulMonadLiftT m n]
+  [Monad p] [CompleteLattice q] [LawfulMonad p] [MPropOrdered p q] [MonadLift n p] (ι' : k -> q)
+  [LawfulMonadLift n p]
+  [inst': TPropT m l n k ι] [inst: MPropLift n k p q ι'] :
+  TPropT m l p q (ι' ∘ ι) where
+    ι_mon := by simp [Monotone]; intros; solve_by_elim [inst.ι_mon, inst'.ι_mon];
+    μ_lift := by
+      simp only [comp_map]; intro x
+      rw [<-lift_map (x := x), liftM]
+      simp [instMonadLiftTOfMonadLift]; erw [inst.μ_lift, <-inst'.μ_lift, <-lift_map]; rfl

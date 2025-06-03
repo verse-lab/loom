@@ -122,7 +122,7 @@ instance
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
   [IsHandler (ε := ε) hd]
   [inst: MPropOrdered m l] :
-  TProp m l (ExceptT ε m) l (fun p => p) where
+  MPropLift m l (ExceptT ε m) l (fun p => p) where
     ι_mon := by simp [Monotone, LE.le]
     μ_lift := by
       intro x;

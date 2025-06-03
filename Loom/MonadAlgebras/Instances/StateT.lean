@@ -87,7 +87,7 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MPropOrdere
     intro _ _; simp [MProp.lift_StateT, inst'.noFailure]; rfl
 
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MPropOrdered m l] :
-  TProp m l (StateT σ m) (σ -> l) (fun p _ => p) where
+  MPropLift m l (StateT σ m) (σ -> l) (fun p _ => p) where
     ι_mon := by simp [Monotone, LE.le]; aesop
     μ_lift := by
       intro x;
