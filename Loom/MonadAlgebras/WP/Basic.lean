@@ -386,8 +386,9 @@ lemma ReaderT.wp_lift (c : m α) (post : α -> σ -> l) :
 omit [LawfulMonad m] in
 lemma MPropLift.wp_lift [Monad n] [CompleteLattice k] [MPropOrdered n k] [MonadLiftT m n]
   [MonadLiftT (Cont l) (Cont k)]
-  [MPropLiftT m l n k] (c : m α) (post : α -> k):
-  wp (liftM (n := n) c) post = liftM (n := Cont k) (m := Cont l) (wp c) post := by
+  [MPropLiftT m l n k] (c : m α):
+  wp (liftM (n := n) c) = fun (post : α -> k) => liftM (n := Cont k) (m := Cont l) (wp c) post := by
+  ext;
   apply MPropLiftT.μ_lift
 
 end Lift
