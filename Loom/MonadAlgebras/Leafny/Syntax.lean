@@ -41,7 +41,7 @@ syntax (priority := high) ident noWs "[" term "]" "+=" term : doElem
 
 macro_rules
   | `(doElem|$id:ident[$idx:term] := $val:term) =>
-    `(doElem| $id:term := ($id:term).modify $idx (· + $val))
+    `(doElem| $id:term := ($id:term).modify $idx (fun _ => $val))
   | `(doElem|$id:ident[$idx:term] += $val:term) =>
     `(doElem| $id:term := ($id:term).modify $idx (· + $val))
 
@@ -200,7 +200,7 @@ elab_rules : command
       retType <- `(($modId:ident : $mutType) × $retType)
     let defCmd <- `(command|
       def $name $bindersIdents* : NonDetT DivM (($retId:ident : $type) × $retType) := do $mods* $doSeq*)
-    let lemmaName := mkIdent <| name.getId.appendAfter "_lemma"
+    let lemmaName := mkIdent <| name.getId.appendAfter "_correct"
 
     let pre <- req.andList
     let post <- ens.andList
