@@ -427,9 +427,8 @@ lemma ExtractNonDet.extract_refines_wp_weak (s : NonDetT m α) (inst : ExtractNo
 omit [MonoBind m] [MPropDet m l] in
 lemma ExtractNonDet.extract_refines_triple_weak (pre : l) (s : NonDetT m α) (inst : ExtractNonDet WeakFindable s) :
   triple pre s post ->
-  pre <= inst.prop ->
   triple pre s.extractWeak post := by
-  intro tr imp; apply le_trans'; apply ExtractNonDet.extract_refines_wp_weak
+  intro tr; apply le_trans'; apply ExtractNonDet.extract_refines_wp_weak
   solve_by_elim
 
 end DemonicChoice
@@ -452,9 +451,8 @@ lemma ExtractNonDet.extract_refines_wp_weak (s : NonDetT m α) (inst : ExtractNo
 omit [MonoBind m] [MPropDet m l] in
 lemma ExtractNonDet.extract_refines_triple (pre : l) (s : NonDetT m α) (inst : ExtractNonDet WeakFindable s) :
   triple pre s.extractWeak post ->
-  pre <= inst.prop ->
   triple pre s post := by
-  intro tr imp; apply le_trans' <;> solve_by_elim [ExtractNonDet.extract_refines_wp_weak]
+  intro tr; apply le_trans' <;> solve_by_elim [ExtractNonDet.extract_refines_wp_weak]
 
 
 end AngelicChoice
