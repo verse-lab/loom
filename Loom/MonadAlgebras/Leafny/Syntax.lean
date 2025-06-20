@@ -66,7 +66,7 @@ macro_rules
   | `(doElem|$id:ident[$idx:term] += $val:term) =>
     `(doElem| $id:term := ($id:term).modify $idx (· + $val))
 
-def toBracketedBinderArray (stx : Array (TSyntax `leafny_binder)) : MetaM (TSyntaxArray `Lean.Parser.Term.bracketedBinder) := do
+private def toBracketedBinderArray (stx : Array (TSyntax `leafny_binder)) : MetaM (TSyntaxArray `Lean.Parser.Term.bracketedBinder) := do
   let mut binders := #[]
   for b in stx do
     match b with
@@ -186,14 +186,12 @@ partial def expandLeafnyDoSeqItem (modIds : Array Ident) (stx : doSeqItem) : Ter
   | stx => pure #[stx]
 end
 
-def Array.andList (ts : Array (TSyntax `term)) : TermElabM (TSyntax `term) := do
+private def Array.andList (ts : Array (TSyntax `term)) : TermElabM (TSyntax `term) := do
   if ts.size = 0 then `(term| True) else
     let mut t := ts[0]!
     for t' in ts[1:] do
       t <- `(term| $t ∧ $t')
     return t
-
-#check Stream
 
 elab_rules : command
   | `(command|
