@@ -56,10 +56,15 @@ method Collection.toSet (mut k : κ) return (s : α -> Bool)
     by
       cases col; simp;
       dsimp [Collection.toSet]
-      mwp
-      { rintro ⟨k, s⟩; mwp; aesop }
-      aesop
+      mwp <;> aesop
 
+
+
+
+-- #check WPGen.bind
+      -- mwp
+      -- { rintro ⟨k, s⟩; mwp; aesop }
+      -- aesop
 /--
 info: DivM.res
   ⟨[(0, false),
@@ -133,10 +138,8 @@ method spmv
     return
   correct_by by {
     simp; dsimp [spmv]
-    mwp
-    { intros; mwp
-      aesop }
-    aesop }
+    mwp <;> aesop
+    }
 /-
   v    = [ A 0 0 B 0 0 C ]
   vInd = [ 0     3     6 ]
@@ -206,7 +209,7 @@ def sparse_dot_product(xInd, xVal, yInd, yVal):
 
 -/
 
-add_aesop_rules norm tactic (by omega)
+-- add_aesop_rules norm tactic (by omega)
 
 instance [Inhabited β] [AddCommMonoid β] : GetElem (SpV β) ℕ β fun _ _ => True where
   getElem inst i _ :=
@@ -232,7 +235,10 @@ method VSpV
       out[0] += spv.val[ind]! * arr[spv.ind[ind]!]!
       ind := ind + 1
     return
-  correct_by by { simp [VSpV]; mwp; intros; mwp; aesop; aesop }
+  correct_by by {
+    simp; dsimp [VSpV]
+    mwp <;> aesop (add safe (by omega))
+   }
 
 theorem getValSpV_eq (spv: SpV α) (j: ℕ) (h_ind: j < spv.size): spv[spv.ind[j]!] = spv.val[j]! := by
   simp [getElem]
@@ -447,9 +453,6 @@ method insertionSort
         invariant mind ≤ n
         invariant forall i j, i < j ∧ j ≤ n ∧ j ≠ mind → arr[i]! ≤ arr[j]!
 
-        invariant 1 ≤ n ∧ n < arr.size
-        invariant forall i j, i < j ∧ j <= n - 1 → arr[i]! ≤ arr[j]!
-
         done_with mind = 0 do
           if arr[mind]! ≤ arr[mind - 1]! then
             let left := arr[mind - 1]!
@@ -459,7 +462,12 @@ method insertionSort
           mind := mind - 1
         n := n + 1
       return
-  correct_by by { sorry }
+  correct_by by {
+    simp; dsimp [insertionSort]
+    mwp
+    -- any_goals aesop (add safe (by omega))
+    stop sorry
+   }
 
 /-
     simp
@@ -660,13 +668,12 @@ method sqrt (x: ℕ) return (res: ℕ)
   correct_by by
   { simp [sqrt]
     mwp
-    { split; simp; intro; mwp; grind }
-    aesop
+    any_goals first | grind | aesop (add safe (by omega))
     have hx : 1 ≤ x := by omega
     have hx₁ : 1 ≤ x_1 := by false_or_by_contra; aesop
-    exact a_1 (x_1 - 1) (by omega)
+    exact left (x_1 - 1) (by omega)
     have hx : 1 ≤ x := by omega
     have hx₁ : 1 ≤ x_1 := by false_or_by_contra; aesop
-    aesop }
+    aesop (add safe (by omega)) }
 
 end squareRoot

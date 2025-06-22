@@ -75,6 +75,7 @@ def attrIgnoreAuxDef (name : Name) (default : AttrM α) (x : AttrM α) : AttrM �
 initialize registerTraceClass `Loom (inherited := true)
 register_simp_attr loomLogicSimp
 register_simp_attr loomWpSimp
+register_simp_attr loomWpSplit
 
 
 

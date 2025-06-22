@@ -65,11 +65,14 @@ macro "wpgen" : tactic => `(tactic| (
   repeat' wpgen_step
   ))
 
-macro "mwp" : tactic => `(tactic| ((try dsimp); wpgen <;> try simp only [loomLogicSimp, loomWpSimp, invariants, List.foldr]))
+macro "mwp" : tactic => `(tactic| (
+  wpgen
+  try simp only [loomLogicSimp, loomWpSimp, invariants, List.foldr]
+  repeat' (apply And.intro <;> intros)))
 
-attribute [spec high, loomWpSimp] WPGen.forWithInvariantDecreasing WPGen.if
+attribute [spec high, loomWpSimp] WPGen.if
 attribute [spec, loomWpSimp] WPGen.bind WPGen.pure WPGen.assert WPGen.forWithInvariant WPGen.map
-attribute [loomWpSimp] spec WPGen.spec_triple_invs
+attribute [loomWpSimp] spec
 
 @[loomLogicSimp]
 lemma leE (l : Type u) [PartialOrder l] (a b : α -> l) : a ≤ b ↔ ∀ x, a x ≤ b x := by
@@ -110,5 +113,16 @@ lemma iInfE (l : Type u) [CompleteLattice l] (a : ι -> α -> Prop) : (⨅ i, a 
 lemma iSupE (l : Type u) [CompleteLattice l] (a : ι -> α -> Prop) : (⨆ i, a i) = fun x => ⨆ i, a i x := by
   ext; simp
 
-attribute [loomLogicSimp] forall_const implies_true and_true true_and
+@[loomLogicSimp]
+lemma himpE  (l : Type u) [CompleteBooleanAlgebra l] (a b : α -> l) :
+  (a ⇨ b) = fun x => a x ⇨ b x := by rfl
+
+@[loomLogicSimp]
+lemma himpPureE (a b : Prop) :
+  (a ⇨ b) = (a -> b) := by rfl
+
+
+attribute [loomLogicSimp] forall_const implies_true and_true true_and iInf_Prop_eq
 attribute [simp←] Nat.mul_add_one
+
+attribute [loomWpSplit] iInf_inf_eq himp_inf_distrib wp_and wp_iInf

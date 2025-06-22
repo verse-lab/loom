@@ -12,26 +12,12 @@ import Loom.MonadAlgebras.Leafny.Extension
 
 open PartialCorrectness DemonicChoice
 
--- method foo (mut x : ℕ) (mut y : ℕ) return (u : Unit)
---   require x = y
---   ensures x = y + 1
---   ensures u = u do
---   pure ()
---   correct_by by sorry
-
--- #print foo_lemma
-
--- method bar (mut x : ℕ) (z : ℕ) : Unit :=
---   x := x + z
---   let mut y := x
---   let u <- foo x y
---   foo y x
---   return u
-
 @[spec, loomWpSimp]
-def WPGen.pickSuchThat : WPGen (pickSuchThat τ p : NonDetT DivM τ) := by
-  refine ⟨fun post => ∀ t, p t -> post t, True, ?_⟩
-  intro post _; apply le_of_eq;
+noncomputable
+def WPGen.pickSuchThat [Monad m] [LawfulMonad m] [CompleteBooleanAlgebra l]
+  [MPropOrdered m l] : WPGen (pickSuchThat τ p : NonDetT m τ) := by
+  refine ⟨fun post => ⨅ t, ⌜p t⌝ ⇨ post t, ?_⟩
+  intro post;
   simp [MonadNonDet.wp_pickSuchThat, loomLogicSimp]
 
 attribute [aesop safe cases] Decidable

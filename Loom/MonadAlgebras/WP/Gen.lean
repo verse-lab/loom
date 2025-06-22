@@ -97,58 +97,53 @@ macro_rules
 
 structure WPGen (x : m α) where
   get : Cont l α
-  invs : Prop := True
-  prop : ∀ post, invs -> get post <= wp x post
+  -- sideCond : l := ⊤
+  prop : ∀ post, get post <= wp x post
 
 omit [LawfulMonad m] in
 lemma WPGen.intro (x : m α) (wpg : WPGen x) :
-  wpg.invs -> pre <= wpg.get post ->
+  pre <= wpg.get post ->
+  -- pre <= wpg.sideCond ->
   triple pre x post := by
-  solve_by_elim [wpg.prop, le_trans']
+  intro h; apply le_trans'; apply wpg.prop; apply_assumption
 
 def WPGen.default (x : m α) : WPGen x where
   get := wp x
-  prop := by intro post; simp_all only [le_refl]; trivial
+  prop := by intro post; simp
 
 def WPGen.pure (x : α) : WPGen (pure (f := m) x) where
   get := fun post => post x
-  prop := by intro post; simp_all only [wp_pure, le_refl]; trivial
+  prop := by intro post; simp [wp_pure]
 
-def WPGen.bind (x : m α) (f : α -> m β) (wpg : WPGen x) (wpgf : ∀ a, WPGen (f a)) :
+def WPGen.bind {x : m α} {f : α -> m β} (wpg : WPGen x) (wpgf : ∀ a, WPGen (f a)) :
   WPGen (x >>= f) where
   get := fun post => wpg.get (fun a => (wpgf a).get post)
-  invs := wpg.invs ∧ ∀ a, (wpgf a).invs
   prop := by
-    simp; intro post invs invs'; simp [wp_bind]; apply le_trans
-    { solve_by_elim [wpg.prop] }
-    apply wp_cons; intro a; solve_by_elim [(wpgf a).prop]
+    intro post; simp [wp_bind]; apply le_trans
+    apply wpg.prop; apply wp_cons; intro a; apply (wpgf a).prop
 
-def WPGen.map (x : m α) (f : α -> β) (wpg : WPGen x) : WPGen (f <$> x) where
+def WPGen.map {x : m α} {f : α -> β} (wpg : WPGen x) : WPGen (f <$> x) where
   get := fun post => wpg.get (fun a => post (f a))
-  invs := wpg.invs
   prop := by
-    intro _ _
-    rw [map_eq_pure_bind]; simp only [wp_bind, wp_pure]
+    rw [map_eq_pure_bind]; simp only [wp_bind, wp_pure]; intro
     apply le_trans; solve_by_elim [wpg.prop]; rfl
-
 
 noncomputable
 def WPGen.spec_triple (x : m α) (trp : triple pre x post) : WPGen x where
   get := spec pre post
   prop := by rw [<-triple_spec] at trp; solve_by_elim
 
-noncomputable
-def WPGen.spec_triple_invs (x : m α) (invs : Prop) (trp : invs -> triple pre x post) : WPGen x where
-  get := spec pre post
-  invs := invs
-  prop := by rw [<-triple_spec] at trp; solve_by_elim
+-- noncomputable
+-- def WPGen.spec_triple_invs (x : m α) (trp : invs -> triple pre x post) : WPGen x where
+--   get := spec pre post
+--   prop := by rw [<-triple_spec] at trp; solve_by_elim
 
 def WPGen.spec_wp wp' (x : m α) (trp : wp x = wp') : WPGen x where
   get := wp'
   prop := by
     intro post
     subst trp
-    simp_all only [le_refl]; trivial
+    simp
 
 theorem triple_forIn_deacreasing {β} {measure : β -> ℕ}
   {init : β} {f : β → m (ForInStep β)}
@@ -177,29 +172,37 @@ theorem triple_forIn_deacreasing {β} {measure : β -> ℕ}
     omega }
   simp
 
+attribute [-simp] Std.Range.forIn_eq_forIn_range' in
 noncomputable
 def WPGen.forWithInvariant {xs : Std.Range} {init : β} {f : ℕ → β → m (ForInStep β)}
-  (inv : ℕ → β → List l) :
-    xs.step = 1 ->
-    xs.start <= xs.stop ->
-    WPGen (forIn xs init (fun i b => do invariantGadget (inv i b); (f i b))) := by
-    intro stp _
-    apply spec_triple_invs (invs :=
-      (∀ i b, triple (invariants (inv i b)) (f i b) (fun | .yield b' => invariants (inv (i + 1) b') | .done b' => invariants (inv xs.stop b'))));
-    intros h; apply triple_forIn_range_step1 (fun i b => (inv i b).foldr (·⊓·) ⊤); simp [invariantGadget, stp]; apply h
-    all_goals solve_by_elim
+  (inv : ℕ → β → List l) (wpg : ∀ i b, WPGen (f i b)) (xs1 : xs.step = 1) (xs_le : xs.start <= xs.stop) :
+    WPGen (forIn xs init (fun i b => do invariantGadget (inv i b); (f i b))) where
+    get := ⌜∀ i b, invariants (inv i b) <= (wpg i b).get fun
+      | .yield b' => invariants <| inv (i + 1) b'
+      | .done b'  => invariants <| inv xs.stop b'⌝
+      ⊓ spec
+      ((inv xs.start init).foldr (·⊓·) ⊤)
+      (fun b => (inv xs.stop b).foldr (·⊓·) ⊤)
+    prop := by
+      intro post; simp only [LE.pure]; split_ifs with h <;> try simp
+      apply (triple_spec ..).mpr
+      simp [invariantGadget]
+      apply triple_forIn_range_step1 (fun i b => (inv i b).foldr (·⊓·) ⊤)
+      simp [invariants, <-xs1] at h
+      intro i b; apply (wpg i b).intro
+      all_goals solve_by_elim
 
-noncomputable
-def WPGen.forWithInvariantDecreasing {β} {measure : β -> ℕ}
-  {init : β} {f : β → m (ForInStep β)}
-  (inv : β → List l) :
-    WPGen (forIn [0:mb] init (fun _ b => do decreasingGadget (measure b); invariantGadget (inv b); f b)) := by
-  apply spec_triple_invs (invs :=
-    mb = measure init ∧
-    (∀ b, measure b <= measure init -> triple (invariants (inv b)) (f b) (fun | .yield b' => invariants (inv b') ⊓ ⌜measure b' < measure b⌝ | .done b' => ⌜ measure b' = 0 ⌝ ⊓ invariants (inv b'))))
-  simp only [and_imp]; intros eq h; simp only [eq]
-  apply triple_forIn_deacreasing (fun b => invariants (inv b)); simp [invariantGadget, decreasingGadget]
-  solve_by_elim
+-- noncomputable
+-- def WPGen.forWithInvariantDecreasing {β} {measure : β -> ℕ}
+--   {init : β} {f : β → m (ForInStep β)}
+--   (inv : β → List l) :
+--     WPGen (forIn [0:mb] init (fun _ b => do decreasingGadget (measure b); invariantGadget (inv b); f b)) := by
+--   apply spec_triple_invs (invs :=
+--     mb = measure init ∧
+--     (∀ b, measure b <= measure init -> triple (invariants (inv b)) (f b) (fun | .yield b' => invariants (inv b') ⊓ ⌜measure b' < measure b⌝ | .done b' => ⌜ measure b' = 0 ⌝ ⊓ invariants (inv b'))))
+--   simp only [and_imp]; intros eq h; simp only [eq]
+--   apply triple_forIn_deacreasing (fun b => invariants (inv b)); simp [invariantGadget, decreasingGadget]
+--   solve_by_elim
 
 end
 variable {m : Type u -> Type v} [Monad m] [LawfulMonad m] {α : Type u} {l : Type u} [CompleteBooleanAlgebra l] [MPropOrdered m l]
@@ -209,8 +212,10 @@ def WPGen.assert {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [
   get := fun post => h ⊓ (h ⇨ post .unit)
   prop := by simp [assertGadget, wp_pure]
 
-def WPGen.if [Decidable h] (x y : m α) (wpgx : WPGen x) (wpgy : WPGen y) : WPGen (if h then x else y) where
-  get := fun post => if h then wpgx.get post else wpgy.get post
-  invs := if h then wpgx.invs else wpgy.invs
+noncomputable
+def WPGen.if {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [CompleteBooleanAlgebra l] [MPropOrdered m l]
+  {_ : Decidable h} {x y : m α} (wpgx : WPGen x) (wpgy : WPGen y) : WPGen (if h then x else y) where
+  get := fun post => (⌜h⌝ ⇨ wpgx.get post) ⊓ (⌜¬ h⌝ ⇨ wpgy.get post)
   prop := by
-    intro post; split <;> solve_by_elim [wpgx.prop, wpgy.prop]
+    intro post; simp [LE.pure]
+    split <;> simp <;> solve_by_elim [wpgx.prop, wpgy.prop]
