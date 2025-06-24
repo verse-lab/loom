@@ -26,6 +26,8 @@ abbrev WithName (α : Type u) (name : Lean.Name := default) := α
 abbrev WithName.mk' {α : Type u} (a : α) (name : Lean.Name := default) : WithName α name :=
   a
 
+abbrev WithName.erase {α : Type u} {name} (a : WithName α name) : α := a
+
 -- HACK: avoid code explosion until heuristics are improved
 set_option compiler.reuse false
 
@@ -814,7 +816,8 @@ private def mkTuple (elems : Array Syntax) : MacroM Syntax := do
   else if h : elems.size = 1 then
     ``(WithName.mk' $(elems[0]) $(Lean.quoteNameMk elems[0].getId))
   else
-    elems.extract 0 (elems.size - 1) |>.foldrM (init := elems.back!) fun elem tuple => do
+    let init <- ``(WithName.mk' $(elems.back!) $(Lean.quoteNameMk elems.back!.getId))
+    elems.extract 0 (elems.size - 1) |>.foldrM (init := init) fun elem tuple => do
       let name := Lean.quoteNameMk elem.getId
       ``(MProdWithNames.mk' $elem $tuple $name)
 
@@ -866,13 +869,13 @@ private def destructTuple (uvars : Array Var) (x : Syntax) (body : Syntax) : Mac
   if uvars.size = 0 then
     return body
   else if h : uvars.size = 1 then
-    `(let $(uvars[0]):ident := $x; $body)
+    `(let $(uvars[0]):ident := WithName.erase $x; $body)
   else
     destruct uvars.toList x body
 where
   destruct (as : List Var) (x : Syntax) (body : Syntax) : MacroM Syntax := do
     match as with
-      | [a, b]  => `(let $a:ident := $x.1; let $b:ident := $x.2; $body)
+      | [a, b]  => `(let $a:ident := $x.1; let $b:ident := WithName.erase $x.2; $body)
       | a :: as => withFreshMacroScope do
         let rest ← destruct as (← `(x)) body
         `(let $a:ident := $x.1; let x := $x.2; $rest)

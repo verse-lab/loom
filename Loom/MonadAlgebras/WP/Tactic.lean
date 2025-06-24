@@ -76,10 +76,20 @@ partial def Lean.Expr.getNamesProp (tp : Expr) : MetaM (Option (List Name)) := d
   | WithName _ n₁ => return some [<- n₁.getName]
   | MProdWithNames _ tp n₁ =>
     let n₁ <- n₁.getName
-    let some ns <- Lean.Expr.getNamesProp tp
+    let some ns <- tp.getNamesProp
       | return none
     return some $ n₁ :: ns
   | _ => return none
+
+def renameOld (n : Name) : TacticM Unit := withMainContext do
+  (<- getMainGoal).modifyLCtx fun hyps => Id.run do
+    let mut hypsNew := hyps
+    for hyp in hyps.decls.toArray.reverse do
+      if hyp.isSome then
+        let n' := hyp.get!.userName
+        if n' == n then
+          hypsNew := hyps.renameUserName n' (n'.toString ++ "Old" |>.toName)
+    return hypsNew
 
 elab "loom_intro" : tactic => withMainContext do
   let goalType <- getMainTarget
@@ -88,16 +98,19 @@ elab "loom_intro" : tactic => withMainContext do
   let some ns <- tp.getNamesProp
     | evalTactic $ <- `(tactic| try intro)
   let names := ns |>.map Lean.mkIdent |>.toArray
+  for name in names do renameOld name.getId
   if names.size > 1 then
     evalTactic $ <- `(tactic|
-      (try unfold WithName); rintro ⟨$[$names],*⟩; try simp only [MProdWithNames.snd, MProdWithNames.fst])
+      rintro ⟨$[$names],*⟩; try simp only [MProdWithNames.snd, MProdWithNames.fst])
   else
-    evalTactic $ <- `(tactic| (try unfold WithName); intro $(names[0]!):ident)
+    let name₀ := names[0]!
+    evalTactic $ <- `(tactic| intro $(name₀):ident)
 
 macro "mwp" : tactic => `(tactic| (
   wpgen
-  try simp only [loomLogicSimp, loomWpSimp, invariants, List.foldr, WithName.mk']
-  repeat' (apply And.intro <;> (repeat loom_intro))))
+  try simp only [loomLogicSimp, loomWpSimp, invariants, List.foldr, WithName.mk', WithName.erase]
+  repeat' (apply And.intro <;> (repeat loom_intro))
+  any_goals unfold WithName at *))
 
 attribute [spec high, loomWpSimp] WPGen.if
 attribute [spec, loomWpSimp] WPGen.bind WPGen.pure WPGen.assert WPGen.forWithInvariant WPGen.map-- WPGen.let
@@ -150,8 +163,13 @@ lemma himpE  (l : Type u) [CompleteBooleanAlgebra l] (a b : α -> l) :
 lemma himpPureE (a b : Prop) :
   (a ⇨ b) = (a -> b) := by rfl
 
+@[loomLogicSimp]
+lemma topE (l : Type u) [CompleteLattice l] : (⊤ : α -> l) = fun _ => ⊤ := by rfl
 
-attribute [loomLogicSimp] forall_const implies_true and_true true_and iInf_Prop_eq
+@[loomLogicSimp]
+lemma topPureE : (⊤ : Prop) = True := by rfl
+
+attribute [loomLogicSimp] forall_const implies_true and_true true_and iInf_Prop_eq topE topPureE and_true
 attribute [simp←] Nat.mul_add_one
 
 attribute [loomWpSplit] iInf_inf_eq himp_inf_distrib wp_and wp_iInf
