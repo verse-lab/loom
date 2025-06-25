@@ -17,7 +17,7 @@ open PartialCorrectness DemonicChoice
 
 set_option auto.smt.trust true
 set_option auto.smt true
-set_option auto.smt.timeout 6
+set_option auto.smt.timeout 5
 set_option auto.smt.solver.name "cvc5"
 
 class TArray (α : outParam Type) (κ: Type) where
@@ -64,9 +64,11 @@ instance [Inhabited α] : TArray α (Array α) where
     rw [getElem!_pos,getElem!_pos] <;> try simp [*]
     rw [List.count_set] <;> try simp [*]
     rw [List.count_set] <;> try simp [*]
-    sorry
-
-
+    simp [List.getElem_set]
+    split_ifs with h <;> try simp
+    have : Array.count a arr > 0 := by
+      apply Array.count_pos_iff.mpr; simp [<-h]
+    omega
 
 attribute [solverHint] TArray.get_set TArray.size_set
 
@@ -152,7 +154,7 @@ lemma sumUpTo0
   sumUpTo spv v 0 = 0 := by
   simp [sumUpTo]
 
-
+set_option trace.profiler true in
 method spmv
   (mut out: arrVal)
   (arr: arrVal)
@@ -869,7 +871,7 @@ method insertionSort
   correct_by by
   { dsimp [insertionSort]
     velvet_solve
-    }
+  }
 
 section squareRoot
 
