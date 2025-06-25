@@ -46,11 +46,6 @@ structure SpecAttr where
   ext  : DiscrTreeExtension Loom.Spec
   deriving Inhabited
 
-structure SolverHintAttr where
-  attr : AttributeImpl
-  ext : SimplePersistentEnvExtension Name (Array Name)
-  deriving Inhabited
-
 /-- For the attributes
 
     If we apply an attribute to a definition in a group of mutually recursive definitions
@@ -131,21 +126,6 @@ initialize specAttr : SpecAttr ← do
   registerBuiltinAttribute attrImpl
   pure { attr := attrImpl, ext := ext }
 
-/- The persistent map from expressions to pspec theorems. -/
-initialize solverHints : SolverHintAttr ← do
-  let ext ←  registerSimplePersistentEnvExtension {
-    name          := `solverHints,
-    addImportedFn := fun a => a.flatMap id
-    addEntryFn    := fun s n => s.push n
-  }
-  let attrImpl : AttributeImpl := {
-    name := `solverHint
-    descr := "Marks theorems to use with the solver"
-    add := fun thName stx attrKind => do
-      setEnv $ ext.addEntry (← getEnv) thName
-  }
-  registerBuiltinAttribute attrImpl
-  pure { attr := attrImpl, ext := ext }
 
 
 def SpecAttr.find? (s : SpecAttr) (e : Expr) : MetaM (Array Loom.Spec) := do
@@ -154,12 +134,26 @@ def SpecAttr.find? (s : SpecAttr) (e : Expr) : MetaM (Array Loom.Spec) := do
 def SpecAttr.getState (s : SpecAttr) : MetaM (DiscrTree Loom.Spec) := do
   return s.ext.getState (← getEnv)
 
-def SolverHintAttr.getState (s : SolverHintAttr) : MetaM (Array Name) := do
-  return s.ext.getState (← getEnv)
+abbrev SolverHints := Array Name
 
--- def showStoredSpec : MetaM Unit := do
---   let st ← specAttr.getState
---   -- TODO: how can we iterate over (at least) the values stored in the tree?
---   --let s := st.toList.foldl (fun s (f, th) => f!"{s}\n{f} → {th}") f!""
---   -- let s := f!"{st.ma}"
---   IO.println s
+initialize solverHints : SimpleScopedEnvExtension Name SolverHints ←
+  registerSimpleScopedEnvExtension {
+    initial := #[]
+    addEntry := fun s' a => s'.push a
+  }
+
+private def _root_.Lean.SimpleScopedEnvExtension.get [Inhabited σ] (ext : SimpleScopedEnvExtension α σ)
+  [Monad m] [MonadEnv m] : m σ := do
+  return ext.getState (<- getEnv)
+
+private def _root_.Lean.SimpleScopedEnvExtension.modify
+  (ext : SimpleScopedEnvExtension α σ) (s : σ -> σ)
+  [Monad m] [MonadEnv m] : m Unit := do
+  Lean.modifyEnv (ext.modifyState · s)
+
+syntax (name:= solverHint) "solverHint" : attr
+initialize registerBuiltinAttribute {
+  name := `solverHint
+  descr := "This is the solver hint"
+  add := fun declName _ _ => solverHints.modify (·.push declName)
+}
