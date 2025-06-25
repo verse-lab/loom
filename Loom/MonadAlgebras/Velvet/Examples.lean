@@ -17,7 +17,7 @@ open PartialCorrectness DemonicChoice
 
 set_option auto.smt.trust true
 set_option auto.smt true
-set_option auto.smt.timeout 5
+set_option auto.smt.timeout 4
 set_option auto.smt.solver.name "cvc5"
 
 class TArray (α : outParam Type) (κ: Type) where
@@ -865,7 +865,7 @@ method insertionSort
             let right := arr[mind]
             arr[mind - 1] := right
             arr[mind] := left
-          mind := mind - 1
+          -- mind := mind - 1
         n := n + 1
       return
   correct_by by

@@ -23,16 +23,18 @@ private def _root_.Lean.SimpleScopedEnvExtension.modify
 
 structure LoomAssertionsMap where
   maxId : Int
-  store : Std.HashMap Int Term
+  syntaxStore : Std.HashMap Int Term
+  nameStore : Std.HashMap Name Int
+
   deriving Inhabited
 
 initialize loomAssertionsMap :
-  SimpleScopedEnvExtension Term LoomAssertionsMap <-
+  SimpleScopedEnvExtension (Term × Name) LoomAssertionsMap <-
   registerSimpleScopedEnvExtension {
     initial := default
-    addEntry := fun s t =>
+    addEntry := fun s ⟨t, n⟩ =>
       let maxId := s.maxId + 1
-      { s with maxId := maxId, store := s.store.insert maxId t }
+      { s with maxId := maxId, syntaxStore := s.syntaxStore.insert maxId t, nameStore := s.nameStore.insert n maxId }
   }
 
 
@@ -71,12 +73,12 @@ def decreasingGadget (measure : ℕ) : m PUnit := pure .unit
 macro "decreasing" t:term : term => `(decreasingGadget $t)
 
 elab "with_name_prefix" lit:name inv:term : term => do
-  let ⟨maxId, s⟩ <- loomAssertionsMap.get
+  let ⟨maxId, _, _⟩ <- loomAssertionsMap.get
   let newMaxId := maxId + 1
   let invName := lit.getName.toString ++ "_" ++ toString newMaxId.toNat |>.toName
-  let newTerm := Lean.quoteNameMk invName
   loomAssertionsMap.modify (fun res => {
-      store := res.store.insert newMaxId newTerm
+      syntaxStore := res.syntaxStore.insert newMaxId inv
+      nameStore := res.nameStore.insert invName newMaxId
       maxId := newMaxId
       })
   Term.elabTerm (<- ``(WithName $inv $(Lean.quoteNameMk invName))) none
@@ -126,7 +128,7 @@ macro_rules
       `(doElem|
         for _ in Lean.Loop.mk do
           invariantGadget [ $[(with_name_prefix `invariant $inv:term)],* ]
-          onDoneGadget $inv_done
+          onDoneGadget (with_name_prefix `done $inv_done:term)
           if ∃ $x:ident, $t then
             let $x :| $t
             $[$seq:doElem]*

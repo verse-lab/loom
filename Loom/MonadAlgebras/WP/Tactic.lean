@@ -92,6 +92,13 @@ def renameOld (n : Name) : TacticM Unit := withMainContext do
           hypsNew := hyps.renameUserName n' (n'.toString ++ "Old" |>.toName)
     return hypsNew
 
+elab "loom_split" : tactic => do
+  let goalType <- getMainTarget
+  match_expr goalType with
+  | WithName _ _ => throwError "Cannot split on a WithName goal"
+  | _ => evalTactic $ <- `(tactic| apply And.intro)
+
+
 elab "loom_intro" : tactic => withMainContext do
   let goalType <- getMainTarget
   let .forallE _ tp _ _ := goalType.consumeMData

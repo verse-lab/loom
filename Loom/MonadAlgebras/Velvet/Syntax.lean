@@ -187,12 +187,20 @@ partial def expandLeafnyDoSeqItem (modIds : Array Ident) (stx : doSeqItem) : Ter
   | stx => pure #[stx]
 end
 
+private def Array.andListWithName (ts : Array (TSyntax `term)) : TermElabM (TSyntax `term) := do
+  if ts.size = 0 then `(term| True) else
+    let mut t <- `(term| with_name_prefix `ensures $(ts[0]!))
+    for t' in ts[1:] do
+      t <- `(term| (with_name_prefix `ensures $t') ∧ $t)
+    return t
+
 private def Array.andList (ts : Array (TSyntax `term)) : TermElabM (TSyntax `term) := do
   if ts.size = 0 then `(term| True) else
     let mut t := ts[0]!
     for t' in ts[1:] do
-      t <- `(term| $t' ∧ $(WithName.mk' t (Lean.Name.anonymous.mkStr "post_condition")) )
+      t <- `(term| $t' ∧ $t)
     return t
+
 
 elab_rules : command
   | `(command|
@@ -223,7 +231,7 @@ elab_rules : command
     let lemmaName := mkIdent <| name.getId.appendAfter "_correct"
 
     let pre <- req.andList
-    let post <- ens.andList
+    let post <- ens.andListWithName
 
     let mut ret <- `(term| ())
     for modId in modIds do

@@ -4,7 +4,9 @@ import Lean.Parser
 
 import Loom.MonadAlgebras.WP.Attr
 import Loom.MonadAlgebras.WP.Tactic
-import Loom.MonadAlgebras.WP.DoNames'
+-- import Loom.MonadAlgebras.WP.DoNames'
+import Loom.MonadAlgebras.WP.Gen
+import Loom.Tactic
 
 import Loom.MonadAlgebras.Velvet.Extension
 
@@ -22,6 +24,21 @@ private def _root_.Lean.SimpleScopedEnvExtension.get [Inhabited σ] (ext : Simpl
   [Monad m] [MonadEnv m] : m σ := do
   return ext.getState (<- getEnv)
 
+def getAssertionStx : TacticM Term := withMainContext do
+  let goal <- getMainTarget
+  let goalStx <- ppExpr goal
+  let .some withNameExpr := goal.find? (fun e => e.isAppOf ``WithName)
+    | throwError s!"Failed to prove assertion which is not registered1: {goalStx}"
+  match_expr withNameExpr with
+  | WithName _ name =>
+    let name <- name.getName
+    let ⟨_, ss, ns⟩ <- loomAssertionsMap.get
+    let some id := ns[name]?
+      | throwError s!"Failed to prove assertion which is not registered3: {goalStx}"
+    return ss[id]!
+  | _ => throwError s!"Failed to prove assertion which is not registered4: {goalStx}"
+  --let ⟨maxId, ss, ns⟩ <- loomAssertionsMap.get
+
 elab "velvet_solve" : tactic => withMainContext do
   let ctx := (<- solverHints.get)
   let mut hints : Array (TSyntax ``Auto.hintelem) := #[]
@@ -37,10 +54,19 @@ elab "velvet_solve" : tactic => withMainContext do
   try simp only [WithName.erase]
   try simp only [List.foldr]
   try simp only [loomLogicSimp]
-  repeat' (apply And.intro <;> (repeat loom_intro))
-  all_goals try unfold WithName at *
-  any_goals solve | ((try simp only [loomAbstractionSimp] at *); auto [$hints,*])
-))
+  repeat' (loom_split <;> (repeat loom_intro))))
+  let res <- anyGoalsWithTag do
+    let stx <- getAssertionStx
+    evalTactic $ <- `(tactic| all_goals try unfold WithName at *)
+    -- mvarId.setTag $ s!"{stx}".toName
+    evalTactic $ <- `(tactic| (
+        try (try simp only [loomAbstractionSimp] at *); auto [$hints,*]
+      ))
+    if (<- getUnsolvedGoals).length > 0 then
+      return some (Name.mkSimple stx.raw.prettyPrint.pretty, stx)
+    else return none
+  for stx in res do
+    logErrorAt stx $ m!"Failed to prove assertion " ++ MessageData.ofSyntax stx
 
 elab "velvet_solve?" : tactic => withMainContext do
   let ctx := (<- solverHints.get)
