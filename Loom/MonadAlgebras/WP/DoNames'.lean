@@ -20,10 +20,11 @@ abbrev MProdWithNames.mk' {α β : Type u} (a : α) (b : β)
   (αName : Lean.Name := default) : MProdWithNames α β αName :=
   @MProdWithNames.mk _ _ αName a b
 
+--Sort instead of type, as we need to name Prop
 set_option linter.unusedVariables false in
-abbrev WithName (α : Type u) (name : Lean.Name := default) := α
+abbrev WithName (α : Sort u) (name : Lean.Name := default) := α
 
-abbrev WithName.mk' {α : Type u} (a : α) (name : Lean.Name := default) : WithName α name :=
+abbrev WithName.mk' {α : Sort u} (a : α) (name : Lean.Name := default) : WithName α name :=
   a
 
 abbrev WithName.erase {α : Type u} {name} (a : WithName α name) : α := a

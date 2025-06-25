@@ -74,12 +74,33 @@ def Lean.Expr.getName (e : Expr) : MetaM Name := do
 partial def Lean.Expr.getNamesProp (tp : Expr) : MetaM (Option (List Name)) := do
   match_expr tp with
   | WithName _ n₁ => return some [<- n₁.getName]
-  | MProdWithNames _ tp n₁ =>
+  | MProdWithNames _ tr n₁ =>
     let n₁ <- n₁.getName
-    let some ns <- tp.getNamesProp
+    let some ns <- tr.getNamesProp
       | return none
     return some $ n₁ :: ns
-  | _ => return none
+  | And fst snd =>
+    match_expr fst with
+    | WithName _ name =>
+      let fstName ← name.getName
+      let some rem ← snd.getNamesProp
+        | return some [fstName]
+      return some $ fstName :: rem
+    | _ => return none
+  | True =>
+    return some [`triv]
+  | _ =>
+    match tp with
+    | Expr.app (Expr.app _ fst) snd =>
+      match_expr fst with
+      | WithName _ name =>
+        let fstName ← name.getName
+        let some rem ← snd.getNamesProp
+          | return some [fstName, `triv] --this is really bad actually
+        return some $ fstName :: rem
+      | _ => return none
+    | _ =>
+      return none
 
 def renameOld (n : Name) : TacticM Unit := withMainContext do
   (<- getMainGoal).modifyLCtx fun hyps => Id.run do
@@ -96,15 +117,18 @@ elab "loom_intro" : tactic => withMainContext do
   let .forallE _ tp _ _ := goalType.consumeMData
     | evalTactic $ <- `(tactic| fail)
   let some ns <- tp.getNamesProp
-    | evalTactic $ <- `(tactic| try intro)
+    | evalTactic $ <- `(tactic| try unhygienic intro) -- because sometimes it is part of an invariant and unnamed by defualt
   let names := ns |>.map Lean.mkIdent |>.toArray
   for name in names do renameOld name.getId
   if names.size > 1 then
     evalTactic $ <- `(tactic|
       rintro ⟨$[$names],*⟩; try simp only [MProdWithNames.snd, MProdWithNames.fst])
   else
-    let name₀ := names[0]!
-    evalTactic $ <- `(tactic| intro $(name₀):ident)
+    if names.size = 0 then
+      pure () --just more robust
+    else
+      let name₀ := names[0]!
+      evalTactic $ <- `(tactic| intro $(name₀):ident)
 
 macro "mwp" : tactic => `(tactic| (
   wpgen
@@ -113,7 +137,7 @@ macro "mwp" : tactic => `(tactic| (
   any_goals unfold WithName at *))
 
 attribute [spec high, loomWpSimp] WPGen.if
-attribute [spec, loomWpSimp] WPGen.bind WPGen.pure WPGen.assert WPGen.forWithInvariant WPGen.map-- WPGen.let
+attribute [spec, loomWpSimp] WPGen.bind WPGen.pure WPGen.assert WPGen.map-- WPGen.let
 attribute [loomWpSimp] spec
 
 @[loomLogicSimp]

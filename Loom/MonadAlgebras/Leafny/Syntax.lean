@@ -191,7 +191,7 @@ private def Array.andList (ts : Array (TSyntax `term)) : TermElabM (TSyntax `ter
   if ts.size = 0 then `(term| True) else
     let mut t := ts[0]!
     for t' in ts[1:] do
-      t <- `(term| $t ∧ $t')
+      t <- `(term| $t' ∧ $(WithName.mk' t (Lean.Name.anonymous.mkStr "post_condition")) )
     return t
 
 elab_rules : command
