@@ -216,27 +216,50 @@ namespace TotalCorrectness
 
 variable [∀ α, CCPO (m α)] [MonoBind m]
 
-lemma repeat_inv (f : Unit -> β -> m (ForInStep β)) [WellFoundedRelation β]
-  (inv : ForInStep β -> l)
+lemma repeat_inv (f : Unit -> β -> m (ForInStep β))
+  (inv : ForInStep β -> l) (measure : β -> Nat)
   init :
-   (∀ b, triple (inv (.yield b)) (f () b) (fun | .yield b' => inv (.yield b') ⊓ ⌜ WellFoundedRelation.rel b' b ⌝ | .done b' => inv (.done b'))) ->
+   (∀ b, triple (inv (.yield b)) (f () b) (fun | .yield b' => inv (.yield b') ⊓ ⌜ measure b' < measure b ⌝ | .done b' => inv (.done b'))) ->
    triple (inv (.yield init)) (Loop.forIn.loop f init) (fun b => inv (.done b)) := by
   intro hstep
-  apply WellFounded.induction (r := WellFoundedRelation.rel)
-    (C := fun init => triple (inv (.yield init)) (Loop.forIn.loop f ( init)) (fun b => inv (.done b)))
-  { apply WellFoundedRelation.wf }
+  have induc (C : β → Prop) (a : β) (h : ∀ x, (∀ y, measure y < measure x → C y) → C x): C a := by
+    have lem: ∀ n: Nat, ∀ x, measure x ≤ n →  C x := by
+      intro n
+      induction n with
+      | zero =>
+        intro x hx
+        exact h x (fun y => by omega)
+      | succ m ih =>
+        intro x hx
+        by_cases neq: measure x ≤ m
+        { exact ih x neq }
+        have eq: measure x = m + 1 := by omega
+        exact h x (fun y hy => ih y (by omega))
+    exact lem (measure a) a (by simp)
+  apply induc
+    (fun ini => triple (inv (.yield ini)) (Loop.forIn.loop f ( ini)) (fun b => inv (.done b))) init
   intro b ih; unfold Loop.forIn.loop; simp [triple, wp_bind]; apply le_trans
-  apply hstep; apply wp_cons; rintro (_|_) <;> simp [wp_pure]
-  solve_by_elim
+  apply hstep; apply wp_cons; rintro (_|_)
+  { simp [wp_pure] }
+  rename_i a
+  match ForInStep.yield a with
+  | .yield b' =>
+    simp; intro m_lt
+    have ihb := ih b' m_lt
+    simp [triple] at ihb
+    exact ihb
+  | .done b' =>
+    simp
+    rw [wp_pure b' (fun s: β => inv (ForInStep.done s))]
 
 
-lemma repeat_inv_split (f : Unit -> β -> m (ForInStep β)) [WellFoundedRelation β]
+lemma repeat_inv_split (f : Unit -> β -> m (ForInStep β))
   (inv : β -> l) (doneWith : β -> l)
-  init :
-    (∀ b, triple (inv b) (f () b) (fun | .yield b' => inv b' ⊓ ⌜ WellFoundedRelation.rel b' b ⌝ | .done b' => inv b' ⊓ doneWith b')) ->
+  init  (measure: β -> Nat):
+    (∀ b, triple (inv b) (f () b) (fun | .yield b' => inv b' ⊓ ⌜ measure b' < measure b ⌝ | .done b' => inv b' ⊓ doneWith b')) ->
     triple (inv init) (Loop.forIn.loop f init) (fun b => inv b ⊓ doneWith b) := by
   intro hstep
-  apply repeat_inv f (fun | .yield b => inv b | .done b => inv b ⊓ doneWith b) init
+  apply repeat_inv f (fun | .yield b => inv b | .done b => inv b ⊓ doneWith b) measure init
   apply hstep
 
 variable [MPropTotal m]

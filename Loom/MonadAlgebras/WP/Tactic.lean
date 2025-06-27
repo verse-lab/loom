@@ -5,11 +5,13 @@ import Loom.MonadAlgebras.WP.DoNames'
 
 open Lean Parser Meta Elab Term Command Tactic
 
-def findSpec (prog : Expr) : TacticM (Ident × Loom.SpecType) := do
+def findSpec (prog : Expr) : TacticM (Array (Ident × Loom.SpecType)) := do
   let specs ← specAttr.find? prog
-  let some ⟨specType, specName, _⟩ := specs.max? | throwError s!"no specs found for {prog}"
-  -- let spec <- Term.elabTerm (mkIdent specName) none
-  return (mkIdent specName, specType)
+  let grts := (specs.qsort (compare · · |>.isLT)).reverse.map
+    fun ⟨specType, specName, _⟩ => (mkIdent specName, specType)
+  if grts.isEmpty then
+    throwError s!"no specs found for {prog}"
+  return grts
 
 def Lean.MVarId.isWPGenGoal : MVarId → TacticM Bool
 | mvarId => do
@@ -43,15 +45,20 @@ macro "try_resolve_spec_goals" : tactic => `(tactic| try is_not_wpgen_goal; solv
 def generateWPStep : TacticM Unit := withMainContext do
   let goalType <- getMainTarget
   let_expr WPGen _m _mInst _α _l _lInst _mPropInst x := goalType | throwError "{goalType} is not a WPGen"
-  match <- findSpec x with
-  | (spec, .wpgen) =>
-    evalTactic $ <- `(tactic| apply $spec)
-  | (spec, .triple) =>
-    evalTactic $ <- `(tactic|
-      eapply $(mkIdent ``WPGen.spec_triple);
-      apply $spec
-      -- hide_non_wpgen_goals
-      )
+  let cs <- findSpec x
+  for elem in cs do
+    try
+      match elem with
+      | (spec, .wpgen) =>
+        evalTactic $ <- `(tactic| apply $spec)
+      | (spec, .triple) =>
+        evalTactic $ <- `(tactic|
+          eapply $(mkIdent ``WPGen.spec_triple);
+          apply $spec
+          hide_non_wpgen_goals)
+      return ()
+    catch _ =>
+      pure ()
 
 
 elab "wpgen_app" : tactic => generateWPStep

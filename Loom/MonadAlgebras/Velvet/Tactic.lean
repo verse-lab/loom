@@ -27,7 +27,7 @@ private def _root_.Lean.SimplePersistentEnvExtension.get [Inhabited σ] (ext : S
   [Monad m] [MonadEnv m] : m σ := do
   return ext.getState (<- getEnv)
 
-def getAssertionStx : TacticM Term := withMainContext do
+def getAssertionStx : TacticM (Option Term) := withMainContext do
   let goal <- getMainTarget
   let goalStx <- ppExpr goal
   let .some withNameExpr := goal.find? (fun e => e.isAppOf ``WithName)
@@ -37,8 +37,8 @@ def getAssertionStx : TacticM Term := withMainContext do
     let name <- name.getName
     let ⟨_, ss, ns⟩ <- loomAssertionsMap.get
     let some id := ns[name]?
-      | throwError s!"Failed to prove assertion which is not registered3: {goalStx}"
-    return ss[id]!
+      | return none --throwError s!"Failed to prove assertion which is not registered3: {goalStx}"
+    return some ss[id]!
   | _ => throwError s!"Failed to prove assertion which is not registered4: {goalStx}"
   --let ⟨maxId, ss, ns⟩ <- loomAssertionsMap.get
 
@@ -76,17 +76,23 @@ elab_rules : tactic
       else
     evalTactic vlsIntro
     let res <- anyGoalsWithTag fun _mvarId => do
-      let stx <- getAssertionStx
+      let stx_res <- getAssertionStx
       evalTactic vlsUnfold
       let mvarId <- getMainGoal
       evalTactic vlsAuto
       if (<- getUnsolvedGoals).length > 0 then
-        return some (.mkSimple stx.raw.prettyPrint.pretty, (mvarId, stx))
+        match stx_res with
+        | some stx =>
+          return some (.mkSimple stx.raw.prettyPrint.pretty, (mvarId, some stx))
+        | none =>
+          return some (`decreasing, (mvarId, none))
       else return none
     match vls with
     | `(velvet_solve_tactic| velvet_solve!) =>
-      for (mvarId, stx) in res do
-        logErrorAt stx $ m!"Failed to prove assertion\n{mvarId}"
+      for (mvarId, stx_res) in res do
+        match stx_res with
+        | some stx => logErrorAt stx $ m!"Failed to prove assertion\n{mvarId}"
+        | none => logError m!"Failed to prove nameless assertion\n{mvarId}"
     | _ => pure ()
 
 elab "velvet_solve?" : tactic => withMainContext do

@@ -59,10 +59,12 @@ set_option linter.unusedVariables false in
 def invariantGadget {invType : Type u} (inv : List invType) [CompleteLattice invType] [MPropOrdered m invType] : m PUnit := pure .unit
 
 declare_syntax_cat doneWith
+declare_syntax_cat decreasingTerm
 declare_syntax_cat invariantClause
 declare_syntax_cat invariants
 syntax "invariant" termBeforeDo linebreak : invariantClause
 syntax "done_with" termBeforeDo : doneWith
+syntax "decreasing" termBeforeDo : decreasingTerm
 
 syntax (invariantClause linebreak)* : invariants
 
@@ -110,6 +112,18 @@ syntax "while" term
   (invariantClause)*
   doneWith
   "do" doSeq : doElem
+syntax "while" term
+  (invariantClause)*
+  "do" doSeq : doElem
+syntax "while" term
+  (invariantClause)*
+  decreasingTerm
+  "do" doSeq : doElem
+syntax "while" term
+  (invariantClause)*
+  doneWith
+  decreasingTerm
+  "do" doSeq : doElem
 syntax "while_some" ident ":|" termBeforeDo "do" doSeq : doElem
 syntax "while_some" ident ":|" term
   (invariantClause)*
@@ -131,7 +145,44 @@ macro_rules
           if $t then
             $seq:doSeq
           else break)
-    -- | _ => Lean.Macro.throwError "while expects a sequence of do-elements"
+  | `(doElem| while $t
+              $[invariant $inv:term
+              ]*
+              do $seq:doSeq) =>
+      `(doElem|
+        for _ in Lean.Loop.mk do
+          invariantGadget [ $[(with_name_prefix `invariant $inv:term)],* ]
+          onDoneGadget (with_name_prefix `done ¬$t:term)
+          if $t then
+            $seq:doSeq
+          else break)
+  | `(doElem| while $t
+              $[invariant $inv:term
+              ]*
+              decreasing $measure:term
+              do $seq:doSeq) =>
+      `(doElem|
+        for _ in Lean.Loop.mk do
+          invariantGadget [ $[(with_name_prefix `invariant $inv:term)],* ]
+          onDoneGadget (with_name_prefix `done ¬$t:term)
+          decreasingGadget ($measure:term)
+          if $t then
+            $seq:doSeq
+          else break)
+  | `(doElem| while $t
+              $[invariant $inv:term
+              ]*
+              done_with $inv_done
+              decreasing $measure:term
+              do $seq:doSeq) =>
+      `(doElem|
+        for _ in Lean.Loop.mk do
+          invariantGadget [ $[(with_name_prefix `invariant $inv:term)],* ]
+          onDoneGadget (with_name_prefix `done $inv_done:term)
+          decreasingGadget ($measure:term)
+          if $t then
+            $seq:doSeq
+          else break)
   | `(doElem| while_some $x:ident :| $t do $seq:doSeq) =>
     match seq with
     | `(doSeq| $[$seq:doElem]*)

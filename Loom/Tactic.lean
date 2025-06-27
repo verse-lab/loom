@@ -15,13 +15,14 @@ def anyGoalsWithTag (tactic : MVarId → TacticM (Option (Name × α))) : Tactic
       setGoals [mvarId]
       try
         let r ← tactic mvarId
+        let goals <- getUnsolvedGoals
         if let some ⟨n, r⟩ := r then
-          let goals <- getUnsolvedGoals
           for goal in goals do
             goal.setTag n
           res := res.push r
           mvarIdsNew := mvarIdsNew ++ goals
-      catch _ =>
+      catch ex =>
+        logInfo m!"{ex.toMessageData}"
         mvarIdsNew := mvarIdsNew.push mvarId
   setGoals mvarIdsNew.toList
   pure res
