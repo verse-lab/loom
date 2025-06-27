@@ -33,11 +33,17 @@ def getAssertionStx : TacticM (Option Term) := withMainContext do
   let .some withNameExpr := goal.find? (fun e => e.isAppOf ``WithName)
     | throwError s!"Failed to prove assertion which is not registered1: {goalStx}"
   match_expr withNameExpr with
-  | WithName _ name =>
+  | WithName exp name =>
     let name <- name.getName
     let ⟨_, ss, ns⟩ <- loomAssertionsMap.get
     let some id := ns[name]?
-      | return none --throwError s!"Failed to prove assertion which is not registered3: {goalStx}"
+      | let .some typeWithNameExpr := exp.find? (fun e => e.isAppOf ``typeWithName)
+          | throwError s!"Failed to prove assertion without names: {goalStx}"
+        let nname := typeWithNameExpr.getAppArgs[2]!
+        let sname <- nname.getName
+        let some id1 := ns[sname]?
+          | throwError s!"typeWithName {sname} not registered: {typeWithNameExpr}"
+        return some ss[id1]!
     return some ss[id]!
   | _ => throwError s!"Failed to prove assertion which is not registered4: {goalStx}"
   --let ⟨maxId, ss, ns⟩ <- loomAssertionsMap.get
@@ -62,10 +68,11 @@ elab_rules : tactic
     try simp only [invariants]
     try simp only [WithName.mk']
     try simp only [WithName.erase]
+    try simp only [typeWithName.erase]
     try simp only [List.foldr]
     try simp only [loomLogicSimp]
     repeat' (loom_split <;> (repeat loom_intro))))
-    let vlsUnfold <- `(tactic| all_goals try unfold WithName at *)
+    let vlsUnfold <- `(tactic| all_goals try unfold WithName at *; all_goals try unfold typeWithName at *)
     let vlsAuto <- `(tactic| try (try simp only [loomAbstractionSimp] at *); auto [$hints,*])
     let vlsTryThis <- `(tacticSeq|
         $vlsIntro
@@ -85,7 +92,7 @@ elab_rules : tactic
         | some stx =>
           return some (.mkSimple stx.raw.prettyPrint.pretty, (mvarId, some stx))
         | none =>
-          return some (`decreasing, (mvarId, none))
+          return some (`unnamed, (mvarId, none))
       else return none
     match vls with
     | `(velvet_solve_tactic| velvet_solve!) =>
@@ -107,10 +114,12 @@ elab "velvet_solve?" : tactic => withMainContext do
   wpgen
   try simp only [$(mkIdent `loomWpSimp):ident]
   try simp only [$(mkIdent `WithName):ident]
+  try simp only [$(mkIdent `typeWithName):ident]
   try unfold spec
   try simp only [$(mkIdent `invariants):ident]
   try simp only [$(mkIdent `WithName.mk'):ident]
   try simp only [$(mkIdent `WithName.erase):ident]
+  try simp only [$(mkIdent `typeWithName.erase):ident]
   try simp only [$(mkIdent `List.foldr):ident]
   try simp only [$(mkIdent `loomLogicSimp):ident]
   try simp only [$(mkIdent `simpMProp):ident]

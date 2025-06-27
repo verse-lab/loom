@@ -98,7 +98,18 @@ elab "with_name_prefix" lit:name inv:term : term => do
       maxId := newMaxId
       })
   Term.elabTerm (<- ``(WithName $inv $(Lean.quoteNameMk invName))) none
-  -- pure default
+
+elab "type_with_name_prefix" lit:name inv:term : term => do
+  let ⟨maxId, _, _⟩ <- loomAssertionsMap.get
+  let newMaxId := maxId + 1
+  let invName := lit.getName.toString ++ "_" ++ toString newMaxId.toNat |>.toName
+  loomAssertionsMap.modify (fun res => {
+      syntaxStore := res.syntaxStore.insert newMaxId inv
+      nameStore := res.nameStore.insert invName newMaxId
+      maxId := newMaxId
+      })
+  Term.elabTerm (<- ``(typeWithName $inv $(Lean.quoteNameMk invName))) none
+
 
 def termBeforeInvariant := Parser.withForbidden "invariant" Parser.termParser
 
@@ -165,7 +176,7 @@ macro_rules
         for _ in Lean.Loop.mk do
           invariantGadget [ $[(with_name_prefix `invariant $inv:term)],* ]
           onDoneGadget (with_name_prefix `done ¬$t:term)
-          decreasingGadget ($measure:term)
+          decreasingGadget (type_with_name_prefix `decreasing_measure $measure:term)
           if $t then
             $seq:doSeq
           else break)
@@ -179,7 +190,7 @@ macro_rules
         for _ in Lean.Loop.mk do
           invariantGadget [ $[(with_name_prefix `invariant $inv:term)],* ]
           onDoneGadget (with_name_prefix `done $inv_done:term)
-          decreasingGadget ($measure:term)
+          decreasingGadget (type_with_name_prefix `decreasing_measure $measure:term)
           if $t then
             $seq:doSeq
           else break)

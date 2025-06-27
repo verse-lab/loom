@@ -24,10 +24,15 @@ abbrev MProdWithNames.mk' {α β : Type u} (a : α) (b : β)
 set_option linter.unusedVariables false in
 abbrev WithName (α : Sort u) (name : Lean.Name := default) := α
 
+set_option linter.unusedVariables false in
+abbrev typeWithName {α : Type u} (β : α) (name : Lean.Name := default) := β
+
 abbrev WithName.mk' {α : Sort u} (a : α) (name : Lean.Name := default) : WithName α name :=
   a
 
 abbrev WithName.erase {α : Type u} {name} (a : WithName α name) : α := a
+
+abbrev typeWithName.erase {α} {name} (a: typeWithName α name): α := a
 
 -- HACK: avoid code explosion until heuristics are improved
 set_option compiler.reuse false

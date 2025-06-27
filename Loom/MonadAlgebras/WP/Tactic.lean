@@ -128,8 +128,9 @@ elab "loom_intro" : tactic => withMainContext do
 
 macro "mwp" : tactic => `(tactic| (
   wpgen
-  try simp only [loomLogicSimp, loomWpSimp, invariants, List.foldr, WithName.mk', WithName.erase]
+  try simp only [loomLogicSimp, loomWpSimp, invariants, List.foldr, WithName.mk', WithName.erase, typeWithName.erase]
   try unfold spec WithName at *
+  try unfold spec typeWithName at *
   ))
 
 attribute [spec high, loomWpSimp] WPGen.if
