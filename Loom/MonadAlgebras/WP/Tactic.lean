@@ -42,7 +42,7 @@ elab "show_all_goals" : tactic => do
 
 macro "try_resolve_spec_goals" : tactic => `(tactic| try is_not_wpgen_goal; solve | rfl | solve_by_elim | simp)
 
-def generateWPStep : TacticM Unit := withMainContext do
+def generateWPStep : TacticM (Bool × Expr) := withMainContext do
   let goalType <- getMainTarget
   let_expr WPGen _m _mInst _α _l _lInst _mPropInst x := goalType | throwError "{goalType} is not a WPGen"
   let cs <- findSpec x
@@ -54,14 +54,16 @@ def generateWPStep : TacticM Unit := withMainContext do
       | (spec, .triple) =>
         evalTactic $ <- `(tactic|
           eapply $(mkIdent ``WPGen.spec_triple);
-          apply $spec
-          hide_non_wpgen_goals)
-      return ()
-    catch _ =>
-      pure ()
+          apply $spec)
+      return (true, x)
+    catch _ => continue
+  return (false, x)
 
 
-elab "wpgen_app" : tactic => generateWPStep
+elab "wpgen_app" : tactic => do
+  let (found, x) ← generateWPStep
+  unless found do throwError "no spec found for {x}"
+
 macro "wpgen_step" : tactic => `(tactic| first
   | (wpgen_app <;> intros <;> try_resolve_spec_goals)
   | (intros; split <;> intros)
