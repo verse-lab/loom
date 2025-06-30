@@ -661,3 +661,10 @@ end TotalCorrectness
 
 macro_rules
   | `(doElem| let $x:term :| $t) => `(doElem| let $x:term <- pickSuchThat _ (fun $x => $t))
+
+
+
+lemma TotalCorrectness.DemonicChoice.NonDetT.wp_intro {α : Type u} (x : NonDetT m α) (post : α -> l):
+  (open TotalCorrectness.DemonicChoice in NonDetT.wp x ⊤) ⊓ (open PartialCorrectness.DemonicChoice in NonDetT.wp x post) =
+    (open TotalCorrectness.DemonicChoice in NonDetT.wp x post) := by
+      sorry
