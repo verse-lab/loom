@@ -16,7 +16,7 @@ open TotalCorrectness DemonicChoice Lean.Elab.Term.DoNames
 
 set_option auto.smt.trust true
 set_option auto.smt true
-set_option auto.smt.timeout 10
+set_option auto.smt.timeout 4
 set_option auto.smt.solver.name "cvc5"
 
 class TArray (α : outParam Type) (κ: Type) where
@@ -180,7 +180,6 @@ section squareRoot
 set_option trace.Loom true
 
 method sqrt (x: ℕ) return (res: ℕ)
-  require x > 8
   ensures res * res ≤ x ∧ ∀ i, i ≤ res → i * i ≤ x
   do
     if x = 0 then
@@ -189,13 +188,31 @@ method sqrt (x: ℕ) return (res: ℕ)
       let mut i := 0
       while i * i ≤ x
       invariant ∀ j, j < i → j * j ≤ x
-      decreasing x - i
+      decreasing x + 8 - i
       do
         i := i + 1
       return i - 1
 prove_correct sqrt by
   dsimp [sqrt]
   velvet_solve
+
+method cbrt (x: ℕ) return (res: ℕ)
+  ensures res * res * res ≤ x ∧ ∀ i, i ≤ res → i * i * i ≤ x
+  do
+    if x = 0 then
+      return 0
+    else
+      let mut i := 0
+      while i * i * i ≤ x
+      invariant ∀ j, j < i → j * j * j ≤ x
+      decreasing x + 8 - i
+      do
+        i := i + 1
+      return i - 1
+prove_correct cbrt by
+  dsimp [cbrt]
+  velvet_solve
+  grind
 
 method sqrt_bn (x: ℕ) (bnd: ℕ) return (res: ℕ)
   require x < bnd * bnd
