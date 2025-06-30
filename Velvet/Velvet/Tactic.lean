@@ -8,7 +8,7 @@ import Loom.MonadAlgebras.WP.Tactic
 import Loom.MonadAlgebras.WP.Gen
 import Loom.Tactic
 
-import Loom.MonadAlgebras.Velvet.Extension
+import Velvet.Extension
 
 import ProofWidgets.Component.Panel.Basic
 import ProofWidgets.Component.HtmlDisplay

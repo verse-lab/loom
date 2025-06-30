@@ -8,9 +8,9 @@ import Loom.MonadAlgebras.NonDetT.Extract
 import Loom.MonadAlgebras.WP.Tactic
 import Loom.MonadAlgebras.WP.DoNames'
 
-import Loom.MonadAlgebras.Velvet.Extension
-import Loom.MonadAlgebras.Velvet.Syntax
-import Loom.MonadAlgebras.Velvet.Tactic
+import Velvet.Extension
+import Velvet.Syntax
+import Velvet.Tactic
 
 open PartialCorrectness DemonicChoice Lean.Elab.Term.DoNames
 

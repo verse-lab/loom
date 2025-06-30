@@ -1,1 +1,1 @@
-import Loom.MonadAlgebras.Velvet.Examples
+import Velvet

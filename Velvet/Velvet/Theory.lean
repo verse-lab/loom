@@ -8,7 +8,7 @@ import Loom.MonadAlgebras.NonDetT.Extract
 import Loom.MonadAlgebras.Instances.Basic
 import Loom.MonadAlgebras.WP.Tactic
 
-import Loom.MonadAlgebras.Velvet.Extension
+import Velvet.Extension
 
 abbrev VelvetM α := NonDetT DivM α
 
@@ -23,13 +23,13 @@ lemma DivM.total_decompose (α : Type) (x : DivM α) (post₁ post₂ : α -> Pr
     simp [[totl| DivM.wp_eq], [part| DivM.wp_eq]]
     split <;> simp
 
-@[local simp]
-lemma eta_red_totl (α : Type) (x: NonDetT DivM α) (post: α -> Prop) :
-  [totl| wp x post] = [totl| wp x fun y => post y] := by trivial
-
-@[local simp]
-lemma eta_red_part (α : Type) (x: NonDetT DivM α) (post: α -> Prop) :
-  [part| wp x post] = [part| wp x fun y => post y] := by trivial
+@[local simp, loomLogicSimp]
+lemma mimpl (x : NonDetT DivM α) (post₁ post₂ : α -> Prop) :
+  (post₁ ≤ post₂) → ([totl|wp x post₁]) ≤ ([part| wp x post₂]) := by
+    intro le
+    simp [loomLogicSimp]
+    simp [loomLogicSimp] at le
+    sorry
 
 lemma VelvetM.total_decompose {α : Type} (x : VelvetM α) (post₁ post₂ : α -> Prop):
   [totl| wp x post₁] ⊓ [part| wp x post₂] = [totl| wp x (post₁ ⊓ post₂)] := by
@@ -41,22 +41,92 @@ lemma VelvetM.total_decompose {α : Type} (x : VelvetM α) (post₁ post₂ : α
       rename_i arg
       have ind := f_ih arg post₁ post₂
       simp at ind
-      rw [ind] }
+      rw [ind]
+      trivial }
     { constructor <;> intro hyp
       { intro i hi
         have hl := hyp.left i hi
         have hr := hyp.right i hi
-        simp [←eta_red_totl] at hl
-        simp [←eta_red_part] at hr
         have ind := f_ih i post₁ post₂
         simp [hl] at ind
         simp [hr] at ind
         exact ind }
-      constructor <;> intro i hi
-      { have conj := hyp i hi
-        sorry }
+      constructor <;>
+      { intro i hi
+        have conj := hyp i hi
+        have ind := f_ih i post₁ post₂
+        simp [loomLogicSimp] at ind
+        rw [←ind] at conj
+        simp [conj] } }
+    constructor
+    { intro conj
       sorry }
-    sorry
+    intro hyp
+    rcases hyp with ⟨inv, x_ex, h_inv⟩
+    rcases x_ex with ⟨x, hx⟩
+    simp [spec]
+    simp [spec] at h_inv
+    simp [LE.pure] at h_inv
+    constructor
+    { exists inv
+      constructor
+      { exists x }
+      simp [h_inv]
+      simp [LE.pure]
+      exact le_trans h_inv.right (by
+        have st: ∀ x, (post₁ x ∧ post₂ x) ≤ post₁ x := by
+          intro x
+          simp
+          intro hx hy
+          exact hx
+        simp [←[totl| NonDetT.wp_eq_wp], ←[part| NonDetT.wp_eq_wp]]
+        simp [loomLogicSimp]
+        intro x and_wp
+        have cont_ind := cont_ih x post₁ post₂
+        simp [loomLogicSimp] at cont_ind
+        simp [and_wp] at cont_ind
+        simp [cont_ind] ) }
+    exists inv
+    constructor
+    { intro b hb
+      have hbx := hx b hb
+      simp [←[totl| NonDetT.wp_eq_wp]] at hbx
+      have hbxf := fun x_1 ↦
+        match x_1 with
+        | ForInStep.yield b' => inv (ForInStep.yield b') ∧ x b' < x b
+        | ForInStep.done b' => inv (ForInStep.done b')
+      have hb_triv: True ≤ ([totl| wp (f b) fun x_1 ↦
+        match x_1 with
+        | ForInStep.yield b' => inv (ForInStep.yield b') ∧ x b' < x b
+        | ForInStep.done b' => inv (ForInStep.done b')]) := by
+        simp [loomLogicSimp]
+        exact hbx
+      have tr_intro: True ≤ ([part| NonDetT.wp (f b) inv]) := le_trans hb_triv (by
+        simp [loomLogicSimp]
+        intro wp_x
+        simp [←[part| NonDetT.wp_eq_wp]]
+        apply mimpl (f b) (fun x_1 ↦
+          match x_1 with
+          | ForInStep.yield b' => inv (ForInStep.yield b') ∧ x b' < x b
+          | ForInStep.done b' => inv (ForInStep.done b')) (fun x => inv x)
+        { simp [loomLogicSimp]
+          intro x1
+          match x1 with
+          | ForInStep.yield b' => simp; intros; simp [*]
+          | ForInStep.done b' => simp }
+        exact wp_x)
+      simp at tr_intro
+      simp [tr_intro] }
+    simp [LE.pure]
+    simp [h_inv]
+    exact le_trans h_inv.right (by
+      simp [←[totl| NonDetT.wp_eq_wp], ←[part| NonDetT.wp_eq_wp]]
+      simp [loomLogicSimp]
+      /-intro x and_wp
+      have cont_ind := cont_ih x post₁ post₂
+      simp [loomLogicSimp] at cont_ind
+      simp [and_wp] at cont_ind
+      simp [cont_ind]-/)
 
 
 
