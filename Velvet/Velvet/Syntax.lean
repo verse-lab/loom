@@ -276,7 +276,7 @@ elab_rules : command
     let post := obligation.post
     let lemmaName := mkIdent <| name.getId.appendAfter "_correct"
     let proof <- withRef tkp ``(by $proof)
-    let thmCmd <- withRef tkp `(command| lemma $lemmaName $bindersIdents* : $pre -> triple True ($name $ids*) (fun ⟨$retId, $ret⟩ => $post) := $proof)
+    let thmCmd <- withRef tkp `(command| lemma $lemmaName $bindersIdents* : triple $pre ($name $ids*) (fun ⟨$retId, $ret⟩ => $post) := $proof)
     Command.elabCommand thmCmd
     velvetObligations.modify (·.erase name.getId)
 

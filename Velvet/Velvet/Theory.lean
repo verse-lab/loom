@@ -186,10 +186,11 @@ lemma VelvetM.total_decompose {α : Type} (x : VelvetM α) (post₁ post₂ : α
       simp [loomLogicSimp])
 
 lemma VelvetM.total_decompose_triple {α : Type} (x : VelvetM α) {pre : Prop} {post : α -> Prop} :
-  [totl| triple pre x fun x => True] → [part| triple pre x post] ->
+  [totl| triple pre x fun _ => True] → [part| triple pre x post] ->
   [totl| triple pre x post] := by
     intro t3 post3
     simp [triple]
+    -- apply total_decompose_triple (h ..)
     intro pre
     simp [triple, pre] at t3
     simp [triple, pre] at post3

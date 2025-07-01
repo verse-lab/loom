@@ -221,9 +221,6 @@ open TotalCorrectness DemonicChoice in
 prove_correct insertionSort_total by
   have triple_termination := insertionSort_termination_correct arr
   have triple_res := insertionSort_part_correct arr
-  simp at triple_termination
-  simp at triple_res
-  simp
   exact VelvetM.total_decompose_triple
     (insertionSort_termination arr)
     triple_termination
