@@ -24,12 +24,43 @@ lemma DivM.total_decompose (α : Type) (x : DivM α) (post₁ post₂ : α -> Pr
     split <;> simp
 
 @[local simp, loomLogicSimp]
-lemma mimpl (x : NonDetT DivM α) (post₁ post₂ : α -> Prop) :
+lemma wp_mono_part (x : NonDetT DivM α) (post₁ post₂ : α -> Prop) :
   (post₁ ≤ post₂) → ([totl|wp x post₁]) ≤ ([part| wp x post₂]) := by
     intro le
     simp [loomLogicSimp]
     simp [loomLogicSimp] at le
-    sorry
+    unhygienic induction x <;> try simp [loomLogicSimp]
+    { exact le ret }
+    { simp [[totl| DivM.wp_eq], [part| DivM.wp_eq]]
+      intro wp1
+      match x_1 with
+      | .div => trivial
+      | .res a => simp; simp at wp1; exact f_ih a post₁ post₂ le wp1 }
+    { intro wp1 i hi
+      exact f_ih i post₁ post₂ le (wp1 i hi) }
+    intro x x_1 h1 sp1
+    exists x
+    constructor
+    { intro b xb
+      have hbx := h1 b xb
+      simp [←[totl| NonDetT.wp_eq_wp]] at hbx
+      simp [←[part| NonDetT.wp_eq_wp]]
+      exact f_ih b (fun x_2 ↦
+        match x_2 with
+        | ForInStep.yield b' => x (ForInStep.yield b') ∧ x_1 b' < x_1 b
+        | ForInStep.done b' => x (ForInStep.done b'))
+        x
+        (by
+          intro x2 hx2
+          match x2 with
+          | .yield b' => simp at hx2; simp [hx2]
+          | .done b' => simp at hx2; simp [hx2] )
+        hbx }
+    simp [spec, LE.pure] at sp1
+    simp [spec, LE.pure, sp1]
+    exact le_trans sp1.right (by
+      simp [loomLogicSimp, ←[totl| NonDetT.wp_eq_wp], ←[part| NonDetT.wp_eq_wp]]
+      intro x1; exact cont_ih x1 post₁ post₂ le )
 
 lemma VelvetM.total_decompose {α : Type} (x : VelvetM α) (post₁ post₂ : α -> Prop):
   [totl| wp x post₁] ⊓ [part| wp x post₂] = [totl| wp x (post₁ ⊓ post₂)] := by
@@ -48,8 +79,7 @@ lemma VelvetM.total_decompose {α : Type} (x : VelvetM α) (post₁ post₂ : α
         have hl := hyp.left i hi
         have hr := hyp.right i hi
         have ind := f_ih i post₁ post₂
-        simp [hl] at ind
-        simp [hr] at ind
+        simp [hl, hr] at ind
         exact ind }
       constructor <;>
       { intro i hi
@@ -60,41 +90,74 @@ lemma VelvetM.total_decompose {α : Type} (x : VelvetM α) (post₁ post₂ : α
         simp [conj] } }
     constructor
     { intro conj
-      sorry }
+      rcases conj with ⟨h, inv_spec, hspec⟩
+      rcases h with ⟨inv, x1, hinv⟩
+      rcases x1 with ⟨x, hx⟩
+      exists inv ⊓ inv_spec
+      constructor
+      { exists x
+        intro b hb
+        simp [←[totl| NonDetT.wp_eq_wp]]
+        simp [loomLogicSimp] at hb
+        have hxb := hx b hb.left
+        simp [←[totl| NonDetT.wp_eq_wp]] at hxb
+        simp [spec, LE.pure, loomLogicSimp, ←[part| NonDetT.wp_eq_wp]] at hspec
+        have hspecb := hspec.left b hb.right
+        have ind := f_ih b
+          (fun x_1 ↦
+          match x_1 with
+          | ForInStep.yield b' => inv (ForInStep.yield b') ∧ x b' < x b
+          | ForInStep.done b' => inv (ForInStep.done b'))
+          inv_spec
+        simp [loomLogicSimp] at ind
+        have indr := ind.mp (And.intro hxb hspecb)
+        have v1 := [totl| NonDetT.wp_mono
+          (f b)
+          (fun x_1 ↦
+            (match x_1 with
+              | ForInStep.yield b' => inv (ForInStep.yield b') ∧ x b' < x b
+              | ForInStep.done b' => inv (ForInStep.done b')) ∧
+              inv_spec x_1)
+          (fun x_1 ↦
+            match x_1 with
+            | ForInStep.yield b' => (inv (ForInStep.yield b') ∧ inv_spec (ForInStep.yield b')) ∧ x b' < x b
+            | ForInStep.done b' => inv (ForInStep.done b') ∧ inv_spec (ForInStep.done b'))
+          ]
+        simp [loomLogicSimp, ←[totl| NonDetT.wp_eq_wp]] at v1
+        exact v1
+          (fun x => by
+            match x with
+            | .yield b' => intro hb hspec; simp [hb, hspec]
+            | .done b' => intro hb hspec; simp [hb, hspec] )
+          indr }
+      simp [spec, LE.pure, loomLogicSimp, ←[totl| NonDetT.wp_eq_wp]] at hinv
+      simp [spec, LE.pure, loomLogicSimp, ←[part| NonDetT.wp_eq_wp]] at hspec
+      simp [spec, LE.pure, loomLogicSimp, ←[totl| NonDetT.wp_eq_wp]]
+      simp [hinv, hspec]
+      intro x inv_x inv_spec
+      have h₁ := hinv.right x inv_x
+      have h₂ := hspec.right.right x inv_spec
+      have cont_ind := cont_ih x post₁ post₂
+      simp [loomLogicSimp] at cont_ind
+      exact cont_ind.mp (And.intro h₁ h₂) }
     intro hyp
     rcases hyp with ⟨inv, x_ex, h_inv⟩
     rcases x_ex with ⟨x, hx⟩
     simp [spec]
-    simp [spec] at h_inv
-    simp [LE.pure] at h_inv
-    constructor
-    { exists inv
-      constructor
-      { exists x }
-      simp [h_inv]
-      simp [LE.pure]
+    simp [spec, LE.pure] at h_inv
+    constructor <;> exists inv <;> constructor
+    { exists x }
+    { simp [h_inv, LE.pure]
       exact le_trans h_inv.right (by
-        have st: ∀ x, (post₁ x ∧ post₂ x) ≤ post₁ x := by
-          intro x
-          simp
-          intro hx hy
-          exact hx
         simp [←[totl| NonDetT.wp_eq_wp], ←[part| NonDetT.wp_eq_wp]]
         simp [loomLogicSimp]
         intro x and_wp
         have cont_ind := cont_ih x post₁ post₂
-        simp [loomLogicSimp] at cont_ind
-        simp [and_wp] at cont_ind
+        simp [loomLogicSimp, and_wp] at cont_ind
         simp [cont_ind] ) }
-    exists inv
-    constructor
     { intro b hb
       have hbx := hx b hb
       simp [←[totl| NonDetT.wp_eq_wp]] at hbx
-      have hbxf := fun x_1 ↦
-        match x_1 with
-        | ForInStep.yield b' => inv (ForInStep.yield b') ∧ x b' < x b
-        | ForInStep.done b' => inv (ForInStep.done b')
       have hb_triv: True ≤ ([totl| wp (f b) fun x_1 ↦
         match x_1 with
         | ForInStep.yield b' => inv (ForInStep.yield b') ∧ x b' < x b
@@ -105,7 +168,7 @@ lemma VelvetM.total_decompose {α : Type} (x : VelvetM α) (post₁ post₂ : α
         simp [loomLogicSimp]
         intro wp_x
         simp [←[part| NonDetT.wp_eq_wp]]
-        apply mimpl (f b) (fun x_1 ↦
+        apply wp_mono_part (f b) (fun x_1 ↦
           match x_1 with
           | ForInStep.yield b' => inv (ForInStep.yield b') ∧ x b' < x b
           | ForInStep.done b' => inv (ForInStep.done b')) (fun x => inv x)
@@ -117,18 +180,10 @@ lemma VelvetM.total_decompose {α : Type} (x : VelvetM α) (post₁ post₂ : α
         exact wp_x)
       simp at tr_intro
       simp [tr_intro] }
-    simp [LE.pure]
-    simp [h_inv]
+    simp [LE.pure, h_inv]
     exact le_trans h_inv.right (by
       simp [←[totl| NonDetT.wp_eq_wp], ←[part| NonDetT.wp_eq_wp]]
-      simp [loomLogicSimp]
-      /-intro x and_wp
-      have cont_ind := cont_ih x post₁ post₂
-      simp [loomLogicSimp] at cont_ind
-      simp [and_wp] at cont_ind
-      simp [cont_ind]-/)
-
-
+      simp [loomLogicSimp])
 
 section
 open PartialCorrectness DemonicChoice
