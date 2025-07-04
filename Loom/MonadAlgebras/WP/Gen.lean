@@ -349,17 +349,3 @@ def WPGen.let  {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [Co
   prop := by
      intro post; simp; refine iInf_le_of_le y ?_
      simp; apply (wpgx y).prop
-
-noncomputable
-def WPGen.getm [CompleteBooleanAlgebra (α -> l)] [MPropOrdered m (α -> l)]
- [self: MonadState α m]: WPGen (MonadState.get : m α) where
-    get := fun fn x => fn x x
-    prop := fun post => by
-      sorry
-
-
-def WPGen.setm [CompleteBooleanAlgebra (α -> l)] [MPropOrdered m (α -> l)] {res: α}
- [self: MonadState α m]: WPGen (MonadState.set res : m PUnit) where
-    get := fun fn x => fn PUnit.unit res
-    prop := fun post => by
-      sorry

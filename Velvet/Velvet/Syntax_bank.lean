@@ -1,6 +1,8 @@
 import Lean
 import Lean.Parser
 
+import Aesop
+
 import Mathlib.Algebra.BigOperators.Intervals
 import Mathlib.Algebra.Ring.Int.Defs
 
@@ -296,10 +298,11 @@ elab_rules : command
     let lemmaName := mkIdent <| name.getId.appendAfter "_correct"
     let proof <- withRef tkp ``(by $proof)
     let balanceOld := mkIdent `balanceOld
+    let bal := mkIdent `balance
     let thmCmd <- withRef tkp `(command| lemma $lemmaName $bindersIdents* :
       ∀ $(balanceOld) : Balance,
       triple
-        (fun balance: Balance => (balance = $(balanceOld)) ∧ $pre)
+        (fun $(bal):ident : Balance => ($bal:ident = $(balanceOld)) ∧ $pre)
         ($name $ids*)
         (fun $retId => fun $ret : Balance => $post) := $proof)
     Command.elabCommand thmCmd
@@ -327,9 +330,9 @@ def nonEmpty (q : Queue α) : Prop :=
 def enqueue (x : α) (q : Queue α) : Queue α :=
   { elems := x :: q.elems}
 
-def dequeue [Inhabited α] (q : Queue α) : α :=
+def dequeue [AddMonoid α] (q : Queue α) : α :=
   match q.elems with
-  | [] => default
+  | [] => 0
   | (x :: _) => x
 
 def tail (q : Queue α) : Queue α :=
@@ -343,5 +346,29 @@ def length (q : Queue α) : Nat := q.elems.length
 
 instance (q : Queue α) : Decidable q.nonEmpty :=
   inferInstanceAs (Decidable (¬q.elems.isEmpty))
+
+@[aesop unsafe]
+theorem tail_length : ∀ q : Queue α, q.nonEmpty → q.tail.length < q.length := by
+  intro q nemp
+  simp [Queue.nonEmpty] at nemp
+  simp [Queue.tail]
+  split
+  { contradiction }
+  simp [Queue.length]
+  rename_i x
+  simp [x]
+
+@[aesop unsafe]
+theorem tail_sum : ∀ q : Queue Nat, q.tail.sum + q.dequeue = q.sum := by
+  intro q
+  simp [Queue.dequeue, Queue.tail, Queue.sum]
+  split <;> rename_i x <;> simp [x]
+  rw [add_comm]
+
+@[aesop unsafe]
+theorem sum_zero : ∀ q : Queue Nat, ¬q.nonEmpty → q.sum = 0 := by
+  intro q nemp
+  simp [Queue.nonEmpty] at nemp
+  simp [Queue.sum, nemp]
 
 end Queue

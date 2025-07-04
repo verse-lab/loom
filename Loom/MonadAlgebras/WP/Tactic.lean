@@ -137,7 +137,7 @@ macro "mwp" : tactic => `(tactic| (
   ))
 
 attribute [spec high, loomWpSimp] WPGen.if
-attribute [spec, loomWpSimp] WPGen.bind WPGen.pure WPGen.assert WPGen.forWithInvariant WPGen.map --WPGen.setm WPGen.getm
+attribute [spec, loomWpSimp] WPGen.bind WPGen.pure WPGen.assert WPGen.forWithInvariant WPGen.map
 attribute [loomWpSimp] spec WPGen.spec_triple
 
 @[loomLogicSimp]

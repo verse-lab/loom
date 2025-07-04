@@ -201,7 +201,7 @@ open PartialCorrectness DemonicChoice
 
 @[spec, loomWpSimp]
 noncomputable
-def WPGen.pickSuchThat [Monad m] [LawfulMonad m] [CompleteBooleanAlgebra l]
+def WPGen.pickSuchThat_part [Monad m] [LawfulMonad m] [CompleteBooleanAlgebra l]
   [MPropOrdered m l] : WPGen (pickSuchThat τ p : NonDetT m τ) := by
   refine ⟨fun post => ⨅ t, ⌜p t⌝ ⇨ post t, ?_⟩
   intro post;
@@ -211,6 +211,18 @@ attribute [aesop safe cases] Decidable
 attribute [-simp] if_true_left Bool.if_true_left ite_eq_left_iff
 attribute [loomLogicSimp] ite_self
 attribute [aesop unsafe 20% apply] le_antisymm
+end
+
+section
+open TotalCorrectness DemonicChoice
+
+@[spec, loomWpSimp]
+noncomputable
+def WPGen.pickSuchThat_totl [Monad m] [LawfulMonad m] [CompleteBooleanAlgebra l]
+  [MPropOrdered m l] : WPGen (pickSuchThat τ p : NonDetT m τ) := by
+  refine ⟨fun post => ⨅ t, ⌜p t⌝ ⇨ post t, ?_⟩
+  intro post;
+  simp [MonadNonDet.wp_pickSuchThat, loomLogicSimp]
 end
 
 @[simp]
