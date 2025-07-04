@@ -43,15 +43,17 @@ to specify the pre- and post-conditions.
 %
 -/
 
+#check MonadExcept
+
 section
 
 open ExceptionAsFailure PartialCorrectness DemonicChoice
 
-abbrev BankM := NonDetT (ExceptT String (StateT Balance DivM))
+
 
 @[spec, loomWpSimp]
 noncomputable
-def BankM.wp_get: WPGen (MonadState.get : BankM Balance) where
+def BankM.wp_get: WPGen (get : BankM Balance) where
     get := fun fn x => fn x x
     prop := fun post => by
       simp [instMonadStateOfMonadStateOf, instMonadStateOfOfMonadLift,getThe]
@@ -60,12 +62,12 @@ def BankM.wp_get: WPGen (MonadState.get : BankM Balance) where
 
 
 @[spec, loomWpSimp]
-def BankM.wp_set (res: Balance) : WPGen (MonadState.set res : BankM PUnit) where
+def BankM.wp_set (res: Balance) : WPGen (set res : BankM PUnit) where
     get := fun fn x => fn PUnit.unit res
     prop := fun post => by
       simp [instMonadStateOfMonadStateOf, instMonadStateOfOfMonadLift,getThe]
       simp [NonDetT.wp_lift, MPropLift.wp_lift]
-      simp [StateT.wp_eq, get, getThe, MonadStateOf.get, StateT.get, wp_pure]
+      simp [StateT.wp_eq, set, StateT.set, wp_pure]
 
 end
 
@@ -109,13 +111,8 @@ bdef withdraw (amount : Nat) returns (u: Unit)
   return
 open PartialCorrectness DemonicChoice in
 prove_correct withdraw by
-  simp [triple, withdraw]
-  simp [set, get, getThe, StateT.set, MonadStateOf.get, liftM, monadLift, MonadLift.monadLift, ExceptT.lift, ExceptT.mk]
-  loom_intro
-  mwp
-  { apply WPGen.getm }
-  { apply WPGen.setm }
-  simp [loomLogicSimp, loomWpSimp]
+  dsimp [withdraw]; intro
+  mwp; simp [loomLogicSimp, loomWpSimp]
 
 /-
 After all the macro-expansion, the code above expands exactly to the code in \todo{},
@@ -144,9 +141,9 @@ open PartialCorrectness DemonicChoice in
 prove_correct withdrawSession by
   simp [triple, withdrawSession]
   loom_intro
-  mwp
-  { apply WPGen.setm }
-  simp [loomLogicSimp, loomWpSimp]
+  mwp; simp [loomLogicSimp, loomWpSimp]
+
+
   constructor
   { intro b x
     constructor
