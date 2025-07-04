@@ -45,6 +45,8 @@ to specify the pre- and post-conditions.
 
 add_aesop_rules safe (by ring_nf)
 add_aesop_rules unsafe (add_comm)
+add_aesop_rules safe (by omega)
+add_aesop_rules safe (by grind)
 
 open ExceptionAsFailure
 
@@ -163,9 +165,8 @@ bdef withdraw (amount : Nat) returns (u: Unit)
 open PartialCorrectness DemonicChoice in
 prove_correct withdraw by
   dsimp [withdraw]; intro
-  velvet_solve
-  --mwp; simp [loomLogicSimp, loomWpSimp]
-
+  velvet_intro; velvet_unfold
+  aesop
 /-
 After all the macro-expansion, the code above expands exactly to the code in \todo{},
 which one can simply run in \lean unsing \code{StateM.run} function.
@@ -193,11 +194,8 @@ open PartialCorrectness DemonicChoice in
 prove_correct withdrawSession by
   dsimp [withdrawSession]
   loom_intro
-  velvet_solve! <;> aesop
-  { sorry }
-  have st := Queue.sum_zero amounts a_2
-  simp [st] at a_1
-  aesop
+  velvet_intro <;> velvet_unfold <;> aesop
+  stop sorry
 
 open TotalCorrectness DemonicChoice in
 bdef withdrawSessionTot (inAmounts : Queue Nat) returns (u: Unit)
@@ -218,9 +216,8 @@ open TotalCorrectness DemonicChoice in
 prove_correct withdrawSessionTot by
   dsimp [withdrawSessionTot]
   loom_intro
-  velvet_solve! <;> aesop
-  { sorry }
-  sorry
+  velvet_intro <;> velvet_unfold <;> aesop
+  stop sorry
 
 open TotalCorrectness DemonicChoice in
 bdef withdrawSessionExcept (inAmounts : Queue Nat) returns (u: Unit)
@@ -247,11 +244,8 @@ open TotalCorrectness DemonicChoice in
 prove_correct withdrawSessionExcept by
   dsimp [withdrawSessionExcept]
   loom_intro
-  velvet_solve! <;> aesop
-  { sorry }
-  { sorry }
-  { sorry }
-  sorry
+  velvet_intro <;> velvet_unfold <;> aesop
+  stop sorry
 
 open TotalCorrectness DemonicChoice in
 bdef withdrawSessionNonDet returns (history : Queue Nat)
@@ -277,8 +271,10 @@ open TotalCorrectness DemonicChoice in
 prove_correct withdrawSessionNonDet by
   dsimp [withdrawSessionNonDet]
   loom_intro
-  velvet_solve
-  { sorry }
+  velvet_intro
+  velvet_unfold
+  aesop
+  stop sorry
 
 /-We are going to demonstrate \tool by building a multi-modal
   verifier for a simple imperative \while-style langauge (with

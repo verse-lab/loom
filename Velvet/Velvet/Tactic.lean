@@ -54,6 +54,30 @@ syntax "velvet_solve?" : velvet_solve_tactic
 syntax "velvet_solve!" : velvet_solve_tactic
 syntax velvet_solve_tactic : tactic
 
+syntax "velvet_intro" : tactic
+syntax "velvet_unfold" : tactic
+
+elab_rules : tactic
+  | `(tactic| velvet_intro) => withMainContext do
+    let vlsIntro <- `(tactic| (
+      wpgen
+      try simp only [loomWpSimp]
+      try unfold spec
+      try simp only [invariants]
+      try simp only [WithName.mk']
+      try simp only [WithName.erase]
+      try simp only [typeWithName.erase]
+      try simp only [List.foldr]
+      try simp only [loomLogicSimp]
+      repeat loom_intro
+      repeat' (loom_split <;> (repeat loom_intro))))
+    evalTactic vlsIntro
+
+elab_rules : tactic
+  | `(tactic| velvet_unfold) => withMainContext do
+    let vlsUnfold <- `(tactic| all_goals try unfold WithName at *; all_goals try unfold typeWithName at *)
+    evalTactic vlsUnfold
+
 elab_rules : tactic
   | `(tactic| $vls:velvet_solve_tactic) => withMainContext do
     let ctx := (<- solverHints.get)
@@ -61,47 +85,36 @@ elab_rules : tactic
     for c in ctx do
       hints := hints.push $ <- `(Auto.hintelem| $(mkIdent c):ident)
     hints := hints.push $ <- `(Auto.hintelem| *)
-    let vlsIntro <- `(tactic| (
-    wpgen
-    try simp only [loomWpSimp]
-    try unfold spec
-    try simp only [invariants]
-    try simp only [WithName.mk']
-    try simp only [WithName.erase]
-    try simp only [typeWithName.erase]
-    try simp only [List.foldr]
-    try simp only [loomLogicSimp]
-    repeat loom_intro
-    repeat' (loom_split <;> (repeat loom_intro))))
-    let vlsUnfold <- `(tactic| all_goals try unfold WithName at *; all_goals try unfold typeWithName at *)
     let vlsAuto <- `(tactic| try (try simp only [loomAbstractionSimp] at *); auto [$hints,*])
     let vlsTryThis <- `(tacticSeq|
-        $vlsIntro
-        $vlsUnfold
+        velvet_intro
+        velvet_unfold
         $vlsAuto)
     if let `(velvet_solve_tactic| velvet_solve?) := vls then
-        Tactic.TryThis.addSuggestion (<-getRef) vlsTryThis
-      else
-    evalTactic vlsIntro
-    let res <- anyGoalsWithTag fun _mvarId => do
-      let stx_res <- getAssertionStx
-      evalTactic vlsUnfold
-      let mvarId <- getMainGoal
-      evalTactic vlsAuto
-      if (<- getUnsolvedGoals).length > 0 then
-        match stx_res with
-        | some stx =>
-          return some (.mkSimple stx.raw.prettyPrint.pretty, (mvarId, some stx))
-        | none =>
-          return some (`unnamed, (mvarId, none))
-      else return none
-    match vls with
-    | `(velvet_solve_tactic| velvet_solve!) =>
-      for (mvarId, stx_res) in res do
-        match stx_res with
-        | some stx => logErrorAt stx $ m!"Failed to prove assertion\n{mvarId}"
-        | none => logError m!"Failed to prove nameless assertion\n{mvarId}"
-    | _ => pure ()
+      Tactic.TryThis.addSuggestion (<-getRef) vlsTryThis
+    else
+      let vlsIntro ← `(tactic| velvet_intro)
+      let vlsUnfold ← `(tactic| velvet_unfold)
+      evalTactic vlsIntro
+      let res <- anyGoalsWithTag fun _mvarId => do
+        let stx_res <- getAssertionStx
+        evalTactic vlsUnfold
+        let mvarId <- getMainGoal
+        evalTactic vlsAuto
+        if (<- getUnsolvedGoals).length > 0 then
+          match stx_res with
+          | some stx =>
+            return some (.mkSimple stx.raw.prettyPrint.pretty, (mvarId, some stx))
+          | none =>
+            return some (`unnamed, (mvarId, none))
+        else return none
+      match vls with
+      | `(velvet_solve_tactic| velvet_solve!) =>
+        for (mvarId, stx_res) in res do
+          match stx_res with
+          | some stx => logErrorAt stx $ m!"Failed to prove assertion\n{mvarId}"
+          | none => logError m!"Failed to prove nameless assertion\n{mvarId}"
+      | _ => pure ()
 
 elab "velvet_solve?" : tactic => withMainContext do
   let ctx := (<- solverHints.get)
