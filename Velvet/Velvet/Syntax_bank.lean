@@ -68,6 +68,8 @@ syntax "(" ident ":" term ")" : leafny_binder
 syntax "(mut" ident ":" term ")" : leafny_binder
 syntax "require" termBeforeReqEnsDo : require_caluse
 syntax "ensures" termBeforeReqEnsDo : ensures_caluse
+--this can be used in more complex cases for set/get
+syntax "balance_set" term : doElem
 
 syntax "bdef" ident leafny_binder* "returns" "(" ident ":" term ")"
   (require_caluse )*
@@ -241,6 +243,13 @@ macro_rules
               $seq:doSeq
             else break)
 
+macro_rules
+| `(doElem|balance_set $t) => do
+  let balId := mkIdent `balance
+  `(doElem|do
+    $balId:ident := $t
+    set $balId:ident
+    $balId:ident ← get)
 
 elab_rules : command
 | `(command|
@@ -347,7 +356,7 @@ def length (q : Queue α) : Nat := q.elems.length
 instance (q : Queue α) : Decidable q.nonEmpty :=
   inferInstanceAs (Decidable (¬q.elems.isEmpty))
 
-@[aesop safe]
+@[aesop unsafe]
 theorem tail_length : ∀ q : Queue Nat, q.nonEmpty → q.tail.length < q.length := by
   intro q nemp
   simp [Queue.nonEmpty] at nemp
@@ -358,25 +367,17 @@ theorem tail_length : ∀ q : Queue Nat, q.nonEmpty → q.tail.length < q.length
   rename_i x
   simp [x]
 
-@[aesop safe]
-theorem tail_sum : ∀ q : Queue Nat, q.tail.sum = q.sum - q.dequeue := by
-  intro q
+@[aesop norm]
+theorem tail_sum : ∀ q : Queue Nat, nonEmpty q → q.sum = q.tail.sum + q.dequeue := by
+  intro _ q
   simp [Queue.dequeue, Queue.tail, Queue.sum]
   split <;> rename_i x <;> simp [x]
+  rw [add_comm]
 
-@[aesop safe]
+@[aesop norm]
 theorem sum_zero : ∀ q : Queue Nat, ¬q.nonEmpty → q.sum = 0 := by
   intro q nemp
   simp [Queue.nonEmpty] at nemp
   simp [Queue.sum, nemp]
-
-@[aesop safe]
-theorem sum_dequeue : ∀ q : Queue Nat, q.dequeue ≤ q.sum := by
-  intro q
-  simp [Queue.dequeue, Queue.sum]
-  split
-  { simp }
-  rename_i x1 x2 x3
-  simp [x3]
 
 end Queue

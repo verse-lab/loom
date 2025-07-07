@@ -15,11 +15,6 @@ import Velvet.Tactic
 
 open Lean.Elab.Term.DoNames
 
-set_option auto.smt.trust true
-set_option auto.smt true
-set_option auto.smt.timeout 10
-set_option auto.smt.solver.name "cvc5"
-
 open Queue
 /-
 In this section we are going to demonstrate \tool by building a multi-modal verifier for a simple
@@ -43,10 +38,6 @@ to specify the pre- and post-conditions.
 %
 -/
 
-add_aesop_rules safe (by ring_nf)
-add_aesop_rules unsafe (add_comm)
-add_aesop_rules safe (by omega)
-add_aesop_rules safe (by grind)
 
 open ExceptionAsFailure
 
@@ -124,38 +115,8 @@ def BankM.wp_throw_totl (s: String) : WPGen (throw s: BankM PUnit) where
       rfl
 end
 
-/-
-instance: MPropOrdered (ExceptT String (StateT Balance DivM)) (Balance -> Prop) where
-  μ := fun f pred =>
-    match (f pred) with
-    | .div => False
-    | .res (.ok res, x) => res x
-    | .res (.error err, x) => False
-  μ_ord_pure := fun l => by simp [pure, ExceptT.pure, ExceptT.mk, StateT.pure]
-  μ_ord_bind := fun {α} f g => by
-    intro leq x
-    simp [LE.le] at leq
-    simp [LE.le, bind, ExceptT.bind, ExceptT.mk, StateT.bind, ExceptT.bindCont]
-    intro b
-    simp [ExceptT, StateT] at x
-    match (x b) with
-    | .div => simp
-    | .res (.error err, y) => simp
-    | .res (.ok res, y) => simp; exact leq res y
--/
-/-
-returns (x : T)
-require P
-ensures Q do
-code
-
-∀ balanceOld,
-  triple
-    (fun balance => balance = balanceOld ∧ P)
-    code
-    (fun x balance => Q)
-
--/
+--small aesop upgrade
+add_aesop_rules safe (by linarith)
 
 bdef withdraw (amount : Nat) returns (u: Unit)
   ensures balance + amount = balanceOld do
@@ -167,14 +128,6 @@ prove_correct withdraw by
   dsimp [withdraw]; intro
   velvet_intro; velvet_unfold
   aesop
-/-
-After all the macro-expansion, the code above expands exactly to the code in \todo{},
-which one can simply run in \lean unsing \code{StateM.run} function.
-Also it will generate a corresponding correctness theorem for \code{withdraw} function
-based on the \code{ensures} annotation.
-We will discuss how this statement looks like and what is required to define it in the next section.
-
--/
 
 open PartialCorrectness DemonicChoice in
 bdef withdrawSession (inAmounts : Queue Nat) returns (u: Unit)
@@ -195,7 +148,6 @@ prove_correct withdrawSession by
   dsimp [withdrawSession]
   loom_intro
   velvet_intro <;> velvet_unfold <;> aesop
-  stop sorry
 
 open TotalCorrectness DemonicChoice in
 bdef withdrawSessionTot (inAmounts : Queue Nat) returns (u: Unit)
@@ -211,13 +163,11 @@ bdef withdrawSessionTot (inAmounts : Queue Nat) returns (u: Unit)
     amounts := amounts.tail
   return
 
-
 open TotalCorrectness DemonicChoice in
 prove_correct withdrawSessionTot by
   dsimp [withdrawSessionTot]
   loom_intro
   velvet_intro <;> velvet_unfold <;> aesop
-  stop sorry
 
 open TotalCorrectness DemonicChoice in
 bdef withdrawSessionExcept (inAmounts : Queue Nat) returns (u: Unit)
@@ -238,14 +188,11 @@ bdef withdrawSessionExcept (inAmounts : Queue Nat) returns (u: Unit)
     amounts := amounts.tail
   return
 
-set_option maxHeartbeats 1000000
-
 open TotalCorrectness DemonicChoice in
 prove_correct withdrawSessionExcept by
   dsimp [withdrawSessionExcept]
   loom_intro
   velvet_intro <;> velvet_unfold <;> aesop
-  stop sorry
 
 open TotalCorrectness DemonicChoice in
 bdef withdrawSessionNonDet returns (history : Queue Nat)
@@ -274,21 +221,9 @@ prove_correct withdrawSessionNonDet by
   velvet_intro
   velvet_unfold
   aesop
-  stop sorry
 
-/-We are going to demonstrate \tool by building a multi-modal
-  verifier for a simple imperative \while-style langauge (with
-  additional goodies). We can follow the simple structure, each item
-  below is a subsection.-/
-/-
-Shallow embedding the \while language, its runtime semantics
-Better syntax via \lean metaprorgamming
-Implementing a VC generator, establishing its soundness
-Adding effects: divergence and exceptions, what happens to the VC generator
-Introducing non-determinism, handlining it demonically
-Angelic handling of non-determinis a la incorrectness logic
-Putting it all together: verifying a small non-trivial program
-Putting it all together: verify a simple program or its version,
-  in a combined interactive/automated mode. Some examples for
-  tinkering are here.\footnote{https://chatgpt.com/share/68623a8d-9d34-8006-8dfb-7be04fefe08f}
--/
+#eval (withdraw 2).run.run.run 10
+#eval (withdrawSession ({elems := [1, 2, 6]})).run.run.run 12
+
+#eval! (withdrawSessionExcept ({elems := {1,2,3}})).run.run.run 8
+#eval! (withdrawSessionExcept ({elems := [1,2,6]})).run.run.run 8

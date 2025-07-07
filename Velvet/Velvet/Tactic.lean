@@ -75,7 +75,7 @@ elab_rules : tactic
 
 elab_rules : tactic
   | `(tactic| velvet_unfold) => withMainContext do
-    let vlsUnfold <- `(tactic| all_goals try unfold WithName at *; all_goals try unfold typeWithName at *)
+    let vlsUnfold <- `(tactic| all_goals try unfold WithName at *; all_goals try unfold typeWithName at *; all_goals try unfold MProdWithName)
     evalTactic vlsUnfold
 
 elab_rules : tactic
