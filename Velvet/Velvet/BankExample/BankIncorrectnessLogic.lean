@@ -17,41 +17,41 @@ open Queue
 
 open ExceptionAsSuccess
 
-instance mlift : MonadLift (ExceptT String (StateT Balance DivM)) BankM where
-  monadLift x := NonDetT.vis x pure
-
 instance : MonadExceptOf String BankM where
-  throw e := mlift.monadLift (throw e)
+  throw e := liftM (m := ExceptT String (StateT Balance DivM)) (throw e)
   tryCatch := fun x _ => x
 
 open TotalCorrectness AngelicChoice
 
 @[spec, loomWpSimp]
 noncomputable
-def BankM.wp_get_totl: WPGen (get : BankM Balance) where
-    get := fun fn x => fn x x
-    prop := fun post => by
-      simp [instMonadStateOfMonadStateOf, instMonadStateOfOfMonadLift,getThe]
-      simp [NonDetT.wp_lift, MAlgLift.wp_lift]
-      erw [StateT.wp_get]
+def BankM.wp_get_totl: WPGen (get : BankM Balance) := by
+  econstructor; intro post
+  have : get = liftM (n := BankM) (liftM (n := (ExceptT String (StateT Balance DivM))) (get : StateT Balance DivM Balance)) := by
+    rfl
+  rewrite [this]
+  simp [NonDetT.wp_lift, MAlgLift.wp_lift]
+  rw [StateT.wp_get]
 
 
 @[spec, loomWpSimp]
-def BankM.wp_set_totl (res: Balance) : WPGen (set res : BankM PUnit) where
-    get := fun fn x => fn PUnit.unit res
-    prop := fun post => by
-      simp [instMonadStateOfMonadStateOf, instMonadStateOfOfMonadLift,getThe]
-      simp [NonDetT.wp_lift, MAlgLift.wp_lift]
-      simp [StateT.wp_eq, set, StateT.set, wp_pure]
+def BankM.wp_set_totl (res: Balance) : WPGen (set res : BankM PUnit) := by
+  econstructor; intro post
+  have : set res = liftM (n := BankM) (liftM (n := (ExceptT String (StateT Balance DivM))) (set res : StateT Balance DivM PUnit)) := by
+    rfl
+  rewrite [this]
+  simp [NonDetT.wp_lift, MAlgLift.wp_lift]
+  rw [StateT.wp_set]
 
 @[spec, loomWpSimp]
 noncomputable
-def BankM.wp_throw_totl (s: String) : WPGen (throw s: BankM PUnit) where
-    get := fun fn x => ⊤
-    prop := fun post => by
-      simp [throw, instMonadExceptOfMonadExceptOf, throwThe, MonadExceptOf]
-      rw [MonadExceptOf.throw, instMonadExceptOfStringBankM]
-      simp [mlift, ExceptT.wp_throw]
+def BankM.wp_throw_totl (s: String) : WPGen (throw s: BankM PUnit) := by
+  econstructor; intro post
+  have : throw s = liftM (n := BankM) (throw s : ExceptT String (StateT Balance DivM) PUnit) := by
+    rfl
+  rewrite [this]
+  simp [NonDetT.wp_lift, MAlgLift.wp_lift]
+  rw [ExceptT.wp_throw]
 
 --small aesop upgrade
 add_aesop_rules safe (by linarith)

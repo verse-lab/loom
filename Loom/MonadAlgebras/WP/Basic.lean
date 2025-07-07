@@ -459,6 +459,10 @@ lemma StateT.wp_get (post : σ -> σ -> l) :
   wp (get (m := StateT σ m)) post = fun s => post s s := by
   simp [StateT.wp_eq, get, getThe, MonadStateOf.get, StateT.get, wp_pure]
 
+lemma StateT.wp_set {res: σ} (post : PUnit -> σ -> l) :
+  wp (set (m := StateT σ m) res) post = fun _ => post PUnit.unit res := by
+  simp [StateT.wp_eq, set, StateT.set, wp_pure]
+
 lemma StateT.wp_modifyGet (post : α -> σ -> l) :
   wp (modifyGet (m := StateT σ m) f) post = fun s => post (f s).1 (f s).2 := by
   simp [StateT.wp_eq, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet, wp_pure]
