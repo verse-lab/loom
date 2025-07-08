@@ -76,7 +76,8 @@ register_simp_attr loomLogicSimp
 register_simp_attr loomWpSimp
 register_simp_attr loomWpSplit
 register_simp_attr loomAbstractionSimp
-
+register_simp_attr loomWPGenSimp
+register_simp_attr loomWPGenRewrite
 
 
 def getSpecKey (ty : Expr) : MetaM (Expr × Loom.SpecType) := do

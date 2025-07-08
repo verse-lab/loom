@@ -23,35 +23,17 @@ instance : MonadExceptOf String BankM where
 
 open TotalCorrectness AngelicChoice
 
-@[spec, loomWpSimp]
-noncomputable
-def BankM.wp_get_totl: WPGen (get : BankM Balance) := by
-  econstructor; intro post
-  have : get = liftM (n := BankM) (liftM (n := (ExceptT String (StateT Balance DivM))) (get : StateT Balance DivM Balance)) := by
-    rfl
-  rewrite [this]
-  simp [NonDetT.wp_lift, MAlgLift.wp_lift]
-  rw [StateT.wp_get]
+#derive_wp for (get : BankM Balance) as
+  liftM (n := BankM) (liftM (n := (ExceptT String (StateT Balance DivM))) (get : StateT Balance DivM Balance))
+  with (u: Unit)
 
+#derive_wp for (set res : BankM PUnit) as
+  liftM (n := BankM) (liftM (n := (ExceptT String (StateT Balance DivM))) (set res : StateT Balance DivM PUnit))
+  with (res: Balance)
 
-@[spec, loomWpSimp]
-def BankM.wp_set_totl (res: Balance) : WPGen (set res : BankM PUnit) := by
-  econstructor; intro post
-  have : set res = liftM (n := BankM) (liftM (n := (ExceptT String (StateT Balance DivM))) (set res : StateT Balance DivM PUnit)) := by
-    rfl
-  rewrite [this]
-  simp [NonDetT.wp_lift, MAlgLift.wp_lift]
-  rw [StateT.wp_set]
-
-@[spec, loomWpSimp]
-noncomputable
-def BankM.wp_throw_totl (s: String) : WPGen (throw s: BankM PUnit) := by
-  econstructor; intro post
-  have : throw s = liftM (n := BankM) (throw s : ExceptT String (StateT Balance DivM) PUnit) := by
-    rfl
-  rewrite [this]
-  simp [NonDetT.wp_lift, MAlgLift.wp_lift]
-  rw [ExceptT.wp_throw]
+#derive_wp for (throw s: BankM PUnit) as
+  liftM (n := BankM) (throw s : ExceptT String (StateT Balance DivM) PUnit)
+  with (s: String)
 
 --small aesop upgrade
 add_aesop_rules safe (by linarith)

@@ -1,6 +1,12 @@
 import Lean
 import Lean.Elab.Tactic
 
+import Loom.MonadAlgebras.WP.Attr
+import Loom.MonadAlgebras.WP.Basic
+import Loom.MonadAlgebras.NonDetT.Basic
+
+import Mathlib.Tactic
+
 open Lean Lean.Expr Lean.Meta
 open Lean Elab Command Term Meta Tactic
 
@@ -386,3 +392,39 @@ elab "#gen_spec" name:ident args:explicitBinders ? "for" prim:term : command => 
     let module <- getCurrNamespace
     simpleAddThm (module ++ name.getId) tp pf (attr := #[{name := `loomWpSimp} ])
     trace[debug] "Generated spec for {prim}:\n{tp}"
+
+attribute [loomWPGenSimp]
+  PartialCorrectness.DemonicChoice.NonDetT.wp_lift
+  PartialCorrectness.AngelicChoice.NonDetT.wp_lift
+  TotalCorrectness.DemonicChoice.NonDetT.wp_lift
+  TotalCorrectness.AngelicChoice.NonDetT.wp_lift
+  MAlgLift.wp_lift
+  StateT.wp_lift
+  ReaderT.wp_lift
+  ExceptionAsFailure.ExceptT.wp_lift
+  ExceptionAsSuccess.ExceptT.wp_lift
+
+attribute [loomWPGenRewrite]
+  StateT.wp_get
+  StateT.wp_set
+  StateT.wp_modifyGet
+  ExceptT.wp_throw
+  ReaderT.wp_read
+  MAlgLift.wp_throw
+
+elab "#derive_wp" "for" "(" name:term ":" type:term ")" "as" inst:term "with" args:explicitBinders : command=> do
+  let args_list ← liftTermElabM do toBracketedBinderArray args
+  let wp_name ← mkFreshIdent name
+  let thmCmd <- `(command|
+  @[spec, loomWpSimp]
+  noncomputable
+  def $wp_name $args_list:bracketedBinder* : WPGen ($name : $type) := by
+    econstructor; intro post
+    have : $name = $inst := by
+      rfl
+    rewrite [this]
+    repeat' simp [loomWPGenSimp]
+    try simp only [loomWPGenRewrite]
+    try rfl)
+  logInfo m!"{thmCmd}"
+  elabCommand thmCmd
