@@ -219,6 +219,11 @@ def WPGen.forWithInvariantLoop [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.Mono
   -- intro h; simp [invariantGadget, onDoneGadget]
   -- solve_by_elim [MonadNonDet.wp_forIn]
 
+instance : MAlgLiftT m l (NonDetT m) l where
+  μ_lift x := by
+    simp [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]
+    rfl
+
 end DemonicChoice
 
 namespace AngelicChoice
@@ -359,6 +364,10 @@ def WPGen.forWithInvariantLoop [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.Mono
       intro b; apply (wpg b).intro
       all_goals solve_by_elim
 
+instance : MAlgLiftT m l (NonDetT m) l where
+  μ_lift x := by
+    simp [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]
+    rfl
 
 end AngelicChoice
 
@@ -513,6 +522,10 @@ def WPGen.forWithInvariantLoop [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.Mono
       intro b; apply (wpg b).intro
       solve_by_elim
 
+instance : MAlgLiftT m l (NonDetT m) l where
+  μ_lift x := by
+    simp [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]
+    rfl
 
 end DemonicChoice
 
@@ -653,6 +666,11 @@ def WPGen.forWithInvariantLoop [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.Mono
       apply MonadNonDet.wp_forIn (inv := fun b => (inv b).foldr (· ⊓ ·) ⊤)
       intro b; apply (wpg b).intro
       solve_by_elim
+
+instance : MAlgLiftT m l (NonDetT m) l where
+  μ_lift x := by
+    simp [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]
+    rfl
 
 end AngelicChoice
 
