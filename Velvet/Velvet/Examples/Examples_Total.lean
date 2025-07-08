@@ -17,7 +17,7 @@ open TotalCorrectness DemonicChoice Lean.Elab.Term.DoNames
 
 set_option auto.smt.trust true
 set_option auto.smt true
-set_option auto.smt.timeout 15
+set_option auto.smt.timeout 10
 set_option auto.smt.solver.name "cvc5"
 
 attribute [solverHint] TArray.get_set TArray.size_set

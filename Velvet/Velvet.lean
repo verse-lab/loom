@@ -1,1 +1,1 @@
-import Velvet.Examples.Examples_Total
+import Velvet.Examples.Examples
