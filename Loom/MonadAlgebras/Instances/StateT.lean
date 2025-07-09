@@ -89,7 +89,7 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MAlgOrdered
     intro _ _; simp [MAlg.lift_StateT, inst'.noFailure]; rfl
 
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MAlgOrdered m l] :
-  MAlgLiftT m l (StateT σ m) (σ -> l) where
+  MAlgLift m l (StateT σ m) (σ -> l) where
     μ_lift := by
       intros; simp [MAlg.lift_StateT]; ext;
       simp [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]

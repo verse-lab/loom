@@ -170,13 +170,15 @@ instance [NoFailure m] : NoFailure (NonDetT m) where
     rw [this, NonDetT.wp_eq_wp]; clear this
     induction c <;> simp [NonDetT.wp, pure, *]
 
+noncomputable
 scoped
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
   [inst: MAlgOrdered m l] :
-  MAlgLiftT m l (NonDetT m) l where
+  MAlgLift m l (NonDetT m) l where
+    cl := by exact LogicLift.refl
     μ_lift := by
       intros; simp [liftM, monadLift, MonadLift.monadLift, MAlgOrdered.μ, NonDetT.μ, NonDetT.wp,
-        pure, wp, MAlg.lift, Functor.map, NonDetT.wp, NonDetT.bind]
+        pure, wp, MAlg.lift, Functor.map, NonDetT.wp, NonDetT.bind,LogicLift.refl]
 
 instance : MAlgLiftT m l (NonDetT m) l where
   μ_lift x := by
@@ -270,13 +272,15 @@ lemma MonadNonDet.wp_pickSuchThat {τ : Type u} (p : τ → Prop) post :
   _root_.wp (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) post = ⨆ a, ⌜p a⌝ ⊓ post a := by
   simp [MonadNonDet.pickSuchThat, NonDetT.pickSuchThat]
 
+noncomputable
 scoped
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
   [inst: MAlgOrdered m l] :
-  MAlgLiftT m l (NonDetT m) l where
+  MAlgLift m l (NonDetT m) l where
+    cl := by exact LogicLift.refl
     μ_lift := by
       intros; simp [liftM, monadLift, MonadLift.monadLift, MAlgOrdered.μ, NonDetT.μ, NonDetT.wp,
-        pure, wp, MAlg.lift, Functor.map, NonDetT.wp, NonDetT.bind]
+        pure, wp, MAlg.lift, Functor.map, NonDetT.wp, NonDetT.bind, LogicLift.refl]
 
 instance : MAlgLiftT m l (NonDetT m) l where
   μ_lift x := by

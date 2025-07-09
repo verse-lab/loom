@@ -203,9 +203,7 @@ variable {m τ l} [Monad m] [LawfulMonad m] [Nonempty τ] [CompleteBooleanAlgebr
 section
 open PartialCorrectness DemonicChoice
 
-#derive_wp for (pickSuchThat τ p : NonDetT m τ) as
-  (pickSuchThat τ p (m := NonDetT m))
-  with (u: Unit)
+#derive_wp for (pickSuchThat τ p : NonDetT m τ)
 
 attribute [aesop safe cases] Decidable
 attribute [-simp] if_true_left Bool.if_true_left ite_eq_left_iff
@@ -216,18 +214,14 @@ end
 section
 open TotalCorrectness DemonicChoice
 
-#derive_wp for (pickSuchThat τ p : NonDetT m τ) as
-  (pickSuchThat τ p (m := NonDetT m))
-  with (u: Unit)
+#derive_wp for (pickSuchThat τ p : NonDetT m τ)
 
 end
 
 section
 open TotalCorrectness AngelicChoice
 
-#derive_wp for (pick τ : NonDetT m τ) as
-  (pick τ (m := NonDetT m))
-  with (u: Unit)
+#derive_wp for (pick τ : NonDetT m τ)
 
 end
 

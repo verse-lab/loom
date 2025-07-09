@@ -393,24 +393,15 @@ elab "#gen_spec" name:ident args:explicitBinders ? "for" prim:term : command => 
     simpleAddThm (module ++ name.getId) tp pf (attr := #[{name := `loomWpSimp} ])
     trace[debug] "Generated spec for {prim}:\n{tp}"
 
-attribute [loomWPGenSimp]
-  PartialCorrectness.DemonicChoice.NonDetT.wp_lift
-  PartialCorrectness.AngelicChoice.NonDetT.wp_lift
-  TotalCorrectness.DemonicChoice.NonDetT.wp_lift
-  TotalCorrectness.AngelicChoice.NonDetT.wp_lift
-  PartialCorrectness.DemonicChoice.MonadNonDet.wp_pick
-  PartialCorrectness.AngelicChoice.MonadNonDet.wp_pick
-  TotalCorrectness.DemonicChoice.MonadNonDet.wp_pick
-  TotalCorrectness.AngelicChoice.MonadNonDet.wp_pick
-  PartialCorrectness.DemonicChoice.MonadNonDet.wp_pickSuchThat
-  PartialCorrectness.AngelicChoice.MonadNonDet.wp_pickSuchThat
-  TotalCorrectness.DemonicChoice.MonadNonDet.wp_pickSuchThat
-  TotalCorrectness.AngelicChoice.MonadNonDet.wp_pickSuchThat
-  MAlgLift.wp_lift
-  StateT.wp_lift
-  ReaderT.wp_lift
-  ExceptionAsFailure.ExceptT.wp_lift
-  ExceptionAsSuccess.ExceptT.wp_lift
+attribute [loomLogicLiftSimp]
+  LogicLiftT.lift
+  instMonadLiftTOfMonadLift
+  instMonadLiftContOfLogicLift
+  MAlgLift.cl
+  LogicLift.refl
+  instMonadLiftTContOfLogicLiftT
+  instMonadLiftT
+  id
 
 attribute [loomWPGenRewrite]
   StateT.wp_get
@@ -420,18 +411,55 @@ attribute [loomWPGenRewrite]
   ReaderT.wp_read
   MAlgLift.wp_throw
 
-elab "#derive_wp" nm:ident ? "for" "(" name:term ":" type:term ")" "as" inst:term "with" args:explicitBinders : command=> do
-  let args_list ← liftTermElabM do toBracketedBinderArray args
-  let wp_name ← nm.getDM <| mkFreshIdent name
+  TotalCorrectness.AngelicChoice.MonadNonDet.wp_pickSuchThat
+  TotalCorrectness.DemonicChoice.MonadNonDet.wp_pickSuchThat
+  PartialCorrectness.AngelicChoice.MonadNonDet.wp_pickSuchThat
+  PartialCorrectness.DemonicChoice.MonadNonDet.wp_pickSuchThat
+
+  TotalCorrectness.DemonicChoice.MonadNonDet.wp_assume
+  TotalCorrectness.AngelicChoice.MonadNonDet.wp_assume
+  TotalCorrectness.DemonicChoice.MonadNonDet.wp_pick
+  TotalCorrectness.AngelicChoice.MonadNonDet.wp_pick
+  PartialCorrectness.DemonicChoice.MonadNonDet.wp_assume
+  PartialCorrectness.AngelicChoice.MonadNonDet.wp_assume
+  PartialCorrectness.DemonicChoice.MonadNonDet.wp_pick
+  PartialCorrectness.AngelicChoice.MonadNonDet.wp_pick
+
+
+elab "#derive_lifted_wp" args:explicitBinders ? "for" "(" name:term ":" type:term ")" "as" m:ident out:ident : command => do
+  let args_list ← liftTermElabM do
+    match args with
+    | .some args => do
+      toBracketedBinderArray args
+    | .none => pure #[]
+  let wp_name ← mkFreshIdent name
+  let thmCmd <- `(command|
+  @[spec, loomWpSimp]
+  noncomputable
+  def $wp_name $args_list:bracketedBinder* : WPGen ($name : $m $out) := by
+    econstructor; intro post
+    have : $name = liftM (n := $m) ($name : $type) := by rfl
+    rewrite [this]
+    rewrite [MAlgLift.wp_lift]
+    simp only [loomLogicLiftSimp]
+    simp only [loomWPGenRewrite]
+    rfl)
+  trace[Loom] m!"{thmCmd}"
+  elabCommand thmCmd
+
+elab "#derive_wp" args:explicitBinders ? "for" "(" name:term ":" type:term ")" : command => do
+  let args_list ← liftTermElabM do
+    match args with
+    | .some args => do
+      toBracketedBinderArray args
+    | .none => pure #[]
+  let wp_name ← mkFreshIdent name
   let thmCmd <- `(command|
   @[spec, loomWpSimp]
   noncomputable
   def $wp_name $args_list:bracketedBinder* : WPGen ($name : $type) := by
     econstructor; intro post
-    have : $name = $inst := by
-      rfl
-    rewrite [this]
-    repeat' simp only [loomWPGenSimp]
-    try simp only [loomWPGenRewrite]
-    try rfl)
+    simp only [loomWPGenRewrite]
+    rfl)
+  trace[Loom] m!"{thmCmd}"
   elabCommand thmCmd

@@ -422,9 +422,9 @@ lemma ReaderT.wp_lift (c : m α) (post : α -> σ -> l) :
 
 omit [LawfulMonad m] in
 lemma MAlgLift.wp_lift [Monad n] [CompleteLattice k] [MAlgOrdered n k] [MonadLiftT m n]
-  [MonadLiftT (Cont l) (Cont k)]
-  [MAlgLiftT m l n k] (c : m α):
-  wp (liftM (n := n) c) = fun (post : α -> k) => liftM (n := Cont k) (m := Cont l) (wp c) post := by
+  -- [MonadLiftT (Cont l) (Cont k)]
+  [mAlgLift : MAlgLiftT m l n k] (c : m α):
+  wp (liftM (n := n) c) = fun (post : α -> k) => mAlgLift.cl.lift.monadLift (wp c) post := by
   ext;
   apply MAlgLiftT.μ_lift
 
@@ -441,13 +441,10 @@ lemma ExceptT.wp_throw (e : ε) :
 lemma MAlgLift.wp_throw
   [Monad n] [CompleteLattice k] [MAlgOrdered n k] [MonadLiftT m n]
   [MonadLiftT (ExceptT ε m) n]
-  [MonadLiftT (Cont l) (Cont k)]
-  [LogicLift l k]
-  [MAlgLiftT (ExceptT ε m) l n k] :
+  [inst: MAlgLiftT (ExceptT ε m) l n k] :
     wp (liftM (n := n) (throw (m := ExceptT ε m) e)) post = ⌜hd e⌝ := by
     rw [MAlgLift.wp_lift, ExceptT.wp_throw]
-    simp only [LE.pure, monadLift_self]; split <;> simp [LogicLift.lift_bot, LogicLift.lift_top]
-
+    simp only [LE.pure, monadLift_self]; split <;> simp [inst.cl.lift_top, inst.cl.lift_bot]
 
 end ExceptT
 

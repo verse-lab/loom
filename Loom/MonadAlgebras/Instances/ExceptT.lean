@@ -118,11 +118,12 @@ instance
     simp [MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure, ExceptT.map, ExceptT.mk, OfHd, MAlgExcept]
     rw [map_eq_pure_bind]; apply MAlgOrdered.bind; ext (_|_) <;> simp
 
-
+noncomputable
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
   [IsHandler (ε := ε) hd]
   [inst: MAlgOrdered m l] :
-  MAlgLiftT m l (ExceptT ε m) l where
+  MAlgLift m l (ExceptT ε m) l where
+    cl := by exact LogicLift.refl
     μ_lift := by
       intros; simp [MAlg.lift_ExceptT];
       simp [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]

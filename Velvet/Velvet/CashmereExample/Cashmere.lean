@@ -47,20 +47,9 @@ section
 
 open PartialCorrectness DemonicChoice
 
-#derive_wp for
-  (get : CashmereM Balance) as
-  (liftM (n := CashmereM) (liftM (n := (ExceptT String (StateT Balance DivM))) (get : StateT Balance DivM Balance)))
-  with (u: Unit)
-
-#derive_wp for
-  (set res : CashmereM PUnit) as
-  (liftM (n := CashmereM) (liftM (n := (ExceptT String (StateT Balance DivM))) (set res : StateT Balance DivM PUnit)))
-  with (res: Balance)
-
-#derive_wp for
-  (throw s : CashmereM PUnit) as
-  liftM (n := CashmereM) (throw s : CashmereM PUnit)
-  with (s: String)
+#derive_lifted_wp for (get : StateT Balance DivM Balance) as CashmereM Balance
+#derive_lifted_wp (res: Balance) for (set res : StateT Balance DivM PUnit) as CashmereM PUnit
+#derive_lifted_wp (s : String) for (throw s : ExceptT String (StateT Balance DivM) PUnit) as CashmereM PUnit
 
 end
 
@@ -68,20 +57,9 @@ section
 
 open TotalCorrectness DemonicChoice
 
-#derive_wp for
-  (get : CashmereM Balance) as
-  (liftM (n := CashmereM) (liftM (n := (ExceptT String (StateT Balance DivM))) (get : StateT Balance DivM Balance)))
-  with (u: Unit)
-
-#derive_wp for
-  (set res : CashmereM PUnit) as
-  (liftM (n := CashmereM) (liftM (n := (ExceptT String (StateT Balance DivM))) (set res : StateT Balance DivM PUnit)))
-  with (res: Balance)
-
-#derive_wp for
-  (throw s : CashmereM PUnit) as
-  liftM (n := CashmereM) (throw s : CashmereM PUnit)
-  with (s: String)
+#derive_lifted_wp for (get : StateT Balance DivM Balance) as CashmereM Balance
+#derive_lifted_wp (res: Balance) for (set res : StateT Balance DivM PUnit) as CashmereM PUnit
+#derive_lifted_wp (s : String) for (throw s : ExceptT String (StateT Balance DivM) PUnit) as CashmereM PUnit
 
 end
 
@@ -165,7 +143,7 @@ bdef withdrawSessionNonDet returns (history : Queue Nat)
   require balance >= 0
   ensures balance >= 0
   ensures balance + history.sum = balanceOld do
-  let inAmounts: Queue Nat ← pickSuchThat (Queue Nat) (fun q => q.sum ≤ balance)
+  let (inAmounts : Queue Nat) :| inAmounts.sum ≤ balance
   let mut amounts := inAmounts
   let balancePrev := balance
   while amounts.nonEmpty
@@ -187,5 +165,5 @@ prove_correct withdrawSessionNonDet by
 #eval (withdraw 2).run.run.run 10
 #eval (withdrawSession ({elems := [1, 2, 6]})).run.run.run 12
 
-#eval! (withdrawSessionExcept ({elems := {1,2,3}})).run.run.run 8
-#eval! (withdrawSessionExcept ({elems := [1,2,6]})).run.run.run 8
+#eval (withdrawSessionExcept ({elems := {1,2,3}})).run.run.run 8
+#eval (withdrawSessionExcept ({elems := [1,2,6]})).run.run.run 8

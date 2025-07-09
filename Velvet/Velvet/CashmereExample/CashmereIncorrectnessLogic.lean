@@ -23,25 +23,17 @@ instance : MonadExceptOf String CashmereM where
 
 open TotalCorrectness AngelicChoice
 
-#derive_wp for (get : CashmereM Balance) as
-  liftM (n := CashmereM) (liftM (n := (ExceptT String (StateT Balance DivM))) (get : StateT Balance DivM Balance))
-  with (u: Unit)
 
-#derive_wp for (set res : CashmereM PUnit) as
-  liftM (n := CashmereM) (liftM (n := (ExceptT String (StateT Balance DivM))) (set res : StateT Balance DivM PUnit))
-  with (res: Balance)
-
-#derive_wp for (throw s: CashmereM PUnit) as
-  liftM (n := CashmereM) (throw s : ExceptT String (StateT Balance DivM) PUnit)
-  with (s: String)
-
+#derive_lifted_wp for (get : StateT Balance DivM Balance) as CashmereM Balance
+#derive_lifted_wp (res: Balance) for (set res : StateT Balance DivM PUnit) as CashmereM PUnit
+#derive_lifted_wp (s : String) for (throw s : ExceptT String (StateT Balance DivM) PUnit) as CashmereM PUnit
 --small aesop upgrade
 add_aesop_rules safe (by linarith)
 
 bdef withdrawSessionAngelic returns (u: Unit)
   require balance > 0
   ensures False do
-  let mut amounts: Queue Nat ← pick (Queue Nat)
+  let mut amounts ← pick (Queue Nat)
   while amounts.nonEmpty
   invariant balance >= 0
   invariant balance < amounts.sum
@@ -55,9 +47,13 @@ bdef withdrawSessionAngelic returns (u: Unit)
     amounts := amounts.tail
   return
 
-@[aesop norm]
-theorem mkQueue (x: Balance) : ∃ q: Queue Nat, x < q.sum := by exists {elems := [Int.toNat (x + 1)]}; simp [Queue.sum]
+
+@[aesop safe]
+theorem Queue.sum_lt (x: Balance) : x < y -> x < (Queue.mk [Int.toNat y]).sum := by intro h; simp [Queue.sum, *]
+@[aesop safe]
+theorem balance_lt (x: Balance) : x < x + 1 := by linarith
+
 
 prove_correct withdrawSessionAngelic by
   dsimp [withdrawSessionAngelic]
-  loom_solve
+  loom_solve!
