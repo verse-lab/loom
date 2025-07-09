@@ -223,7 +223,7 @@ elab_rules : command
   $[require $req:term]*
   $[ensures $ens:term]* do $doSeq:doSeq
   ) => do
-  let (defCmd, obligation) ← Command.runTermElabM fun _vs => do
+  let (defCmd, obligation, testingCtx) ← Command.runTermElabM fun _vs => do
     let bindersIdents ← toBracketedBinderArrayLeafny binders
 
     let modIds ← getModIds binders
@@ -250,6 +250,9 @@ elab_rules : command
     let pre <- req.andListWithName reqName
     let post <- ens.andListWithName ensName
 
+    let namelessPre <- req.andList
+    let namelessPost <- ens.andList
+
     let mut ret <- `(term| ())
     for modId in modIds do
       let modId := mkIdent <| modId.getId.appendAfter "New"
@@ -264,9 +267,13 @@ elab_rules : command
       pre := pre
       post := post
     }
-    return (defCmd, obligation)
+    let newIds := modIds.map (fun x => Lean.mkIdent <| x.getId.appendAfter "New")
+    let modBinders ← newIds.zip mutTypes |>.mapM fun (newId, mutType) =>
+      `(bracketedBinder| ($newId : $mutType))
+    return (defCmd, obligation, { obligation with pre := namelessPre , post := namelessPost , modBinders , newIds })
   elabCommand defCmd
   velvetObligations.modify (·.insert name.getId obligation)
+  velvetTestingContextMap.modify (·.insert name.getId testingCtx)
 
 notation "{" P "}" c "{" v "," Q "}" => triple P c (fun v => Q)
 
@@ -301,3 +308,88 @@ elab_rules : command
 
 set_option linter.unusedVariables false in
 def atomicAssertion {α : Type u} (n : Name) (a : α) := a
+
+syntax "extract_program_for" ident : command
+syntax "prove_precondition_decidable_for" ident ("by" tacticSeq)? : command
+syntax "prove_postcondition_decidable_for" ident ("by" tacticSeq)? : command
+syntax "derive_tester_for" ident : command
+
+def obtainVelvetTestingCtx (nameRaw : Ident) : CommandElabM (VelvetTestingCtx × Name) := do
+  let ctxMap ← velvetTestingContextMap.get
+  let name := nameRaw.getId
+  unless ctxMap.contains name do
+    throwError "{name} is not a Velvet program"
+  return (ctxMap[name]!, name)
+
+elab_rules : command
+  | `(command| extract_program_for $nameRaw:ident ) => do
+  -- assuming the thing is computable, then extract the program first
+  let (ctx, name) ← obtainVelvetTestingCtx nameRaw
+  let bindersIdents := ctx.binderIdents
+  let ids := ctx.ids
+  let execName := name.appendAfter "Exec"
+  let execDefCmd ← `(command|
+    def $(mkIdent execName) $bindersIdents* :=
+      $(mkIdent ``NonDetT.extractWeak) ($nameRaw $ids*) (by extract_tactic))
+  elabCommand execDefCmd
+
+def elabDefiningDecidableInstancesForVelvetSpec (nameRaw : Ident)
+    (pre? : Bool) (tac : Option (TSyntax `Lean.Parser.Tactic.tacticSeq)) : CommandElabM Unit := do
+  let (ctx, name) ← obtainVelvetTestingCtx nameRaw
+  let bindersIdents := ctx.binderIdents
+  let (target, suffix, binders) :=
+    if pre?
+    then (ctx.pre, "PreDecidable", bindersIdents)
+    else (ctx.post, "PostDecidable", bindersIdents ++ ctx.modBinders)
+  let decidableInstName := name.appendAfter suffix
+  -- let proof := tac.getD (← `(term| (by infer_instance) ))
+  let tac := tac.getD (← `(Lean.Parser.Tactic.tacticSeq| skip ))
+  let proof := (← `(Lean.Parser.Tactic.tacticSeq|
+    repeat' refine @instDecidableAnd _ _ ?_ ?_
+    all_goals (try infer_instance)
+    ($tac) ))
+  let decidableInstDefCmd ← `(command|
+    def $(mkIdent decidableInstName) $binders* :
+      $(mkIdent ``Decidable) ($target) := by $proof)
+  elabCommand decidableInstDefCmd
+
+elab_rules : command
+  | `(command| prove_precondition_decidable_for $nameRaw:ident ) => do
+    elabDefiningDecidableInstancesForVelvetSpec nameRaw true none
+  | `(command| prove_precondition_decidable_for $nameRaw:ident by $tac) => do
+    elabDefiningDecidableInstancesForVelvetSpec nameRaw true (some tac)
+  | `(command| prove_postcondition_decidable_for $nameRaw:ident ) => do
+    elabDefiningDecidableInstancesForVelvetSpec nameRaw false none
+  | `(command| prove_postcondition_decidable_for $nameRaw:ident by $tac) => do
+    elabDefiningDecidableInstancesForVelvetSpec nameRaw false (some tac)
+
+elab_rules : command
+  | `(command| derive_tester_for $nameRaw:ident ) => do
+  let (ctx, name) ← obtainVelvetTestingCtx nameRaw
+  let execName ← do
+    try resolveGlobalConstNoOverloadCore <| name.appendAfter "Exec"
+    catch _ =>
+      throwError "no executable found for {name}, please extract the program first"
+  let ids := ctx.ids
+  let retId := ctx.retId
+  let ret := ctx.ret
+  let bindersIdents := ctx.binderIdents
+  let bundle (pre? : Bool) := if pre?
+    then (ctx.pre, name.appendAfter "PreDecidable", ids)
+    else (ctx.post, name.appendAfter "PostDecidable", ids ++ ctx.newIds)
+  let decideTerm bundled : CommandElabM (TSyntax `term) := do
+    let (target, instname, args) := bundled
+    try
+      let instname ← resolveGlobalConstNoOverloadCore instname
+      `(term| (@$(mkIdent ``decide) _ ($(Syntax.mkApp (mkIdent instname) args))))
+    catch _ =>
+      `(term| ($(mkIdent ``decide) ($target)))
+  let matcherTerm ← `(term|
+      match ($(Syntax.mkApp (mkIdent execName) ids)) with
+      | $(mkIdent ``DivM.res) ⟨$retId, $ret⟩ => $(← decideTerm <| bundle false)
+      | _ => false)
+  let ifTerm ← `(term| if $(← decideTerm <| bundle true) then $matcherTerm else true)
+  let testerName := name.appendAfter "Tester"
+  let testerDefCmd ← `(command|
+    def $(mkIdent testerName) $bindersIdents* : Bool := $ifTerm)
+  elabCommand testerDefCmd

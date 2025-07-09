@@ -9,6 +9,7 @@ import Loom.MonadAlgebras.WP.Tactic
 import Loom.MonadAlgebras.WP.DoNames'
 
 import LoomCaseStudies.Velvet.Std
+import LoomCaseStudies.TestingUtil
 
 open PartialCorrectness DemonicChoice Lean.Elab.Term.DoNames
 
@@ -93,6 +94,25 @@ method insertionSort
         mind := mind - 1
       n := n + 1
     return
+
+extract_program_for insertionSort
+prove_precondition_decidable_for insertionSort
+prove_postcondition_decidable_for insertionSort by
+  (exact (decidable_by_nat_upperbound [(size arr), (size arr)]))
+derive_tester_for insertionSort
+
+-- doing simple testing
+run_elab do
+  let g : Plausible.Gen (_ × Bool) := do
+    let arr ← Plausible.SampleableExt.interpSample (Array Int)
+    let res := insertionSortTester arr
+    pure (arr, res)
+  for _ in [1: 500] do
+    let res ← Plausible.Gen.run g 10
+    unless res.2 do
+      IO.println s!"postcondition violated for input {res.1}"
+      break
+
 prove_correct insertionSort by
   dsimp [insertionSort]
   loom_solve
