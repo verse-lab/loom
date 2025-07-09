@@ -180,11 +180,6 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
       intros; simp [liftM, monadLift, MonadLift.monadLift, MAlgOrdered.μ, NonDetT.μ, NonDetT.wp,
         pure, wp, MAlg.lift, Functor.map, NonDetT.wp, NonDetT.bind,LogicLift.refl]
 
-instance : MAlgLiftT m l (NonDetT m) l where
-  μ_lift x := by
-    simp [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]
-    rfl
-
 end DemonicChoice
 
 namespace AngelicChoice
@@ -281,11 +276,6 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
     μ_lift := by
       intros; simp [liftM, monadLift, MonadLift.monadLift, MAlgOrdered.μ, NonDetT.μ, NonDetT.wp,
         pure, wp, MAlg.lift, Functor.map, NonDetT.wp, NonDetT.bind, LogicLift.refl]
-
-instance : MAlgLiftT m l (NonDetT m) l where
-  μ_lift x := by
-    simp [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]
-    rfl
 
 end AngelicChoice
 
