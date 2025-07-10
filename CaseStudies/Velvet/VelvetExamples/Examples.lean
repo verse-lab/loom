@@ -8,9 +8,9 @@ import Loom.MonadAlgebras.NonDetT.Extract
 import Loom.MonadAlgebras.WP.Tactic
 import Loom.MonadAlgebras.WP.DoNames'
 
-import LoomCaseStudies.Velvet.Std
+import CaseStudies.Velvet.Std
 
-open TotalCorrectness DemonicChoice Lean.Elab.Term.DoNames
+open PartialCorrectness DemonicChoice Lean.Elab.Term.DoNames
 
 set_option auto.smt.trust true
 set_option auto.smt true
@@ -63,51 +63,46 @@ attribute [local solverHint] TArray.multiSet_swap
 
 method insertionSort
   (mut arr: arrInt) return (u: Unit)
+  require 1 ≤ size arr
   ensures forall i j, 0 ≤ i ∧ i ≤ j ∧ j < size arr → arrNew[i] ≤ arrNew[j]
   ensures toMultiset arr = toMultiset arrNew
   do
     let arr₀ := arr
     let arr_size := size arr
-    if arr_size ≤ 1
-    then
-      return
-    else
-      let mut n := 1
-      while n ≠ size arr
+    let mut n := 1
+    while n ≠ size arr
+    invariant size arr = arr_size
+    invariant 1 ≤ n ∧ n ≤ size arr
+    invariant forall i j, 0 ≤ i ∧ i < j ∧ j <= n - 1 → arr[i] ≤ arr[j]
+    invariant toMultiset arr = toMultiset arr₀
+    done_with n = size arr
+    do
+      let mut mind := n
+      while mind ≠ 0
       invariant size arr = arr_size
-      invariant 1 ≤ n ∧ n ≤ size arr
-      invariant forall i j, 0 ≤ i ∧ i < j ∧ j <= n - 1 → arr[i] ≤ arr[j]
+      invariant mind ≤ n
+      invariant forall i j, 0 ≤ i ∧ i < j ∧ j ≤ n ∧ j ≠ mind → arr[i] ≤ arr[j]
       invariant toMultiset arr = toMultiset arr₀
-      decreasing size arr - n
+      done_with mind = 0
       do
-        let mut mind := n
-        while mind ≠ 0
-        invariant size arr = arr_size
-        invariant mind ≤ n
-        invariant forall i j, 0 ≤ i ∧ i < j ∧ j ≤ n ∧ j ≠ mind → arr[i] ≤ arr[j]
-        invariant toMultiset arr = toMultiset arr₀
-        decreasing mind
-        do
-          if arr[mind] < arr[mind - 1] then
-            let left := arr[mind - 1]
-            let right := arr[mind]
-            arr[mind - 1] := right
-            arr[mind] := left
-          mind := mind - 1
-        n := n + 1
-      return
+        if arr[mind] < arr[mind - 1] then
+          swap arr[mind - 1] arr[mind]
+        mind := mind - 1
+      n := n + 1
+    return
 prove_correct insertionSort by
   dsimp [insertionSort]
-  loom_solve!
+  loom_solve
 
 end insertionSort
 
 section squareRoot
 
-set_option trace.Loom true
-
 method sqrt (x: ℕ) return (res: ℕ)
-  ensures res * res ≤ x ∧ ∀ i, i ≤ res → i * i ≤ x
+  require x > 8
+  ensures res * res ≤ x
+  ensures ∀ i, i ≤ res → i * i ≤ x
+  ensures ∀ i, i * i ≤ x → i ≤ res
   do
     if x = 0 then
       return 0
@@ -115,52 +110,12 @@ method sqrt (x: ℕ) return (res: ℕ)
       let mut i := 0
       while i * i ≤ x
       invariant ∀ j, j < i → j * j ≤ x
-      decreasing x + 8 - i
+      done_with x < i * i
       do
         i := i + 1
       return i - 1
 prove_correct sqrt by
   dsimp [sqrt]
-  loom_solve
-
-method cbrt (x: ℕ) return (res: ℕ)
-  ensures res * res * res ≤ x ∧ ∀ i, i ≤ res → i * i * i ≤ x
-  do
-    if x = 0 then
-      return 0
-    else
-      let mut i := 0
-      while i * i * i ≤ x
-      invariant ∀ j, j < i → j * j * j ≤ x
-      decreasing x + 8 - i
-      do
-        i := i + 1
-      return i - 1
-prove_correct cbrt by
-  dsimp [cbrt]
-  loom_solve
-  grind
-
-method sqrt_bn (x: ℕ) (bnd: ℕ) return (res: ℕ)
-  require x < bnd * bnd
-  ensures res * res ≤ x ∧ ∀ i, i ≤ res → i * i ≤ x
-  do
-    let mut l := 0
-    let mut r := bnd
-    while 1 < r - l
-    invariant l * l ≤ x
-    invariant x < r * r
-    invariant ∀ i, i ≤ l → i * i ≤ x
-    decreasing r - l
-    do
-      let m := (r + l) / 2
-      if m * m ≤ x then
-        l := m
-      else
-        r := m
-    return l
-prove_correct sqrt_bn by
-  dsimp [sqrt_bn]
   loom_solve!
 
 end squareRoot

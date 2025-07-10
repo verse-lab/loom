@@ -3,9 +3,11 @@ import Loom.MonadAlgebras.Instances.ExceptT
 import Loom.MonadAlgebras.NonDetT.Extract
 import Loom.MonadAlgebras.WP.Tactic
 import Loom.MonadAlgebras.WP.DoNames'
+import Mathlib.Tactic.Common
+import Mathlib.Tactic.Linarith
 import Lean
 
-import LoomCaseStudies.Cashmere.Syntax_Cashmere
+import CaseStudies.Cashmere.Syntax_Cashmere
 
 open Lean.Elab.Term.DoNames
 
@@ -13,7 +15,7 @@ open Queue
 
 open ExceptionAsSuccess
 
-instance : MonadExceptOf String CashmereM where
+instance angelic_exception: MonadExceptOf String CashmereM where
   throw e := liftM (m := ExceptT String (StateT Balance DivM)) (throw e)
   tryCatch := fun x _ => x
 

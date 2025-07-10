@@ -9,7 +9,7 @@ import Loom.MonadAlgebras.Instances.Basic
 import Loom.MonadAlgebras.WP.Tactic
 import Loom.Tactic
 
-import LoomCaseStudies.Extension
+import CaseStudies.Extension
 variable {m τ l} [Monad m] [LawfulMonad m] [Nonempty τ] [CompleteBooleanAlgebra l]
   [MAlgOrdered m l]
 

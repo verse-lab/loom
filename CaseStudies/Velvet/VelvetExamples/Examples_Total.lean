@@ -8,9 +8,9 @@ import Loom.MonadAlgebras.NonDetT.Extract
 import Loom.MonadAlgebras.WP.Tactic
 import Loom.MonadAlgebras.WP.DoNames'
 
-import LoomCaseStudies.Velvet.Std
+import CaseStudies.Velvet.Std
 
-open PartialCorrectness DemonicChoice Lean.Elab.Term.DoNames
+open TotalCorrectness DemonicChoice Lean.Elab.Term.DoNames
 
 set_option auto.smt.trust true
 set_option auto.smt true
@@ -58,10 +58,9 @@ method insertionSort(arr: array<int>)
 variable {arrInt} [arr_inst_int: TArray Int arrInt]
 variable {arrNat} [arr_inst: TArray Nat arrNat]
 
--- set_option trace.profiler true
 attribute [local solverHint] TArray.multiSet_swap
 
-method insertionSort
+method insertionSort_total
   (mut arr: arrInt) return (u: Unit)
   require 1 ≤ size arr
   ensures forall i j, 0 ≤ i ∧ i ≤ j ∧ j < size arr → arrNew[i] ≤ arrNew[j]
@@ -75,7 +74,7 @@ method insertionSort
     invariant 1 ≤ n ∧ n ≤ size arr
     invariant forall i j, 0 ≤ i ∧ i < j ∧ j <= n - 1 → arr[i] ≤ arr[j]
     invariant toMultiset arr = toMultiset arr₀
-    done_with n = size arr
+    decreasing size arr - n
     do
       let mut mind := n
       while mind ≠ 0
@@ -83,27 +82,27 @@ method insertionSort
       invariant mind ≤ n
       invariant forall i j, 0 ≤ i ∧ i < j ∧ j ≤ n ∧ j ≠ mind → arr[i] ≤ arr[j]
       invariant toMultiset arr = toMultiset arr₀
-      done_with mind = 0
+      decreasing mind
       do
         if arr[mind] < arr[mind - 1] then
-          let left := arr[mind - 1]
-          let right := arr[mind]
-          arr[mind - 1] := right
-          arr[mind] := left
+          swap arr[mind - 1] arr[mind]
         mind := mind - 1
       n := n + 1
     return
-prove_correct insertionSort by
-  dsimp [insertionSort]
-  loom_solve
+prove_correct insertionSort_total by
+  dsimp [insertionSort_total]
+  loom_solve!
 
 end insertionSort
 
 section squareRoot
 
-method sqrt (x: ℕ) return (res: ℕ)
-  require x > 8
-  ensures res * res ≤ x ∧ ∀ i, i ≤ res → i * i ≤ x
+set_option trace.Loom true
+
+method sqrt_total (x: ℕ) return (res: ℕ)
+  ensures res * res ≤ x
+  ensures ∀ i, i ≤ res → i * i ≤ x
+  ensures ∀ i, i * i ≤ x → i ≤ res
   do
     if x = 0 then
       return 0
@@ -111,12 +110,56 @@ method sqrt (x: ℕ) return (res: ℕ)
       let mut i := 0
       while i * i ≤ x
       invariant ∀ j, j < i → j * j ≤ x
-      done_with x < i * i
+      decreasing x + 8 - i
       do
         i := i + 1
       return i - 1
-prove_correct sqrt by
-  dsimp [sqrt]
+prove_correct sqrt_total by
+  dsimp [sqrt_total]
+  loom_solve
+
+method cbrt (x: ℕ) return (res: ℕ)
+  ensures res * res * res ≤ x
+  ensures ∀ i, i ≤ res → i * i * i ≤ x
+  ensures ∀ i, i * i * i ≤ x → i ≤ res
+  do
+    if x = 0 then
+      return 0
+    else
+      let mut i := 0
+      while i * i * i ≤ x
+      invariant ∀ j, j < i → j * j * j ≤ x
+      decreasing x + 8 - i
+      do
+        i := i + 1
+      return i - 1
+prove_correct cbrt by
+  dsimp [cbrt]
+  loom_solve
+  grind
+
+method sqrt_bn (x: ℕ) (bnd: ℕ) return (res: ℕ)
+  require x < bnd * bnd
+  ensures res * res ≤ x
+  ensures ∀ i, i ≤ res → i * i ≤ x
+  ensures ∀ i, i * i ≤ x → i ≤ res
+  do
+    let mut l := 0
+    let mut r := bnd
+    while 1 < r - l
+    invariant l * l ≤ x
+    invariant x < r * r
+    invariant ∀ i, i ≤ l → i * i ≤ x
+    decreasing r - l
+    do
+      let m := (r + l) / 2
+      if m * m ≤ x then
+        l := m
+      else
+        r := m
+    return l
+prove_correct sqrt_bn by
+  dsimp [sqrt_bn]
   loom_solve!
 
 end squareRoot

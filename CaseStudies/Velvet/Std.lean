@@ -8,8 +8,8 @@ import Loom.MonadAlgebras.NonDetT.Extract
 import Loom.MonadAlgebras.WP.Tactic
 import Loom.MonadAlgebras.WP.DoNames'
 
-import LoomCaseStudies.Extension
-import LoomCaseStudies.Velvet.Syntax
+import CaseStudies.Extension
+import CaseStudies.Velvet.Syntax
 
 class TArray (α : outParam Type) (κ: Type) where
   get : Nat → κ → α
@@ -78,14 +78,14 @@ lemma getElemE (α κ) {_ : TArray α κ} (k : κ) : k[i] = get i k := by
 syntax (priority := high + 1) ident noWs "[" term "]" ":=" term : doElem
 syntax (priority := high + 1) ident noWs "[" term "]" "+=" term : doElem
 
-syntax "swap" ident noWs "[" term "]" "," ident noWs "[" term "]" : doElem
+syntax "swap" ident noWs "[" term "]" ident noWs "[" term "]" : doElem
 
 macro_rules
   | `(doElem|$id:ident[$idx:term] := $val:term) =>
     `(doElem| $id:term := TArray.set $idx $val $id:term)
   | `(doElem|$id:ident[$idx:term] += $val:term) =>
     `(doElem| $id:term := TArray.set $idx (($id:term)[$idx] + $val) $id:term)
-  | `(doElem|swap $id1:ident[$idx1:term] , $id2:ident[$idx2:term]) =>
+  | `(doElem|swap $id1:ident[$idx1:term] $id2:ident[$idx2:term]) =>
     `(doElem|do
       let lhs := $id1:ident[$idx1:term]
       let rhs := $id2:ident[$idx2:term]

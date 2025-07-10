@@ -211,7 +211,7 @@ def NonDetT.extractGen {findable : {τ : Type u} -> (τ -> Prop) -> Type u}
   (findOf : ∀ {τ : Type u} (p : τ -> Prop), findable p -> Unit -> Option τ)
   : {α : Type u} -> (s : NonDetT m α) -> (ex : ExtractNonDet findable s := by solve_by_elim) -> m α
   | _, .pure x, _ => Pure.pure x
-  | _, .vis x f, .vis _ _ _ => liftM x >>= (fun x => extractGen findOf (f x))
+  | _, .vis x f, .vis _ _ _ => x >>= (fun x => extractGen findOf (f x))
   | _, .pickCont _ p f, .pickSuchThat _ _ _ _ =>
     match findOf p ‹_› () with
     | none => CCPOBot.compBot

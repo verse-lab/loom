@@ -7,7 +7,7 @@ import Mathlib.Tactic.Common
 import Mathlib.Tactic.Linarith
 import Lean
 
-import LoomCaseStudies.Cashmere.Syntax_Cashmere
+import CaseStudies.Cashmere.Syntax_Cashmere
 
 import Loom.MonadAlgebras.WP.Tactic
 
@@ -38,7 +38,7 @@ to specify the pre- and post-conditions.
 
 open ExceptionAsFailure
 
-instance : MonadExceptOf String CashmereM where
+instance demonic_exception: MonadExceptOf String CashmereM where
   throw e := liftM (m := ExceptT String (StateT Balance DivM)) (throw e)
   tryCatch := fun x _ => x
 

@@ -21,8 +21,7 @@ def anyGoalsWithTag (tactic : MVarId → TacticM (Option (Name × α))) : Tactic
             goal.setTag n
           res := res.push r
           mvarIdsNew := mvarIdsNew ++ goals
-      catch ex =>
-        logInfo m!"{ex.toMessageData}"
+      catch _ =>
         mvarIdsNew := mvarIdsNew.push mvarId
   setGoals mvarIdsNew.toList
   pure res
