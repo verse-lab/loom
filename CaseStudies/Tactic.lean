@@ -63,7 +63,7 @@ syntax loom_solve_tactic : tactic
 syntax "loom_goals_intro" : tactic
 syntax "loom_unfold" : tactic
 syntax "loom_auto" : tactic
-syntax "loom_solver_fun" : tactic
+syntax "loom_solver" : tactic
 
 elab_rules : tactic
   | `(tactic| loom_goals_intro) => withMainContext do
@@ -107,13 +107,13 @@ elab_rules : tactic
     let vlsTryThis <- `(tacticSeq|
         loom_goals_intro
         loom_unfold
-        loom_solver_fun)
+        loom_solver)
     if let `(loom_solve_tactic| loom_solve?) := vls then
       Tactic.TryThis.addSuggestion (<-getRef) vlsTryThis
     else
       let vlsIntro ← `(tactic| loom_goals_intro)
       let vlsUnfold ← `(tactic| loom_unfold)
-      let vlsSolve ← `(tactic| loom_solver_fun)
+      let vlsSolve ← `(tactic| loom_solver)
       evalTactic vlsIntro
       let res <- anyGoalsWithTag fun _mvarId => do
         let stx_res <- getAssertionStx
@@ -127,7 +127,7 @@ elab_rules : tactic
           | none =>
             return some (`unnamed, (mvarId, none))
         else return none
-      let tryVlsSolve ← `(tactic| all_goals try loom_solver_fun)
+      let tryVlsSolve ← `(tactic| all_goals try loom_solver)
       let tryVlsUnfold ← `(tactic| all_goals try loom_unfold)
       evalTactic tryVlsSolve
       evalTactic tryVlsUnfold

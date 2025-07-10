@@ -80,7 +80,7 @@ macro_rules
     `(doElem| $id:term := ($id:term).modify $idx (· + $val))
 
 macro_rules
-  | `(tactic|loom_solver_fun) =>
+  | `(tactic|loom_solver) =>
     `(tactic|loom_auto)
 
 private def toBracketedBinderArrayLeafny (stx : Array (TSyntax `leafny_binder)) : MetaM (TSyntaxArray `Lean.Parser.Term.bracketedBinder) := do

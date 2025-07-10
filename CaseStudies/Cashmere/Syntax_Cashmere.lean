@@ -212,7 +212,7 @@ private def Array.andList (ts : Array (TSyntax `term)) : TermElabM (TSyntax `ter
     return t
 
 macro_rules
-  | `(tactic|loom_solver_fun) =>
+  | `(tactic|loom_solver) =>
     `(tactic|aesop)
 
 macro_rules

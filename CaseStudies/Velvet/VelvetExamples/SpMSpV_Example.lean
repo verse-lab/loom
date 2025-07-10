@@ -15,7 +15,8 @@ open PartialCorrectness DemonicChoice Lean.Elab.Term.DoNames
 
 set_option auto.smt.trust true
 set_option auto.smt true
-set_option auto.smt.timeout 10
+--try increasing this parameter if verification fails
+set_option auto.smt.timeout 4
 set_option auto.smt.solver.name "cvc5"
 
 attribute [solverHint] TArray.get_set TArray.size_set
@@ -71,6 +72,7 @@ variable {SpVAbs} [SpV_inst : SpVT Int arrVal arrNat SpVAbs]
 --type for Compressed Sparse Row matrix
 variable {arrSpV} [SpM_inst: TArray SpVAbs arrSpV]
 
+--helpers for getElem syntax
 instance : Inhabited (SpV Int arrVal arrNat) where
   default :=
   { ind := default,
@@ -84,6 +86,38 @@ lemma sumUpTo0
   sumUpTo spv v 0 = 0 := by
   simp [sumUpTo]
 
+def toList [arr_inst: TArray ε τ] (arr: τ): List ε :=
+  (List.range (arr_inst.size arr)).map (fun i => arr_inst.get i arr)
+
+instance: GetElem SpVAbs Nat Int fun _ _ => True where
+  getElem inst i _ :=
+    match (List.zip (toList (SpVT.ind inst)) (toList (SpVT.val inst))).find? fun (j, _) => j = i with
+    | some pr => pr.2
+    | none => 0
+
+--sparse vector by vector multiplication
+method VSpV
+  (mut out: arrVal)
+  (arr: arrVal)
+  (spv: SpVAbs) return (u: Unit)
+  ensures size outNew = 1
+  ensures outNew[0] = sumUpTo spv arr (SpVT.size spv)
+  do
+    let mut ind := 0
+    out := val_inst.replicate 1 0
+    while ind ≠ SpVT.size spv
+    invariant size out = 1
+    invariant ind ≤ SpVT.size spv
+    invariant out[0] = sumUpTo spv arr ind
+    done_with ind = SpVT.size spv
+    do
+      out[0] += (SpVT.val spv)[ind] * arr[(SpVT.ind spv)[ind]]
+      ind := ind + 1
+    return
+
+prove_correct VSpV by
+  dsimp [VSpV]
+  loom_solve
 
 --CSR matrix by a vector multiplication
 method spmv
@@ -114,40 +148,164 @@ prove_correct spmv by
   dsimp [spmv]
   loom_solve
 
+--helper function for calculation of dot product on sparse vectors
+def spv_dot [SpV_inst: SpVT ℤ arrVal arrNat SpVAbs_p] (spv1 spv2: SpVAbs_p) (pnt1 pnt2: ℕ): Int :=
+  if (SpVT.size spv1) ≤ pnt1 ∨ (SpVT.size spv2) ≤ pnt2 then
+    0
+  else
+    if (SpVT.ind spv1)[pnt1] = (SpVT.ind spv2)[pnt2] then
+      (SpVT.val spv1)[pnt1] * (SpVT.val spv2)[pnt2] + spv_dot spv1 spv2 (pnt1 + 1) (pnt2 + 1)
+    else
+      if (SpVT.ind spv1)[pnt1] < (SpVT.ind spv2)[pnt2] then
+        spv_dot spv1 spv2 (pnt1 + 1) pnt2
+      else
+        spv_dot spv1 spv2 pnt1 (pnt2 + 1)
+  termination_by ((SpVT.size spv1) + (SpVT.size spv2) - pnt1 - pnt2)
 
-def toList [arr_inst: TArray ε τ] (arr: τ): List ε :=
-  (List.range (arr_inst.size arr)).map (fun i => arr_inst.get i arr)
-
-instance: GetElem SpVAbs Nat Int fun _ _ => True where
-  getElem inst i _ :=
-    match (List.zip (toList (SpVT.ind inst)) (toList (SpVT.val inst))).find? fun (j, _) => j = i with
-    | some pr => pr.2
-    | none => 0
-
-
---sparse vector by vector multiplication
-method VSpV
+--sparse vector by sparse vector multiplication
+method SpVSpV
   (mut out: arrVal)
-  (arr: arrVal)
-  (spv: SpVAbs) return (u: Unit)
+  (spv1: SpVAbs)
+  (spv2: SpVAbs) return (u: Unit)
   ensures size outNew = 1
-  ensures outNew[0] = sumUpTo spv arr (SpVT.size spv)
+  ensures outNew[0] = spv_dot spv1 spv2 0 0
   do
-    let mut ind := 0
     out := val_inst.replicate 1 0
-    while ind ≠ SpVT.size spv
+    let mut pnt1 := 0
+    let mut pnt2 := 0
+    while pnt1 ≠ SpVT.size spv1 ∧ pnt2 ≠ SpVT.size spv2
     invariant size out = 1
-    invariant ind ≤ SpVT.size spv
-    invariant out[0] = sumUpTo spv arr ind
-    done_with ind = SpVT.size spv
+    invariant pnt1 ≤ SpVT.size spv1 ∧ pnt2 ≤ SpVT.size spv2
+    invariant out[0] + spv_dot spv1 spv2 pnt1 pnt2 = spv_dot spv1 spv2 0 0
+    done_with pnt1 = SpVT.size spv1 ∨ pnt2 = SpVT.size spv2
     do
-      out[0] += (SpVT.val spv)[ind] * arr[(SpVT.ind spv)[ind]]
-      ind := ind + 1
+      if (SpVT.ind spv1)[pnt1] = (SpVT.ind spv2)[pnt2] then
+        out[0] += (SpVT.val spv1)[pnt1] * (SpVT.val spv2)[pnt2]
+        pnt1 := pnt1 + 1
+        pnt2 := pnt2 + 1
+      else
+        if (SpVT.ind spv1)[pnt1] < (SpVT.ind spv2)[pnt2] then
+          pnt1 := pnt1 + 1
+        else
+          pnt2 := pnt2 + 1
     return
 
-prove_correct VSpV by
-  dsimp [VSpV]
+--Compressed Sparse Row matrix by sparse vector multiplicaiton
+method SpMSpV
+  (mut out: arrVal)
+  (spm: arrSpV)
+  (spv: SpVAbs) return (u: Unit)
+  ensures size outNew = size spm
+  ensures ∀ i < size spm, outNew[i] = spv_dot spm[i] spv 0 0
+  do
+    out := val_inst.replicate (size spm) 0
+    let mut spmInd := ind_inst.replicate (size spm) 0
+    let mut spvInd := ind_inst.replicate (size spm) 0
+    while_some i :| i < (size spm) ∧ TArray.get i spmInd < SpVT.size (TArray.get i spm) ∧ TArray.get i spvInd < SpVT.size spv
+    invariant ind_inst.size spvInd = size spm
+    invariant ind_inst.size spmInd = size spm
+    invariant size out = size spm
+    invariant ∀ i < ind_inst.size spmInd, spmInd[i] <= SpVT.size spm[i]
+    invariant ∀ i < ind_inst.size spvInd, spvInd[i] <= SpVT.size spv
+    invariant ∀ i < size spm, out[i] + spv_dot spm[i] spv spmInd[i] spvInd[i] = spv_dot spm[i] spv 0 0
+    done_with ∀ i < size spm, spmInd[i] = SpVT.size spm[i] ∨ spvInd[i] = SpVT.size spv
+    do
+      let ind_m := spmInd[i]
+      let ind_v := spvInd[i]
+      if TArray.get ind_m (SpVT.ind spm[i]) = TArray.get ind_v (SpVT.ind spv) then
+        out[i] += TArray.get ind_m (SpVT.val spm[i]) * TArray.get ind_v (SpVT.val spv)
+        spmInd[i] += 1
+        spvInd[i] += 1
+      else
+        if (SpVT.ind spm[i])[ind_m] < (SpVT.ind spv)[ind_v] then
+          spmInd[i] += 1
+        else
+          spvInd[i] += 1
+    return
+
+--lemma for helper function
+@[solverHint]
+lemma spv_dot_eq
+  (SpV_inst : SpVT ℤ arrVal arrNat SpVAbs_p := by assumption)
+  (spv1 spv2: SpVAbs_p) (pnt1 pnt2: ℕ) (prev: Int):
+  prev + spv_dot spv1 spv2 pnt1 pnt2 = spv_dot spv1 spv2 0 0 →
+    TArray.get pnt1 (SpVT.ind spv1) = TArray.get pnt2 (SpVT.ind spv2) →
+    pnt1 < SpVT.size spv1 →
+    pnt2 < SpVT.size spv2 →
+    prev + TArray.get pnt1 (SpVT.val spv1) * TArray.get pnt2 (SpVT.val spv2) + spv_dot spv1 spv2 (pnt1 + 1) (pnt2 + 1) = spv_dot spv1 spv2 0 0 := by
+      intro sum_eq ind_eq inb1 inb2
+      rw [spv_dot] at sum_eq
+      have neq: ¬(SpVT.size spv1 ≤ pnt1 ∨ SpVT.size spv2 ≤ pnt2) := by omega
+      try simp only [loomAbstractionSimp] at *
+      simp [neq, ind_eq] at sum_eq
+      rw [←add_assoc] at sum_eq
+      exact sum_eq
+
+--lemma for helper function
+@[solverHint]
+theorem spv_dot_lt
+  (SpV_inst : SpVT ℤ arrVal arrNat SpVAbs_p := by assumption)
+  (spv1 spv2: SpVAbs_p) (pnt1 pnt2: ℕ) (prev: Int):
+  prev + spv_dot spv1 spv2 pnt1 pnt2 = spv_dot spv1 spv2 0 0 →
+  TArray.get pnt1 (SpVT.ind spv1) < TArray.get pnt2 (SpVT.ind spv2) →
+  pnt1 < SpVT.size spv1 → pnt2 < SpVT.size spv2 →
+    prev + spv_dot spv1 spv2 (pnt1 + 1) pnt2 = spv_dot spv1 spv2 0 0 := by
+      intro sum_eq ind_lt inb1 inb2
+      rw [spv_dot] at sum_eq
+      have neq: ¬(SpVT.size spv1 ≤ pnt1 ∨ SpVT.size spv2 ≤ pnt2) := by omega
+      try simp only [loomAbstractionSimp] at *
+      simp [neq, ind_lt] at sum_eq
+      simp [lt_iff_le_and_ne.mp ind_lt] at sum_eq
+      exact sum_eq
+
+--lemma for helper function
+@[solverHint]
+theorem spv_dot_gt
+  (SpV_inst : SpVT ℤ arrVal arrNat SpVAbs_p := by assumption)
+  (spv1 spv2: SpVAbs_p) (pnt1 pnt2: ℕ) (prev: Int) :
+  prev + spv_dot spv1 spv2 pnt1 pnt2 = spv_dot spv1 spv2 0 0 →
+  TArray.get pnt2 (SpVT.ind spv2) ≤ TArray.get pnt1 (SpVT.ind spv1) →
+  TArray.get pnt1 (SpVT.ind spv1) ≠ TArray.get pnt2 (SpVT.ind spv2) →
+  pnt1 < SpVT.size spv1 → pnt2 < SpVT.size spv2 →
+    prev + spv_dot spv1 spv2 pnt1 (pnt2 + 1) = spv_dot spv1 spv2 0 0 := by
+      intro sum_eq ind_le ind_neq inb1 inb2
+      rw [spv_dot] at sum_eq
+      have neq: ¬(SpVT.size spv1 ≤ pnt1 ∨ SpVT.size spv2 ≤ pnt2) := by omega
+      try simp only [loomAbstractionSimp] at *
+      simp [neq, ind_neq, ind_le] at sum_eq
+      have ilt: ¬((SpVT.ind spv1)[pnt1] < (SpVT.ind spv2)[pnt2]) := by
+        try simp only [loomAbstractionSimp] at *
+        omega
+      try simp only [loomAbstractionSimp] at *
+      simp [ilt] at sum_eq
+      exact sum_eq
+
+--lemma for helper function
+@[solverHint]
+theorem spv_dot_exh
+  (SpV_inst : SpVT ℤ arrVal arrNat SpVAbs_p := by assumption)
+  (spv1 spv2: SpVAbs_p) (pnt1 pnt2: ℕ):
+  pnt1 = SpVT.size spv1 ∨ pnt2 = SpVT.size spv2 → spv_dot spv1 spv2 pnt1 pnt2 = 0 := by
+    intro exh
+    rw [spv_dot]
+    by_cases triv: SpVT.size spv1 ≤ pnt1 ∨ SpVT.size spv2 ≤ pnt2 <;> simp [triv]
+    omega
+
+
+--proofs for sparse vector by sparse vector multiplication
+--and sparse matrix by sparse vector multiplication algorithms
+prove_correct SpVSpV by
+  dsimp [SpVSpV]
   loom_solve
+
+
+prove_correct SpMSpV by
+  dsimp [SpMSpV]
+  loom_solve
+
+--now we will prove that presented algorithms indeed calculate
+--dot product/matrix product
+
 
 --theorem: getting a value by position which exists in sparse vector equals to element on that position
 theorem getValSpV_eq (spv: SpVAbs) (j: ℕ) (h_ind: j < SpVT.size spv): spv[(SpVT.ind spv)[j]] = (SpVT.val spv)[j] := by
@@ -263,7 +421,7 @@ theorem VSpV_correct_pure (out: arrVal) (arr: arrVal)
       rw [←fin_lemma]
       exact Finset.sum_congr (by rfl) fun i h_i => by aesop
 
---sparse vector by vector multiplication actually computes dot product
+--sparse vector by vector multiplication algorithm actually computes dot product
 theorem VSpV_correct_triple (out: arrVal) (arr: arrVal) (spv: SpVAbs):
   triple
     (∀ i < SpVT.size spv, (SpVT.ind spv)[i] < size arr)
@@ -283,7 +441,7 @@ theorem VSpV_correct_triple (out: arrVal) (arr: arrVal) (spv: SpVAbs):
       simp [triple, WithName] at triple_true
       exact triple_true
 
---Column Sparse Matrix by vector multiplication actually computes matrix multiplication
+--Column Sparse Matrix by vector multiplication algorithm actually computes matrix multiplication
 theorem spmv_correct_triple (out: arrVal) (arr: arrVal) (spm: arrSpV):
   triple
     (∀ i < size spm, ∀ j < (SpVT.size spm[i]), (SpVT.ind spm[i])[j] < size arr)
@@ -315,84 +473,6 @@ theorem spmv_correct_triple (out: arrVal) (arr: arrVal) (spm: arrSpV):
       have triple_true := spmv_correct out arr spm
       simp [triple] at triple_true
       exact triple_true
-
---helper function for calculation of dot product on sparse vectors
-def spv_dot [SpV_inst: SpVT ℤ arrVal arrNat SpVAbs_p] (spv1 spv2: SpVAbs_p) (pnt1 pnt2: ℕ): Int :=
-  if (SpVT.size spv1) ≤ pnt1 ∨ (SpVT.size spv2) ≤ pnt2 then
-    0
-  else
-    if (SpVT.ind spv1)[pnt1] = (SpVT.ind spv2)[pnt2] then
-      (SpVT.val spv1)[pnt1] * (SpVT.val spv2)[pnt2] + spv_dot spv1 spv2 (pnt1 + 1) (pnt2 + 1)
-    else
-      if (SpVT.ind spv1)[pnt1] < (SpVT.ind spv2)[pnt2] then
-        spv_dot spv1 spv2 (pnt1 + 1) pnt2
-      else
-        spv_dot spv1 spv2 pnt1 (pnt2 + 1)
-  termination_by ((SpVT.size spv1) + (SpVT.size spv2) - pnt1 - pnt2)
-
-@[solverHint]
-lemma spv_dot_eq
-  (SpV_inst : SpVT ℤ arrVal arrNat SpVAbs_p := by assumption)
-  (spv1 spv2: SpVAbs_p) (pnt1 pnt2: ℕ) (prev: Int):
-  prev + spv_dot spv1 spv2 pnt1 pnt2 = spv_dot spv1 spv2 0 0 →
-    TArray.get pnt1 (SpVT.ind spv1) = TArray.get pnt2 (SpVT.ind spv2) →
-    pnt1 < SpVT.size spv1 →
-    pnt2 < SpVT.size spv2 →
-    prev + TArray.get pnt1 (SpVT.val spv1) * TArray.get pnt2 (SpVT.val spv2) + spv_dot spv1 spv2 (pnt1 + 1) (pnt2 + 1) = spv_dot spv1 spv2 0 0 := by
-      intro sum_eq ind_eq inb1 inb2
-      rw [spv_dot] at sum_eq
-      have neq: ¬(SpVT.size spv1 ≤ pnt1 ∨ SpVT.size spv2 ≤ pnt2) := by omega
-      try simp only [loomAbstractionSimp] at *
-      simp [neq, ind_eq] at sum_eq
-      rw [←add_assoc] at sum_eq
-      exact sum_eq
-
-@[solverHint]
-theorem spv_dot_lt
-  (SpV_inst : SpVT ℤ arrVal arrNat SpVAbs_p := by assumption)
-  (spv1 spv2: SpVAbs_p) (pnt1 pnt2: ℕ) (prev: Int):
-  prev + spv_dot spv1 spv2 pnt1 pnt2 = spv_dot spv1 spv2 0 0 →
-  TArray.get pnt1 (SpVT.ind spv1) < TArray.get pnt2 (SpVT.ind spv2) →
-  pnt1 < SpVT.size spv1 → pnt2 < SpVT.size spv2 →
-    prev + spv_dot spv1 spv2 (pnt1 + 1) pnt2 = spv_dot spv1 spv2 0 0 := by
-      intro sum_eq ind_lt inb1 inb2
-      rw [spv_dot] at sum_eq
-      have neq: ¬(SpVT.size spv1 ≤ pnt1 ∨ SpVT.size spv2 ≤ pnt2) := by omega
-      try simp only [loomAbstractionSimp] at *
-      simp [neq, ind_lt] at sum_eq
-      simp [lt_iff_le_and_ne.mp ind_lt] at sum_eq
-      exact sum_eq
-
-@[solverHint]
-theorem spv_dot_gt
-  (SpV_inst : SpVT ℤ arrVal arrNat SpVAbs_p := by assumption)
-  (spv1 spv2: SpVAbs_p) (pnt1 pnt2: ℕ) (prev: Int) :
-  prev + spv_dot spv1 spv2 pnt1 pnt2 = spv_dot spv1 spv2 0 0 →
-  TArray.get pnt2 (SpVT.ind spv2) ≤ TArray.get pnt1 (SpVT.ind spv1) →
-  TArray.get pnt1 (SpVT.ind spv1) ≠ TArray.get pnt2 (SpVT.ind spv2) →
-  pnt1 < SpVT.size spv1 → pnt2 < SpVT.size spv2 →
-    prev + spv_dot spv1 spv2 pnt1 (pnt2 + 1) = spv_dot spv1 spv2 0 0 := by
-      intro sum_eq ind_le ind_neq inb1 inb2
-      rw [spv_dot] at sum_eq
-      have neq: ¬(SpVT.size spv1 ≤ pnt1 ∨ SpVT.size spv2 ≤ pnt2) := by omega
-      try simp only [loomAbstractionSimp] at *
-      simp [neq, ind_neq, ind_le] at sum_eq
-      have ilt: ¬((SpVT.ind spv1)[pnt1] < (SpVT.ind spv2)[pnt2]) := by
-        try simp only [loomAbstractionSimp] at *
-        omega
-      try simp only [loomAbstractionSimp] at *
-      simp [ilt] at sum_eq
-      exact sum_eq
-
-@[solverHint]
-theorem spv_dot_exh
-  (SpV_inst : SpVT ℤ arrVal arrNat SpVAbs_p := by assumption)
-  (spv1 spv2: SpVAbs_p) (pnt1 pnt2: ℕ):
-  pnt1 = SpVT.size spv1 ∨ pnt2 = SpVT.size spv2 → spv_dot spv1 spv2 pnt1 pnt2 = 0 := by
-    intro exh
-    rw [spv_dot]
-    by_cases triv: SpVT.size spv1 ≤ pnt1 ∨ SpVT.size spv2 ≤ pnt2 <;> simp [triv]
-    omega
 
 --theorem: helper function computes actual dot product
 theorem spv_dot_pure_gen (spv1 spv2: SpVAbs) (n pnt1 pnt2: ℕ)
@@ -624,6 +704,7 @@ theorem spv_dot_pure_gen (spv1 spv2: SpVAbs) (n pnt1 pnt2: ℕ)
     simp at ex
     simp [getValSpV_empty spv2 x ex]
 
+--theorem: helper function from (0,0) calculates full dot product
 theorem spv_dot_pure (spv1 spv2: SpVAbs) (n: ℕ)
   (sz1: ∀ i < SpVT.size spv1, (SpVT.ind spv1)[i] < n) (sz2: ∀ i < SpVT.size spv2, (SpVT.ind spv2)[i] < n):
     spv_dot spv1 spv2 0 0 = ∑ i ∈ Finset.range n, spv1[i] * spv2[i] := by
@@ -657,39 +738,7 @@ theorem spv_dot_pure (spv1 spv2: SpVAbs) (n: ℕ)
       simp at sm1
       simp [zer_lemma spv1 x em1 sm1]
 
---sparse vector by sparse vector multiplication
-method SpVSpV
-  (mut out: arrVal)
-  (spv1: SpVAbs)
-  (spv2: SpVAbs) return (u: Unit)
-  ensures size outNew = 1
-  ensures outNew[0] = spv_dot spv1 spv2 0 0
-  do
-    out := val_inst.replicate 1 0
-    let mut pnt1 := 0
-    let mut pnt2 := 0
-    while pnt1 ≠ SpVT.size spv1 ∧ pnt2 ≠ SpVT.size spv2
-    invariant size out = 1
-    invariant pnt1 ≤ SpVT.size spv1 ∧ pnt2 ≤ SpVT.size spv2
-    invariant out[0] + spv_dot spv1 spv2 pnt1 pnt2 = spv_dot spv1 spv2 0 0
-    done_with pnt1 = SpVT.size spv1 ∨ pnt2 = SpVT.size spv2
-    do
-      if (SpVT.ind spv1)[pnt1] = (SpVT.ind spv2)[pnt2] then
-        out[0] += (SpVT.val spv1)[pnt1] * (SpVT.val spv2)[pnt2]
-        pnt1 := pnt1 + 1
-        pnt2 := pnt2 + 1
-      else
-        if (SpVT.ind spv1)[pnt1] < (SpVT.ind spv2)[pnt2] then
-          pnt1 := pnt1 + 1
-        else
-          pnt2 := pnt2 + 1
-    return
-
-prove_correct SpVSpV by
-  dsimp [SpVSpV]
-  loom_solve
-
---sparse vector by sparse vector multiplicaiton actually computes dot product
+--sparse vector by sparse vector multiplicaiton algorithm actually computes dot product
 theorem SpVSpV_correct_triple (out: arrVal) (spv1 spv2: SpVAbs) (n: ℕ):
   triple
     ((∀ i < SpVT.size spv1, (SpVT.ind spv1)[i] < n) ∧ (∀ i < SpVT.size spv2, (SpVT.ind spv2)[i] < n))
@@ -711,44 +760,7 @@ theorem SpVSpV_correct_triple (out: arrVal) (spv1 spv2: SpVAbs) (n: ℕ):
       simp [WithName] at triple_true
       exact triple_true
 
---Compressed Sparse Row matrix by sparse vector multiplicaiton
-method SpMSpV
-  (mut out: arrVal)
-  (spm: arrSpV)
-  (spv: SpVAbs) return (u: Unit)
-  ensures size outNew = size spm
-  ensures ∀ i < size spm, outNew[i] = spv_dot spm[i] spv 0 0
-  do
-    out := val_inst.replicate (size spm) 0
-    let mut spmInd := ind_inst.replicate (size spm) 0
-    let mut spvInd := ind_inst.replicate (size spm) 0
-    while_some i :| i < (size spm) ∧ TArray.get i spmInd < SpVT.size (TArray.get i spm) ∧ TArray.get i spvInd < SpVT.size spv
-    invariant ind_inst.size spvInd = size spm
-    invariant ind_inst.size spmInd = size spm
-    invariant size out = size spm
-    invariant ∀ i < ind_inst.size spmInd, spmInd[i] <= SpVT.size spm[i]
-    invariant ∀ i < ind_inst.size spvInd, spvInd[i] <= SpVT.size spv
-    invariant ∀ i < size spm, out[i] + spv_dot spm[i] spv spmInd[i] spvInd[i] = spv_dot spm[i] spv 0 0
-    done_with ∀ i < size spm, spmInd[i] = SpVT.size spm[i] ∨ spvInd[i] = SpVT.size spv
-    do
-      let ind_m := spmInd[i]
-      let ind_v := spvInd[i]
-      if TArray.get ind_m (SpVT.ind spm[i]) = TArray.get ind_v (SpVT.ind spv) then
-        out[i] += TArray.get ind_m (SpVT.val spm[i]) * TArray.get ind_v (SpVT.val spv)
-        spmInd[i] += 1
-        spvInd[i] += 1
-      else
-        if (SpVT.ind spm[i])[ind_m] < (SpVT.ind spv)[ind_v] then
-          spmInd[i] += 1
-        else
-          spvInd[i] += 1
-    return
-prove_correct SpMSpV by
-  dsimp [SpMSpV]
-  loom_solve
-
-
---Compressed Sparse Row matrix by sparse vector multiplicaiton actually computes matrix product
+--Compressed Sparse Row matrix by sparse vector multiplicaiton algorithm actually computes matrix product
 theorem SpMSpV_correct_triple
   (out: arrVal)
   (spm: arrSpV)
