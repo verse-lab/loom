@@ -7,7 +7,7 @@ import Mathlib.Tactic.Common
 import Mathlib.Tactic.Linarith
 import Lean
 
-import LoomCaseStudies.Cashmere.Syntax_Cashmere
+import CaseStudies.Cashmere.Syntax_Cashmere
 
 import Loom.MonadAlgebras.WP.Tactic
 

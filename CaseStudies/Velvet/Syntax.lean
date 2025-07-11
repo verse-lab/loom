@@ -7,9 +7,9 @@ import Mathlib.Algebra.Ring.Int.Defs
 import Loom.MonadAlgebras.NonDetT.Extract
 import Loom.MonadAlgebras.WP.Tactic
 
-import LoomCaseStudies.Theory
-import LoomCaseStudies.Velvet.VelvetTheory
-import LoomCaseStudies.Tactic
+import CaseStudies.Theory
+import CaseStudies.Velvet.VelvetTheory
+import CaseStudies.Tactic
 import Loom.MonadAlgebras.WP.DoNames'
 
 open Lean Elab Command Term Meta Lean.Parser

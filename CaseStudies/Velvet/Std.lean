@@ -8,8 +8,8 @@ import Loom.MonadAlgebras.NonDetT.Extract
 import Loom.MonadAlgebras.WP.Tactic
 import Loom.MonadAlgebras.WP.DoNames'
 
-import LoomCaseStudies.Extension
-import LoomCaseStudies.Velvet.Syntax
+import CaseStudies.Extension
+import CaseStudies.Velvet.Syntax
 
 class TArray (α : outParam Type) (κ: Type) where
   get : Nat → κ → α

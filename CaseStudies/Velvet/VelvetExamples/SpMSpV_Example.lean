@@ -9,7 +9,7 @@ import Loom.MonadAlgebras.WP.Tactic
 import Loom.MonadAlgebras.WP.DoNames'
 
 
-import LoomCaseStudies.Velvet.Std
+import CaseStudies.Velvet.Std
 
 open PartialCorrectness DemonicChoice Lean.Elab.Term.DoNames
 

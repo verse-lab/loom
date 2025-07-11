@@ -9,8 +9,8 @@ import Mathlib.Algebra.Ring.Int.Defs
 import Loom.MonadAlgebras.NonDetT.Extract
 import Loom.MonadAlgebras.WP.Tactic
 
-import LoomCaseStudies.Theory
-import LoomCaseStudies.Tactic
+import CaseStudies.Theory
+import CaseStudies.Tactic
 import Loom.MonadAlgebras.WP.DoNames'
 
 abbrev Balance := Int

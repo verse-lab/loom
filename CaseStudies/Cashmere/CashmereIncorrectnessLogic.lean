@@ -5,7 +5,7 @@ import Loom.MonadAlgebras.WP.Tactic
 import Loom.MonadAlgebras.WP.DoNames'
 import Lean
 
-import LoomCaseStudies.Cashmere.Syntax_Cashmere
+import CaseStudies.Cashmere.Syntax_Cashmere
 
 open Lean.Elab.Term.DoNames
 
