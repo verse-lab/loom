@@ -33,22 +33,28 @@ structure LoomAssertionsMap where
   maxId : Int
   syntaxStore : Std.HashMap Int Term
   nameStore : Std.HashMap Name Int
+  nameCounter : Std.HashMap Name Int
 
   deriving Inhabited
 
-def addAssertion (s : LoomAssertionsMap) (t : Term) (n : Name) : LoomAssertionsMap :=
+def addAssertion (s : LoomAssertionsMap) (t : Term) (n : Name) (coreName: Name): LoomAssertionsMap :=
   let maxId := s.maxId + 1
-  { s with maxId := maxId, syntaxStore := s.syntaxStore.insert maxId t, nameStore := s.nameStore.insert n maxId }
+  let maxIdLocal := s.nameCounter.get! coreName + 1
+  { s with
+    maxId := maxId
+    syntaxStore := s.syntaxStore.insert maxId t
+    nameStore := s.nameStore.insert n maxId
+    nameCounter := s.nameCounter.insert coreName maxIdLocal }
 
 initialize loomAssertionsMap :
-  SimplePersistentEnvExtension (Term × Name) LoomAssertionsMap <-
+  SimplePersistentEnvExtension (Term × Name × Name) LoomAssertionsMap <-
   registerSimplePersistentEnvExtension {
-    addEntryFn := fun s ⟨t, n⟩ => addAssertion s t n
+    addEntryFn := fun s ⟨t, n, coreName⟩ => addAssertion s t n coreName
     addImportedFn := fun as => Id.run do
       let mut res : LoomAssertionsMap := default
       for a in as do
-        for (t, n) in a do
-          res := addAssertion res t n
+        for (t, n, coreName) in a do
+          res := addAssertion res t n coreName
       return res
   }
 
@@ -76,24 +82,42 @@ set_option linter.unusedVariables false in
 def decreasingGadget (measure : ℕ) : m PUnit := pure .unit
 
 elab "with_name_prefix" lit:name inv:term : term => do
-  let ⟨maxId, _, _⟩ <- loomAssertionsMap.get
+  let ⟨maxId, _, _, cntr⟩ <- loomAssertionsMap.get
   let newMaxId := maxId + 1
-  let invName := lit.getName.toString ++ "_" ++ toString newMaxId.toNat |>.toName
+  let coreName := match (← Term.getDeclName?) with
+    | some res => res
+    | none => `nameless
+  let localName := (Lean.Name.mkSimple (lit.getName.toString ++ "_" ++ coreName.toString))
+  let cntrElem := match cntr.get? localName with
+    | some resId => resId
+    | none => 0
+  let maxIdLocal := 1 + cntrElem
+  let invName := lit.getName.toString ++ "_" ++ toString maxIdLocal.toNat |>.toName
   loomAssertionsMap.modify (fun res => {
       syntaxStore := res.syntaxStore.insert newMaxId inv
       nameStore := res.nameStore.insert invName newMaxId
       maxId := newMaxId
+      nameCounter := res.nameCounter.insert localName maxIdLocal
       })
   Term.elabTerm (<- ``(WithName $inv $(Lean.quoteNameMk invName))) none
 
 elab "type_with_name_prefix" lit:name inv:term : term => do
-  let ⟨maxId, _, _⟩ <- loomAssertionsMap.get
+  let ⟨maxId, _, _, cntr⟩ <- loomAssertionsMap.get
   let newMaxId := maxId + 1
-  let invName := lit.getName.toString ++ "_" ++ toString newMaxId.toNat |>.toName
+  let coreName := match (← Term.getDeclName?) with
+    | some res => res
+    | none => `nameless
+  let localName := (Lean.Name.mkSimple (lit.getName.toString ++ "_" ++ coreName.toString))
+  let cntrElem := match cntr.get? localName with
+    | some resId => resId
+    | none => 0
+  let maxIdLocal := 1 + cntrElem
+  let invName := lit.getName.toString ++ "_" ++ toString maxIdLocal.toNat |>.toName
   loomAssertionsMap.modify (fun res => {
       syntaxStore := res.syntaxStore.insert newMaxId inv
       nameStore := res.nameStore.insert invName newMaxId
       maxId := newMaxId
+      nameCounter := res.nameCounter.insert localName maxIdLocal
       })
   Term.elabTerm (<- ``(typeWithName $inv $(Lean.quoteNameMk invName))) none
 

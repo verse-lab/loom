@@ -80,7 +80,7 @@ elab "wpgen_app" : tactic => do
 
 macro "wpgen_step" : tactic => `(tactic| first
   | (wpgen_app <;> intros <;> try_resolve_spec_goals)
-  | (intros; split <;> intros)
+  --| (intros; split <;> intros)
   )
 macro "wpgen_intro" : tactic => `(tactic| (apply WPGen.intro; rotate_right))
 macro "wpgen" : tactic => `(tactic| (
