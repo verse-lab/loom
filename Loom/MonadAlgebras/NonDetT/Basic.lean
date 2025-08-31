@@ -694,6 +694,3 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
 end AngelicChoice
 
 end TotalCorrectness
-
-macro_rules
-  | `(doElem| let $x:term :| $t) => `(doElem| let $x:term <- pickSuchThat _ (fun $x => $t))

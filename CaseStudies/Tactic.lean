@@ -9,6 +9,7 @@ import Loom.MonadAlgebras.WP.Gen
 import Loom.Tactic
 
 import CaseStudies.Extension
+import CaseStudies.Macro
 
 import ProofWidgets.Component.Panel.Basic
 import ProofWidgets.Component.HtmlDisplay
@@ -30,7 +31,7 @@ private def _root_.Lean.SimplePersistentEnvExtension.get [Inhabited σ] (ext : S
 def getAssertionStx : TacticM (Option Term) := withMainContext do
   let goal <- getMainTarget
   let goalStx <- ppExpr goal
-  let ⟨_, ss, ns⟩ <- loomAssertionsMap.get
+  let ⟨_, ss, ns, _⟩ <- loomAssertionsMap.get
   let .some withNameExpr := goal.find? (fun e => e.isAppOf ``WithName)
     | let .some typeWithNameExpr := goal.find? (fun e => e.isAppOf ``typeWithName)
         | throwError s!"Failed to parse an assertion without names: {goalStx}"

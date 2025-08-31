@@ -43,7 +43,7 @@ instance [Inhabited α] : TArray α (Array α) where
       rw [@Array.getElem_set]; aesop }
     simp [Array.setIfInBounds, dif_neg h']
     rw [getElem!_pos] <;> try simp [*]
-    split_ifs; omega; rfl
+    omega
   size_set i val arr := by simp
   replicate sz elem := Array.replicate sz elem
   replicate_size sz elem := by simp

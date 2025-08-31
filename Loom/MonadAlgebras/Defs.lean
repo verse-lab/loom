@@ -60,10 +60,10 @@ abbrev MAlg.lift {m : Type u -> Type v} {l : Type u} [Monad m] [MAlg m l] :
 instance (l : Type u) {m : Type u -> Type v} [Monad m] [MAlg m l] : MonadLiftT m (Cont l) where
   monadLift := MAlg.lift
 
-instance EffectObservationOfMAlg (l : Type u) {m : Type u -> Type v} [Monad m] [LawfulMonad m] [MAlg m l] : LawfulMonadLift m (Cont l) where
-  lift_pure := by
+instance EffectObservationOfMAlg (l : Type u) {m : Type u -> Type v} [Monad m] [LawfulMonad m] [MAlg m l] : LawfulMonadLiftT m (Cont l) where
+  monadLift_pure := by
     intro α x; simp [monadLift, pure]; unfold MAlg.lift; simp [map_pure, MAlg.pure]
-  lift_bind := by
+  monadLift_bind := by
     intros α β x f; simp [monadLift, bind]; unfold MAlg.lift; ext g
     rw (config := { occs := .pos [2] }) [map_eq_pure_bind]
     simp only [map_bind]; apply MAlg.bind
@@ -95,7 +95,7 @@ lemma Cont.monotone_lift {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMo
 @[simp]
 lemma MAlg.μ_eq {m l} [Monad m] [CompleteLattice l] [MAlgOrdered m l] : MAlg.μ (m := m) = MAlgOrdered.μ (m := m) := by rfl
 
-lemma MAlg.lift_bind {α β} {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [CompleteLattice l] [MAlgOrdered m l]
+lemma MAlg.monadLift_bind {α β} {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [CompleteLattice l] [MAlgOrdered m l]
   (x : m α) (f g : α -> Cont l β) :
     f <= g ->
     (lift x >>= f) ≤ (lift x >>= g) := by
@@ -201,7 +201,9 @@ def MAlgLift.mk_rep  (m : semiOutParam (Type u -> Type v)) (l : semiOutParam (Ty
     MAlgOrdered.μ (liftM (n := n) x) =
     fun s => MAlgOrdered.μ ((· s) <$> x)) : MAlgLift m l n (σ → l) := by
     constructor; intro α f x
-    simp [MAlg.lift, <-lift_map, μ_lift]
+    simp [MAlg.lift]; rw [←lift_map]
+    rw [μ_lift (f <$> x)]
+    simp [Functor.map_map]
 
 def MAlgLift.mk_id  (m : semiOutParam (Type u -> Type v)) (l : semiOutParam (Type u)) [Monad m] [CompleteLattice l] [MAlgOrdered m l]
   (n : (Type u -> Type w)) [LawfulMonad m] [Monad n] [LawfulMonad n] [CompleteLattice k] [MAlgOrdered n l]
@@ -211,7 +213,7 @@ def MAlgLift.mk_id  (m : semiOutParam (Type u -> Type v)) (l : semiOutParam (Typ
     MAlgOrdered.μ x) : MAlgLift m l n l := by
     let cl := LogicLift.refl (l := l)
     constructor; intro α f x
-    simp [MAlg.lift, <-lift_map, μ_lift]
+    simp [MAlg.lift]; rw [<-lift_map]; apply μ_lift
 
 class MAlgLiftT
   (m : (Type u -> Type v)) (l : (Type u)) [Monad m] [CompleteLattice l] [MAlgOrdered m l]

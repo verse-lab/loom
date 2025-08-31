@@ -20,13 +20,13 @@ def triple (pre : l) (c : m α) (post : α -> l) : Prop :=
   pre ≤ wp c post
 
 lemma wp_pure (x : α) (post : α -> l) : wp (m := m) (pure x) post = post x := by
-  simp [wp, liftM, lift_pure]
+  simp [wp, liftM, monadLift_pure]
   rfl
 
 lemma triple_pure (pre : l) (x : α) (post : α -> l) :
   triple pre (pure (f := m) x) post <-> pre ≤ (post x)
   := by
-    rw [triple, wp]; simp [liftM, lift_pure]; rfl
+    rw [triple, wp]; simp [liftM, monadLift_pure]; rfl
 
 end
 
@@ -34,7 +34,7 @@ variable [MAlgOrdered m l]
 
 lemma wp_bind {β} (x : m α) (f : α -> m β) (post : β -> l) :
     wp (x >>= f) post = wp x (fun x => wp (f x) post) := by
-    simp [wp, liftM]; rw [lift_bind]; rfl
+    simp [wp, liftM]; rfl
 
 lemma wp_map {β} (x : m α) (f : α -> β) (post : β -> l) :
   wp (f <$> x) post = wp x (fun x => post (f x)) := by

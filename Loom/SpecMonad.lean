@@ -12,44 +12,34 @@ class MonadOrder extends Monad w, PreOrderFunctor w where
   bind_le {α : Type u} {β : Type u} (x y : w α) (f g : α -> w β) :
     x ≤ y → (∀ a, f a ≤ g a) → bind x f ≤ bind y g
 
-class LawfulMonadLift (w : outParam (Type u -> Type v)) [Monad m] [Monad w] [MonadLiftT m w] where
-  lift_pure {α : Type u} (x : α) : monadLift (pure (f := m) x) = pure (f := w) x
-  lift_bind {α : Type u} {β : Type u} (x : m α) (f : α -> m β) : monadLift (bind (m := m) x f) = bind (m := w) (monadLift x) (fun x => monadLift (f x))
-
-export LawfulMonadLift (lift_pure lift_bind)
-
-class LawfulMonadLiftT (w : (Type u -> Type v)) [Monad m] [Monad w] [MonadLiftT m w] where
-  lift_pure {α : Type u} (x : α) : monadLift (pure (f := m) x) = pure (f := w) x
-  lift_bind {α : Type u} {β : Type u} (x : m α) (f : α -> m β) : monadLift (bind (m := m) x f) = bind (m := w) (monadLift x) (fun x => monadLift (f x))
-
 lemma lift_map {α : Type u} {β : Type u} (f : α -> β) (x : m α)
   [Monad m] [Monad n] [LawfulMonad m] [LawfulMonad n] [MonadLiftT m n] [LawfulMonadLiftT m n] :
   liftM (f <$> x) = f <$> liftM (n := n) x := by
-    rw [map_eq_pure_bind, liftM, LawfulMonadLiftT.lift_bind]
-    simp [LawfulMonadLiftT.lift_pure]
+    rw [map_eq_pure_bind, liftM, LawfulMonadLiftT.monadLift_bind]
+    simp [LawfulMonadLiftT.monadLift_pure]
 
 instance [Monad m] : LawfulMonadLiftT m m where
-  lift_pure := by simp [monadLift, lift_pure]
-  lift_bind := by simp [monadLift, lift_bind]
+  monadLift_pure := by simp [monadLift, monadLift_pure]
+  monadLift_bind := by simp [monadLift, monadLift_bind]
 
 instance [Monad m] [LawfulMonad m] : LawfulMonadLiftT m (StateT σ m) where
-  lift_pure := by simp [monadLift, MonadLift.monadLift]; intros; ext; simp
-  lift_bind := by simp [monadLift, MonadLift.monadLift]; intros; ext; simp
+  monadLift_pure := by simp [monadLift, MonadLift.monadLift]; intros; ext; simp
+  monadLift_bind := by simp [monadLift, MonadLift.monadLift]; intros; ext; simp
 
 instance [Monad m] [LawfulMonad m] : LawfulMonadLiftT m (ReaderT σ m) where
-  lift_pure := by simp [monadLift, MonadLift.monadLift]; intros; ext; simp [ReaderT.run, pure, ReaderT.pure]
-  lift_bind := by simp [monadLift, MonadLift.monadLift]; intros; ext; simp [ReaderT.run, bind, ReaderT.bind]
+  monadLift_pure := by simp [monadLift, MonadLift.monadLift]; intros; ext; simp [ReaderT.run, pure, ReaderT.pure]
+  monadLift_bind := by simp [monadLift, MonadLift.monadLift]; intros; ext; simp [ReaderT.run, bind, ReaderT.bind]
 
 instance [Monad m] [LawfulMonad m] : LawfulMonadLiftT m (ExceptT ε m) where
-  lift_pure := by simp [monadLift, MonadLift.monadLift];
-  lift_bind := by simp [monadLift, MonadLift.monadLift]; intros; ext; simp
+  monadLift_pure := by simp [monadLift, MonadLift.monadLift];
+  monadLift_bind := by simp [monadLift, MonadLift.monadLift];
 
 instance [Monad m] [LawfulMonad m]
   [Monad n] [LawfulMonad n] [MonadLiftT m n] [inst: LawfulMonadLiftT m n]
-  [Monad p] [LawfulMonad p] [MonadLift n p] [inst':LawfulMonadLift n p]
+  [Monad p] [LawfulMonad p] [MonadLift n p] [inst':LawfulMonadLiftT n p]
   : LawfulMonadLiftT m p where
-    lift_pure := by simp [instMonadLiftTOfMonadLift, inst.lift_pure]; intros; apply inst'.lift_pure
-    lift_bind := by simp [instMonadLiftTOfMonadLift, inst.lift_bind]; intros; apply inst'.lift_bind
+    monadLift_pure := by simp [instMonadLiftTOfMonadLift, inst.monadLift_pure]; intros; apply inst'.monadLift_pure
+    monadLift_bind := by simp [instMonadLiftTOfMonadLift, inst.monadLift_bind]; intros; apply inst'.monadLift_bind
 
 alias EffectObservation := LawfulMonadLift
 

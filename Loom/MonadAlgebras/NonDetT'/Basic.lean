@@ -278,6 +278,3 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
         pure, wp, MAlg.lift, Functor.map, NonDetT.wp, NonDetT.bind, LogicLift.refl]
 
 end AngelicChoice
-
-macro_rules
-  | `(doElem| let $x:term :| $t) => `(doElem| let $x:term <- pickSuchThat _ (fun $x => $t))

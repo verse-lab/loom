@@ -33,22 +33,28 @@ structure LoomAssertionsMap where
   maxId : Int
   syntaxStore : Std.HashMap Int Term
   nameStore : Std.HashMap Name Int
+  nameCounter : Std.HashMap Name Int
 
   deriving Inhabited
 
-def addAssertion (s : LoomAssertionsMap) (t : Term) (n : Name) : LoomAssertionsMap :=
+def addAssertion (s : LoomAssertionsMap) (t : Term) (n : Name) (coreName: Name): LoomAssertionsMap :=
   let maxId := s.maxId + 1
-  { s with maxId := maxId, syntaxStore := s.syntaxStore.insert maxId t, nameStore := s.nameStore.insert n maxId }
+  let maxIdLocal := s.nameCounter.get! coreName + 1
+  { s with
+    maxId := maxId
+    syntaxStore := s.syntaxStore.insert maxId t
+    nameStore := s.nameStore.insert n maxId
+    nameCounter := s.nameCounter.insert coreName maxIdLocal }
 
 initialize loomAssertionsMap :
-  SimplePersistentEnvExtension (Term × Name) LoomAssertionsMap <-
+  SimplePersistentEnvExtension (Term × Name × Name) LoomAssertionsMap <-
   registerSimplePersistentEnvExtension {
-    addEntryFn := fun s ⟨t, n⟩ => addAssertion s t n
+    addEntryFn := fun s ⟨t, n, coreName⟩ => addAssertion s t n coreName
     addImportedFn := fun as => Id.run do
       let mut res : LoomAssertionsMap := default
       for a in as do
-        for (t, n) in a do
-          res := addAssertion res t n
+        for (t, n, coreName) in a do
+          res := addAssertion res t n coreName
       return res
   }
 
@@ -57,16 +63,6 @@ variable {m : Type u -> Type v} [Monad m] [LawfulMonad m] {α : Type u} {l : Typ
 
 set_option linter.unusedVariables false in
 def invariantGadget {invType : Type u} (inv : List invType) [CompleteLattice invType] [MAlgOrdered m invType] : m PUnit := pure .unit
-
-declare_syntax_cat doneWith
-declare_syntax_cat decreasingTerm
-declare_syntax_cat invariantClause
-declare_syntax_cat invariants
-syntax "invariant" termBeforeDo linebreak : invariantClause
-syntax "done_with" termBeforeDo : doneWith
-syntax "decreasing" termBeforeDo : decreasingTerm
-
-syntax (invariantClause linebreak)* : invariants
 
 @[simp]
 abbrev invariants (f : List l) := f.foldr (·⊓·) ⊤
@@ -81,32 +77,47 @@ def onDoneGadget {invType : Type u} (inv : invType) [CompleteLattice invType] [M
 set_option linter.unusedVariables false in
 def assertGadget {l : Type u} (h : l) [CompleteLattice l] [MAlgOrdered m l] : m PUnit := pure .unit
 
-macro "assert" t:term : term => `(assertGadget $t)
 
 set_option linter.unusedVariables false in
 def decreasingGadget (measure : ℕ) : m PUnit := pure .unit
 
-macro "decreasing" t:term : term => `(decreasingGadget $t)
-
 elab "with_name_prefix" lit:name inv:term : term => do
-  let ⟨maxId, _, _⟩ <- loomAssertionsMap.get
+  let ⟨maxId, _, _, cntr⟩ <- loomAssertionsMap.get
   let newMaxId := maxId + 1
-  let invName := lit.getName.toString ++ "_" ++ toString newMaxId.toNat |>.toName
+  let coreName := match (← Term.getDeclName?) with
+    | some res => res
+    | none => `nameless
+  let localName := (Lean.Name.mkSimple (lit.getName.toString ++ "_" ++ coreName.toString))
+  let cntrElem := match cntr.get? localName with
+    | some resId => resId
+    | none => 0
+  let maxIdLocal := 1 + cntrElem
+  let invName := lit.getName.toString ++ "_" ++ toString maxIdLocal.toNat |>.toName
   loomAssertionsMap.modify (fun res => {
       syntaxStore := res.syntaxStore.insert newMaxId inv
       nameStore := res.nameStore.insert invName newMaxId
       maxId := newMaxId
+      nameCounter := res.nameCounter.insert localName maxIdLocal
       })
   Term.elabTerm (<- ``(WithName $inv $(Lean.quoteNameMk invName))) none
 
 elab "type_with_name_prefix" lit:name inv:term : term => do
-  let ⟨maxId, _, _⟩ <- loomAssertionsMap.get
+  let ⟨maxId, _, _, cntr⟩ <- loomAssertionsMap.get
   let newMaxId := maxId + 1
-  let invName := lit.getName.toString ++ "_" ++ toString newMaxId.toNat |>.toName
+  let coreName := match (← Term.getDeclName?) with
+    | some res => res
+    | none => `nameless
+  let localName := (Lean.Name.mkSimple (lit.getName.toString ++ "_" ++ coreName.toString))
+  let cntrElem := match cntr.get? localName with
+    | some resId => resId
+    | none => 0
+  let maxIdLocal := 1 + cntrElem
+  let invName := lit.getName.toString ++ "_" ++ toString maxIdLocal.toNat |>.toName
   loomAssertionsMap.modify (fun res => {
       syntaxStore := res.syntaxStore.insert newMaxId inv
       nameStore := res.nameStore.insert invName newMaxId
       maxId := newMaxId
+      nameCounter := res.nameCounter.insert localName maxIdLocal
       })
   Term.elabTerm (<- ``(typeWithName $inv $(Lean.quoteNameMk invName))) none
 
@@ -117,93 +128,6 @@ attribute [run_builtin_parser_attribute_hooks] termBeforeInvariant
 
 builtin_initialize
   register_parser_alias termBeforeInvariant
-
-syntax "let" term ":|" term : doElem
-syntax "while" term
-  (invariantClause)*
-  (doneWith)?
-  (decreasingTerm)?
-  "do" doSeq : doElem
-syntax "while_some" term ":|" termBeforeDo "do" doSeq : doElem
-syntax "while_some" term ":|" term
-  (invariantClause)*
-  doneWith
-  "do" doSeq : doElem
-syntax "for" ident "in" termBeforeInvariant
-  (invariantClause)+
-  "do" doSeq : doElem
-
-macro_rules
-  | `(doElem| while $t
-              $[invariant $inv:term
-              ]*
-              $[done_with $inv_done]?
-              $[decreasing $measure]?
-              do $seq:doSeq) => do
-      let invd_some ← match inv_done with
-      | some invd_some => withRef invd_some ``($invd_some)
-      | none => ``(¬$t:term)
-      match measure with
-      | some measure_some => `(doElem|
-        for _ in Lean.Loop.mk do
-          invariantGadget [ $[(with_name_prefix `invariant $inv:term)],* ]
-          onDoneGadget (with_name_prefix `done $invd_some:term)
-          decreasingGadget (type_with_name_prefix `decreasing $measure_some:term)
-          if $t then
-            $seq:doSeq
-          else break)
-      | none => `(doElem|
-        for _ in Lean.Loop.mk do
-          invariantGadget [ $[(with_name_prefix `invariant $inv:term)],* ]
-          onDoneGadget (with_name_prefix `done $invd_some:term)
-          if $t then
-            $seq:doSeq
-          else break)
-  | `(doElem| while_some $x:ident :| $t do $seq:doSeq) =>
-    match seq with
-    | `(doSeq| $[$seq:doElem]*)
-    | `(doSeq| $[$seq:doElem;]*)
-    | `(doSeq| { $[$seq:doElem]* }) =>
-      `(doElem|
-        while ∃ $x:ident, $t do
-          let $x :| $t
-          $[$seq:doElem]*)
-    | _ => Lean.Macro.throwError "while_some expects a sequence of do-elements"
-  | `(doElem| while_some $x:ident :| $t
-              $[invariant $inv:term
-              ]*
-              done_with $inv_done do
-                $seq:doSeq) =>
-    match seq with
-    | `(doSeq| $[$seq:doElem]*)
-    | `(doSeq| $[$seq:doElem;]*)
-    | `(doSeq| { $[$seq:doElem]* }) =>
-      `(doElem|
-        for _ in Lean.Loop.mk do
-          invariantGadget [ $[(with_name_prefix `invariant $inv:term)],* ]
-          onDoneGadget (with_name_prefix `done $inv_done:term)
-          if ∃ $x:ident, $t then
-            let $x :| $t
-            $[$seq:doElem]*
-          else break)
-    | _ => Lean.Macro.throwError "while_some expects a sequence of do-elements"
-  | `(doElem| for $x:ident in $t
-            invariant $inv':term
-            $[invariant $inv:term
-            ]*
-            do $seq:doSeq) =>
-      match seq with
-      | `(doSeq| $[$seq:doElem]*)
-      | `(doSeq| $[$seq:doElem;]*)
-      | `(doSeq| { $[$seq:doElem]* }) =>
-        -- let inv := invs.push inv
-        `(doElem|
-          for $x:ident in $t do
-            invariantGadget [ $inv':term, $[$inv:term],* ]
-            $[$seq:doElem]*)
-      | _ => Lean.Macro.throwError "for expects a sequence of do-elements"
-
-
 
 structure WPGen (x : m α) where
   get : Cont l α
@@ -324,12 +248,29 @@ def WPGen.assert {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [
 
 noncomputable
 def WPGen.if {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [CompleteBooleanAlgebra l] [MAlgOrdered m l]
-  {_ : Decidable h} {x y : m α} (wpgx : WPGen x) (wpgy : WPGen y) : WPGen (if h then x else y) where
-  get := fun post => (⌜WithName h (Lean.Name.anonymous.mkStr "if_pos")⌝ ⇨ wpgx.get post) ⊓ (⌜WithName (¬ h) (Lean.Name.anonymous.mkStr "if_neg")⌝ ⇨ wpgy.get post)
+  {hd : Decidable h} {x y : m α}
+  (wpgx : h → WPGen x) (wpgy : ¬h → WPGen y)
+  : WPGen (if h then x else y) where
+  get := fun post =>
+    (⨅ hc : WithName h (Lean.Name.anonymous.mkStr "if_pos"), (wpgx hc).get post) ⊓
+    (⨅ hc : WithName (¬h) (Lean.Name.anonymous.mkStr "if_neg"), (wpgy hc).get post)
   prop := by
-    intro post; simp [LE.pure]
-    split <;> simp <;> solve_by_elim [wpgx.prop, wpgy.prop]
-
+    intro post
+    split
+    { refine inf_le_of_left_le ?_
+      apply iInf_le_iff.mpr
+      rename_i hc
+      intro b hi
+      apply le_trans (b := (wpgx hc).get post)
+      exact hi hc
+      apply (wpgx hc).prop }
+    refine inf_le_of_right_le ?_
+    apply iInf_le_iff.mpr
+    rename_i hc
+    intro b hi
+    apply le_trans (b := (wpgy hc).get post)
+    exact hi hc
+    apply (wpgy hc).prop
 noncomputable
 def WPGen.let  {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [CompleteBooleanAlgebra l] [MAlgOrdered m l]
   (y : β) {x : β -> m α} (wpgx : ∀ y, WPGen (x y)) : WPGen (let z := y; x z) where

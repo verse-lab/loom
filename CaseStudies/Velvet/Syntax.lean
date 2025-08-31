@@ -299,7 +299,9 @@ elab_rules : command
     let post := obligation.post
     let lemmaName := mkIdent <| name.getId.appendAfter "_correct"
     -- let proof <- withRef tkp ``()
-    let thmCmd <- withRef tkp `(command| lemma $lemmaName $bindersIdents* :
+    let thmCmd <- withRef tkp `(command|
+      @[spec]
+      lemma $lemmaName $bindersIdents* :
       triple
         $pre
         ($name $ids*)

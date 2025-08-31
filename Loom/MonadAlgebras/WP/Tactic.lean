@@ -9,8 +9,6 @@ def findSpec (prog : Expr) : TacticM (Array (Ident × Loom.SpecType)) := do
   let specs ← specAttr.find? prog
   let grts := specs.qsort (compare · · |>.isGT) |>.map
     fun ⟨specType, specName, _⟩ => (mkIdent specName, specType)
-  if grts.isEmpty then
-    throwError s!"no specs found for {prog}"
   return grts
 
 def Lean.MVarId.isWPGenGoal : MVarId → TacticM Bool
@@ -52,12 +50,28 @@ def generateWPStep : TacticM (Bool × Expr) := withMainContext do
       | (spec, .wpgen) =>
         evalTactic $ <- `(tactic| apply $spec)
       | (spec, .triple) =>
+        let info ← getConstInfo spec.getId
+        let num_args := info.type.getNumHeadForalls
+        let refine_part ←
+          Array.foldlM
+            (fun x li => `(term|$x $li))
+            (←`(term| $spec))
+            (Array.replicate num_args (←`(term|?_)))
+        let refine_tac ← `(tactic|refine $refine_part)
         evalTactic $ <- `(tactic|
           eapply $(mkIdent ``WPGen.spec_triple);
-          apply $spec)
+          $refine_tac)
       return (true, x)
     catch _ => continue
-  return (false, x)
+  let some mainName ← getDeclName? | throwError s!"no lemma name provided"
+  let mainNameIdent := mkIdent mainName
+  try
+    evalTactic $ <- `(tactic|
+        eapply $(mkIdent ``WPGen.spec_triple);
+        apply $mainNameIdent)
+    return (true, x)
+  catch _ =>
+    return (false, x)
 
 
 elab "wpgen_app" : tactic => do
@@ -66,7 +80,7 @@ elab "wpgen_app" : tactic => do
 
 macro "wpgen_step" : tactic => `(tactic| first
   | (wpgen_app <;> intros <;> try_resolve_spec_goals)
-  | (intros; split <;> intros)
+  --| (intros; split <;> intros)
   )
 macro "wpgen_intro" : tactic => `(tactic| (apply WPGen.intro; rotate_right))
 macro "wpgen" : tactic => `(tactic| (
