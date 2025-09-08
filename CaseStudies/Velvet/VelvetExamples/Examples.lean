@@ -148,8 +148,8 @@ structure Encoding where
   cnt: Nat
   c: Char
 
-variable {VelvetString} [arr_inst_int: TArray Char VelvetString]
-variable {ArrEncoding} [arr_encoding_inst: TArray Encoding ArrEncoding]
+variable {velvetString} [arr_inst_int: TArray Char velvetString]
+variable {arrEncoding} [arr_encoding_inst: TArray Encoding arrEncoding]
 
 def get_cnt_sum (l: List Encoding) :=
   (l.map (·.cnt)).sum
@@ -186,6 +186,29 @@ def get_cnt_sum (l: List Encoding) :=
   --}
 --}
 
+method decodeStr (encoded_str: arrEncoding) 
+   return (res: velvetString)
+   require (forall i, i < size encoded_str -> encoded_str[i].cnt > 0   )
+   ensures (size res = get_cnt_sum (TArray.to_list encoded_str) )
+     do
+       let mut decoded := TArray.replicate 0 default
+       let mut i := 0
+       while (i < (TArray.size encoded_str))
+          invariant 0 <= i ∧ i <= TArray.size encoded_str
+          invariant size decoded  = get_cnt_sum (TArray.to_list (TArray.slice 0 i encoded_str))
+          done_with i = TArray.size encoded_str
+          do
+            let elem := encoded_str[0]
+            let elem_decoded := TArray.replicate elem.cnt elem.c
+            decoded := TArray.append decoded elem_decoded
+            i := i + 1
+       return decoded
+
+
+prove_correct decodeStr by
+  unfold decodeStr
+
+
 -- recursive but termination issue
 /-
  -method decode (encoded_str: ArrEncoding) return (res: VelvetString)
@@ -199,12 +222,5 @@ def get_cnt_sum (l: List Encoding) :=
  -      let fst := encoded_str[0]
  -      return (TArray.append (TArray.replicate fst.cnt fst.c) rem)
  -/
-
-/- prove_correct decode by -/
-/-   unfold decode -/
-/-   loom_solve -/
-
-
-
 
 end runLengthEncoding
