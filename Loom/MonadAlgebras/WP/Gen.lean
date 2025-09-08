@@ -285,11 +285,9 @@ noncomputable
 def WPGen.match
   {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [CompleteBooleanAlgebra l] [MAlgOrdered m l]
   -- The program to run if the option is 'none'
-  {y : m β} {z : α → m β} (wpgy : WPGen y)
+  {y : m β} {z : γ  → m β} (opt : Option γ ) (wpgy : WPGen y)
   -- A function that gives a program to run if the option is 'some a'
-  (wpgz : ∀ a, WPGen (z a))
-  -- The option value we are matching on
-  (opt : Option α)
+  (wpgz : ∀ a, WPGen (z a)) 
   -- The return type is parameterized by the whole match expression
   : WPGen (match opt with | none => y | some a => z a)
 where
@@ -433,6 +431,7 @@ set_option pp.rawOnError true
 
 
 set_option trace.Meta.Tactic.simp true
+
 simproc reduceWPGenMatch (WPGen _) :=
   fun e => do
     let args := e.getAppArgs
@@ -460,4 +459,3 @@ simproc reduceWPGenMatch (WPGen _) :=
         return .done { expr := res.toExpr }
       else 
         return .done { expr := e }
-    

@@ -1,5 +1,5 @@
 import Lean
-
+ 
 /- import Mathlib.Algebra.BigOperators.Intervals -/
 /- import Mathlib.Algebra.Ring.Int.Defs -/
 /- import Mathlib.Data.Int.Bitwise -/
@@ -23,6 +23,22 @@ set_option auto.smt.solver.name "cvc5"
 
 section Match
 
+def mtch (x: Option String) : VelvetM Nat := do
+  match x with
+  | none => pure 1
+  | some x => pure (x.length + 1)
+
+set_option pp.all true
+
+lemma match_correct : forall (x: Option String), triple True (mtch x) (fun y => y > 0) := by
+  unfold mtch
+  loom_intro
+  wpgen_intro
+  refine WPGen.match (m:=VelvetM) (y:=(pure 1)) (z:=(fun x => pure (x.length + 1))) x ?_ ?_ 
+  /- loom_goals_intro -/
+  assumption
+  
+
 
 method str_id (s: String) return (ss: String)
 ensures (s = ss)
@@ -32,10 +48,16 @@ do
 method opt_strlen (o: Option String) return (n: Nat)
   ensures n >= 1
   do
-    let s <- (match o with
-      | none => str_id ""
-      | some x => str_id x)
-    return s.1.length + 1
+    let res' := (match o with
+    | none => 1
+    | some x => (x.length  + 1))
+    return res'
+
+
+    /- let s <- (match o with -/
+    /-   | none => pure "" -/
+    /-   | some x => pure x) -/
+    /- return s.1.length + 1 -/
 
 
 prove_correct str_id by
@@ -54,20 +76,13 @@ set_option diagnostics true
 prove_correct opt_strlen by
   unfold opt_strlen
   loom_solve
-  · refine WPGen.match ?wpg_none ?wpg_some o
-
-
-
-    
-
-    
-
-  /- split -/
-  /- expose_names -/
-  /- · exact (WPGen.spec_triple (str_id x) (str_id_correct x)) -/
-  /- · exact (WPGen.spec_triple (str_id "") (str_id_correct "")) -/
   /- · simp -/
-  /-   sorry -/
+  · refine WPGen.match (m:=VelvetM) (y:=(pure "" )) (z:=pure) o ?_ ?_ 
+
+  · sorry
+
+
+
 
 
 method unwrap_nat_and_double (o: Option Nat) return (res: Option Nat)
