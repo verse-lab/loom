@@ -140,3 +140,71 @@ prove_correct sqrt by
   loom_solve!
 
 end squareRoot
+
+
+section runLengthEncoding
+
+structure Encoding where
+  cnt: Nat
+  c: Char
+
+variable {VelvetString} [arr_inst_int: TArray Char VelvetString]
+variable {ArrEncoding} [arr_encoding_inst: TArray Encoding ArrEncoding]
+
+def get_cnt_sum (l: List Encoding) :=
+  (l.map (·.cnt)).sum
+  
+
+
+--method RleDecodeIterative<T>(compressed: seq<Run<T>>) returns (decoded: seq<T>)
+  --// Preconditions are the same as the specification.
+  --requires forall run :: run in compressed ==> run.count > 0
+  --// Postconditions guarantee the result is identical to the specification's result.
+  --ensures decoded == RleDecode(compressed)
+  --ensures |decoded| == SumRunCounts(compressed)
+--{
+  --decoded := []; // Initialize the result sequence.
+  --var i := 0;   // Initialize a loop counter.
+
+  --while i < |compressed|
+    --// Loop invariants are properties that must hold at the start of each iteration.
+    --// Dafny uses them to prove the loop is correct.
+    --invariant 0 <= i <= |compressed|
+    --// 1. The index 'i' is always within the valid bounds.
+
+    --invariant decoded == RleDecode(compressed[0..i])
+    --// 2. (The Key Invariant): The 'decoded' sequence we have built so far
+    --//    is the correct decoding of the runs we have already processed (from 0 to i-1).
+  --{
+    --var run := compressed[i];
+
+    --// Append the next decoded segment to our result.
+    --var segment := RepeatIterative(run.value, run.count);
+    --decoded := decoded + segment;
+
+    --i := i + 1;
+  --}
+--}
+
+-- recursive but termination issue
+/-
+ -method decode (encoded_str: ArrEncoding) return (res: VelvetString)
+ -  require (forall i, i < size encoded_str -> encoded_str[i].cnt > 0   )
+ -  ensures (size res = get_cnt_sum (TArray.to_list encoded_str) )
+ -  do
+ -    if size encoded_str = 0 then
+ -      return (TArray.replicate 0 default)
+ -    else
+ -      let rem <- decode (slice 1 ((size encoded_str) - 1) encoded_str)
+ -      let fst := encoded_str[0]
+ -      return (TArray.append (TArray.replicate fst.cnt fst.c) rem)
+ -/
+
+/- prove_correct decode by -/
+/-   unfold decode -/
+/-   loom_solve -/
+
+
+
+
+end runLengthEncoding
