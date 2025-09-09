@@ -28,15 +28,20 @@ def mtch (x: Option String) : VelvetM Nat := do
   | none => pure 1
   | some x => pure (x.length + 1)
 
-set_option pp.all true
+/- set_option pp.all true -/
 
 lemma match_correct : forall (x: Option String), triple True (mtch x) (fun y => y > 0) := by
   unfold mtch
+
   loom_intro
   wpgen_intro
+  conv => {
+    congr
+    reduce
+  }
   refine WPGen.match (m:=VelvetM) (y:=(pure 1)) (z:=(fun x => pure (x.length + 1))) x ?_ ?_ 
-  /- loom_goals_intro -/
-  assumption
+  /- /- loom_goals_intro -/ -/
+  /- assumption -/
   
 
 
