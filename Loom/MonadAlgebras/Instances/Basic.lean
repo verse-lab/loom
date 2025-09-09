@@ -58,16 +58,16 @@ scoped instance : MAlgOrdered DivM Prop where
   μ := fun x => match x with
     | .res x => x
     | .div => ⊤
-  μ_ord_pure := by simp [LE.pure]
+  μ_ord_pure := by simp
   μ_ord_bind {α} f g := by
     rintro h (_|_) <;> simp
     solve_by_elim
 
 scoped instance : MAlgDet DivM Prop where
   demonic := by
-    rintro _ _ (_|_) <;> simp [MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure]
+    rintro _ _ (_|_) <;> simp [MAlg.lift, MAlgOrdered.μ, Functor.map]
   angelic := by
-    rintro _ _ (_|_) <;> simp [MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure]
+    rintro _ _ (_|_) <;> simp [MAlg.lift, MAlgOrdered.μ, Functor.map]
 
 instance : MAlgPartial DivM where
   csup_lift {α} chain := by
@@ -81,7 +81,7 @@ instance : MAlgPartial DivM where
 
 instance : NoFailure DivM where
   noFailure := by
-    rintro _ (_|_) <;> simp [MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure]
+    rintro _ (_|_) <;> simp [MAlg.lift, MAlgOrdered.μ, Functor.map]
 
 end PartialCorrectness
 

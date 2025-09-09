@@ -94,9 +94,9 @@ def getSpecKey (ty : Expr) : MetaM (Expr × Loom.SpecType) := do
 
 /- The persistent map from expressions to pspec theorems. -/
 initialize specAttr : SpecAttr ← do
-  let ext ← mkDiscrTreeExtension `specMap
+  let ext ← mkDiscrTreeExtension `loomSpecMap
   let attrImpl : AttributeImpl := {
-    name := `spec
+    name := `loomSpec
     descr := "Marks theorems to use with the `mspec` tactic"
     add := fun thName stx attrKind => do
       let prio <- Attribute.Builtin.getPrio stx

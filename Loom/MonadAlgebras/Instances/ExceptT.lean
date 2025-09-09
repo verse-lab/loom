@@ -10,7 +10,7 @@ abbrev Except.bind' {m : Type u -> Type v} {ε α β} [Monad m] : Except ε α -
 
 lemma Except.bind'_bind {m : Type u -> Type v} {ε α β} [Monad m] [LawfulMonad m] (i : m (Except ε α)) (f : α -> ExceptT ε m β) :
   (i >>= fun a => Except.bind' a f) = bind (m := ExceptT ε m) i f := by
-  simp [Except.bind', bind, bind_assoc, ExceptT.bind]; rfl
+  simp [Except.bind', bind, ExceptT.bind]; rfl
 
 noncomputable
 def MAlgExcept (ε : Type u) (df : ε -> Prop) (l : Type u) (m : Type u -> Type v)
@@ -22,7 +22,7 @@ def MAlgExcept (ε : Type u) (df : ε -> Prop) (l : Type u) (m : Type u -> Type 
     solve_by_elim [MAlgOrdered.μ_ord_pure]
   μ_ord_bind := by
     intros α f g
-    simp [Function.comp, Pi.hasLe, Pi.partialOrder, Pi.preorder, inferInstanceAs]; intros le x
+    simp [Function.comp, Pi.hasLe]; intros le x
     have leM := @inst.μ_ord_bind (Except ε α)
       (fun x => Except.getD (⌜df ·⌝) <$> Except.bind' x f)
       (fun x => Except.getD (⌜df ·⌝) <$> Except.bind' x g)
@@ -54,7 +54,7 @@ instance MAlgExceptHdDet (hd : ε -> Prop)
   [inst': MAlgDet m l] : MAlgDet (ExceptT ε m) l where
   angelic := by
     intros α ι c p _
-    simp [MAlg.lift, MAlg.μ, MAlgOrdered.μ, Functor.map, ExceptT.map, ExceptT.mk]
+    simp [MAlg.lift, MAlg.μ, Functor.map, ExceptT.map, ExceptT.mk]
     simp [OfHd, MAlgExcept]
     have h := inst'.angelic (α := Except ε α) (c := c)
       (p := fun i e =>
@@ -79,10 +79,10 @@ instance MAlgExceptHdDet (hd : ε -> Prop)
       intro p; congr; ext i; rw [map_eq_pure_bind]; apply MAlg.bind (m := m); ext a; cases a <;> simp
     (repeat erw [h₁]); clear h₁; apply le_trans'; apply h
     apply le_of_eq;rw [map_eq_pure_bind]; apply MAlg.bind (m := m); ext a; cases a <;> simp
-    simp [Except.getD, MAlg.μ, iSup_const]
+    simp [Except.getD, iSup_const]
   demonic := by
     intros α ι c p _
-    simp [MAlg.lift, MAlg.μ, MAlgOrdered.μ, Functor.map, ExceptT.map, ExceptT.mk]
+    simp [MAlg.lift, MAlg.μ, Functor.map, ExceptT.map, ExceptT.mk]
     simp [OfHd, MAlgExcept]
     have h := inst'.demonic (α := Except ε α) (c := c)
       (p := fun i e =>
@@ -107,7 +107,7 @@ instance MAlgExceptHdDet (hd : ε -> Prop)
       intro p; congr; ext i; rw [map_eq_pure_bind]; apply MAlg.bind (m := m); ext a; cases a <;> simp
     (repeat erw [h₁]); clear h₁; apply le_trans; apply h
     apply le_of_eq;rw [map_eq_pure_bind]; apply MAlg.bind (m := m); ext a; cases a <;> simp
-    simp [Except.getD, MAlg.μ, iInf_const]
+    simp [Except.getD, iInf_const]
 
 instance
   [CompleteLattice l] [inst: MAlgOrdered m l] [IsHandler (fun (_ : ε) => True)]
@@ -127,7 +127,7 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
     μ_lift := by
       intros; simp [MAlg.lift_ExceptT];
       simp [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]
-      simp [ExceptT.map, ExceptT.lift, ExceptT.mk, MAlg.lift]
+      simp [ExceptT.lift, ExceptT.mk, MAlg.lift]
 
 end ExeceptHandler
 

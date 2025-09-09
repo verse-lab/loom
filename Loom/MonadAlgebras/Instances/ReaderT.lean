@@ -10,7 +10,7 @@ instance (σ : Type u) (l : Type u) (m : Type u -> Type v)
     solve_by_elim [MAlgOrdered.μ_ord_pure]
   μ_ord_bind := by
     intros α f g
-    simp [Function.comp, Pi.hasLe, Pi.partialOrder, Pi.preorder, inferInstanceAs]; intros le x r
+    simp [Function.comp, Pi.hasLe]; intros le x r
     have leM := @inst.μ_ord_bind (α) (fun a => (· r) <$> f a r) (fun a => (· r) <$> g a r)
     simp only [Function.comp, Pi.hasLe, <-map_bind] at leM
     apply leM; intro; apply le
@@ -43,7 +43,7 @@ instance [Monad m] [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.MonoBind m] : Le
     apply Lean.Order.MonoBind.bind_mono_left (m := m)
     apply h₁₂
   bind_mono_right h₁₂ _ := by
-    simp [bind, StateT.bind]
+    simp [bind]
     apply Lean.Order.MonoBind.bind_mono_right (m := m)
     intro x; apply h₁₂
 
@@ -53,7 +53,7 @@ instance [Monad m] [CCPOBot m] : CCPOBot (ReaderT σ m) where
 instance [Monad m] [inst : ∀ α, Lean.Order.CCPO (m α)] [CCPOBot m] [CCPOBotLawful m] : CCPOBotLawful (ReaderT σ m) where
   prop := by
     simp [Lean.Order.bot, Lean.Order.CCPO.csup, instCCPOReaderTOfMonad_loom]
-    unfold Lean.Order.fun_csup; intro α; ext; simp [StateT.run]
+    unfold Lean.Order.fun_csup; intro α; ext; simp
     apply CCPOBotLawful.prop
 
 lemma MAlg.lift_ReaderT [Monad m] [LawfulMonad m] [CompleteLattice l] [inst: MAlgOrdered m l] (x : ReaderT σ m α) :
@@ -95,4 +95,4 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MAlgOrdered
   MAlgLift m l (ReaderT σ m) (σ -> l) where
     μ_lift := by
       intros; simp [MAlg.lift_ReaderT]; ext;
-      simp [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]
+      simp [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]; rfl

@@ -62,7 +62,7 @@ section
 variable {m : Type u -> Type v} [Monad m] [LawfulMonad m] {α : Type u} {l : Type u} [CompleteLattice l] [MAlgOrdered m l]
 
 set_option linter.unusedVariables false in
-def invariantGadget {invType : Type u} (inv : List invType) [CompleteLattice invType] [MAlgOrdered m invType] : m PUnit := pure .unit
+def invariantGadget {invType : Type u} (inv : List invType): m PUnit := pure .unit
 
 @[simp]
 abbrev invariants (f : List l) := f.foldr (·⊓·) ⊤
@@ -71,11 +71,11 @@ abbrev invariants (f : List l) := f.foldr (·⊓·) ⊤
 
 
 set_option linter.unusedVariables false in
-def onDoneGadget {invType : Type u} (inv : invType) [CompleteLattice invType] [MAlgOrdered m invType] : m PUnit := pure .unit
+def onDoneGadget {invType : Type u} (inv : invType) : m PUnit := pure .unit
 
 
 set_option linter.unusedVariables false in
-def assertGadget {l : Type u} (h : l) [CompleteLattice l] [MAlgOrdered m l] : m PUnit := pure .unit
+def assertGadget {l : Type u} (h : l) : m PUnit := pure .unit
 
 
 set_option linter.unusedVariables false in
@@ -195,7 +195,7 @@ theorem triple_forIn_deacreasing {β} {measure : β -> ℕ}
   { simp; intro i b
     by_cases h : measure b + i ≤ measure init <;> simp [h, triple]
     apply le_trans; apply hstep; omega
-    apply wp_cons; rintro (b'|b') <;> simp [triple]
+    apply wp_cons; rintro (b'|b') <;> simp
     by_cases h: measure b' = 0 <;> simp [h]
     by_cases h': measure b' < measure b <;> simp [h']
     have : measure b' + (i + 1) ≤ measure init := by omega

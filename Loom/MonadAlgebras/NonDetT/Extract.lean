@@ -70,7 +70,8 @@ lemma p_findNat_some (p : Nat -> Prop) [DecidablePred p] (i : Nat) :
   intro pi;
   have : (findNat p).isSome := by
     false_or_by_contra; rename_i h
-    simp [<-Option.isNone_iff_eq_none] at h
+    simp at h
+    rw [←Option.isNone_iff_eq_none] at h
     have h := findNat_none _ h
     aesop
   revert this; simp [Option.isSome_iff_exists]
@@ -120,7 +121,7 @@ instance {p : α -> Prop} [Encodable α] [DecidablePred p] : Findable p where
 @[instance high]
 instance {p : α -> Prop} [FinEnum α] [DecidablePred p] : Findable p where
   find := fun _ => FinEnum.toList α |>.find? p
-  find_none := by simp [List.find?, Fintype.complete]
+  find_none := by simp
   find_some_p := by intro x h; have := List.find?_some h; aesop
 
 inductive ExtractNonDet (findable : {τ : Type u} -> (τ -> Prop) -> Type u) {m} : {α : Type u} -> NonDetT m α -> Type _ where
@@ -204,7 +205,7 @@ instance ExtractNonDet.forIn {β : Type u} (init : β) (f : Unit -> β -> NonDet
     apply (ExtractNonDet.repeatCont _ _ _ ex); intro;
     apply ExtractNonDet.pure
 
-variable [Monad m] [∀ α, CCPO (m α)] [CCPOBot m] [MonoBind m] [CompleteBooleanAlgebra l] [MAlgOrdered m l] [MAlgDet m l] [LawfulMonad m]
+variable [Monad m] [CCPOBot m] [CompleteBooleanAlgebra l] [MAlgOrdered m l] [MAlgDet m l] [LawfulMonad m]
 
 @[simp, inline]
 def NonDetT.extractGen {findable : {τ : Type u} -> (τ -> Prop) -> Type u}
@@ -250,6 +251,8 @@ def NonDetT.run {α : Type u} (s : NonDetT m α) (ex : ExtractNonDet Findable s 
 def NonDetT.runWeak {α : Type u} (s : NonDetT m α) (ex : ExtractNonDet WeakFindable s := by extract_tactic) : m α :=
   NonDetT.extractWeak s ex
 
+variable [∀ α, CCPO (m α)] [MonoBind m]
+
 noncomputable
 abbrev NonDetT.prop : {α : Type u} -> (s : NonDetT m α) -> Cont l α
   | _, .pure x => Pure.pure x
@@ -293,7 +296,7 @@ def Extractable.bind (x : NonDetT m α) (f : α -> NonDetT m β)
   Extractable (x >>= f) := by
     exists fun post => ex.cond (fun a => (exf a).cond post)
     intro post; rw [NonDetT.prop_bind]
-    simp [Bind.bind, NonDetT.bind, NonDetT.prop]
+    simp
     apply le_trans'; apply NonDetT.prop_mono
     { intro a; apply (exf a).prop }
     apply ex.prop
@@ -304,7 +307,7 @@ def Extractable.pure (x : α) : Extractable (pure (f := NonDetT m) x) := by
 
 def Extractable.liftM (x : m α) : Extractable (liftM (n := NonDetT m) x) := by
   exists wlp x
-  intro post; simp [_root_.liftM, NonDetT.prop]; apply wlp_cons; rfl
+  intro post; simp [NonDetT.prop]; apply wlp_cons; rfl
 
 noncomputable
 def Extractable.assume (p : Prop) :
@@ -316,7 +319,7 @@ noncomputable
 def Extractable.pickSuchThat (τ : Type u) (p : τ -> Prop) [Encodable τ] [DecidablePred p] :
   Extractable (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) := by
     exists fun post => (⨅ t, ⌜ p t ⌝ ⇨ post t) ⊓ (⨆ t, ⌜ p t ⌝)
-    intro post; simp [NonDetT.prop, MonadNonDet.pickSuchThat, NonDetT.pickSuchThat, Pure.pure, iInf_const]
+    intro post; simp [NonDetT.prop, MonadNonDet.pickSuchThat, NonDetT.pickSuchThat, Pure.pure]
 
 noncomputable
 def Extractable.forIn (xs : List α) (init : β) (f : α -> β -> NonDetT m (ForInStep β))
@@ -393,7 +396,7 @@ macro "extractable_step" : tactic =>
 
 macro "extractable_tactic" : tactic =>
   `(tactic| repeat' (intros; extractable_step; try dsimp))
-
+/-
 namespace TotalCorrectness.DemonicChoice
 
 lemma ExtractNonDet.extract_refines_wp (s : NonDetT m α) (inst : ExtractNonDet Findable s) :
@@ -421,7 +424,8 @@ lemma ExtractNonDet.extract_refines_wp (s : NonDetT m α) (inst : ExtractNonDet 
     refine inf_le_of_right_le ?_; exact inf_le_left }
   rw [NonDetT.wp_repeatCont, NonDetT.extract, NonDetT.extractGen, wp_bind, NonDetT.prop]
   simp; intro hprop inv wf hinv; apply le_trans'; apply wp_cons; rotate_right
-  { apply (triple_spec ..).mpr; apply repeat_inv
+  { apply (triple_spec ..).mpr;
+    apply repeat_inv ?_ inv ?_ init
     intro b; apply le_trans'; apply a_ih; simp [hprop]
     simp [NonDetT.wp_eq_wp, hinv]
     apply hinv }
@@ -525,3 +529,4 @@ lemma ExtractNonDet.extract_refines_triple_weak (pre : l) (s : NonDetT m α) (in
 
 
 end PartialCorrectness.DemonicChoice
+-/

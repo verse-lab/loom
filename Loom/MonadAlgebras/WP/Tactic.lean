@@ -153,8 +153,8 @@ macro "mwp" : tactic => `(tactic| (
   try unfold spec typeWithName at *
   ))
 
-attribute [spec high, loomWpSimp] WPGen.if
-attribute [spec, loomWpSimp] WPGen.bind WPGen.pure WPGen.assert WPGen.forWithInvariant WPGen.map
+attribute [loomSpec high, loomWpSimp] WPGen.if
+attribute [loomSpec, loomWpSimp] WPGen.bind WPGen.pure WPGen.assert WPGen.forWithInvariant WPGen.map
 attribute [loomWpSimp] spec WPGen.spec_triple
 
 @[loomLogicSimp]

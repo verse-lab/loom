@@ -346,7 +346,7 @@ theorem tail_length : ∀ q : List Nat, q.nonEmpty → q.tail.length < q.length 
 theorem tail_sum (q: List Nat) (hnemp: q.nonEmpty): q.sum = q.tail.sum + q.head! := by
   simp [List.head!, List.tail]
   simp [List.nonEmpty] at hnemp
-  split <;> rename_i x <;> simp [hnemp]
+  split <;> rename_i x <;> simp
   rw [add_comm]
 
 @[aesop unsafe]

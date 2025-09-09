@@ -16,11 +16,11 @@ lemma lift_map {α : Type u} {β : Type u} (f : α -> β) (x : m α)
   [Monad m] [Monad n] [LawfulMonad m] [LawfulMonad n] [MonadLiftT m n] [LawfulMonadLiftT m n] :
   liftM (f <$> x) = f <$> liftM (n := n) x := by
     rw [map_eq_pure_bind, liftM, LawfulMonadLiftT.monadLift_bind]
-    simp [LawfulMonadLiftT.monadLift_pure]
+    simp
 
 instance [Monad m] : LawfulMonadLiftT m m where
-  monadLift_pure := by simp [monadLift, monadLift_pure]
-  monadLift_bind := by simp [monadLift, monadLift_bind]
+  monadLift_pure := by simp [monadLift]
+  monadLift_bind := by simp [monadLift]
 
 instance [Monad m] [LawfulMonad m] : LawfulMonadLiftT m (StateT σ m) where
   monadLift_pure := by simp [monadLift, MonadLift.monadLift]; intros; ext; simp

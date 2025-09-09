@@ -300,7 +300,7 @@ elab_rules : command
     let lemmaName := mkIdent <| name.getId.appendAfter "_correct"
     -- let proof <- withRef tkp ``()
     let thmCmd <- withRef tkp `(command|
-      @[spec]
+      @[loomSpec]
       lemma $lemmaName $bindersIdents* :
       triple
         $pre

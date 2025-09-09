@@ -45,7 +45,7 @@ lemma wlp_true (c : m α) : wlp c (fun _ => ⊤) = ⊤ := by
 @[simp]
 lemma wlp_pure (x : α) (post : α -> l) :
   wlp (pure (f := m) x) post = post x := by
-    simp [wlp, wp_pure, triple_pure]
+    simp [wlp, wp_pure]
 
 omit [LawfulMonad m] in
 lemma wp_wlp (c : m α) (post : α -> l) :
@@ -212,7 +212,7 @@ lemma TotalCorrectness.DivM.wlp_eq (α : Type) (x : DivM α) (post : α -> Prop)
 
 lemma PartialCorrectness.DivM.wlp_eq (α : Type) (x : DivM α) (post : α -> Prop) :
   wlp x post = wp x post := by
-  simp [wlp, TotalCorrectness.DivM.wp_eq, PartialCorrectness.DivM.wp_eq]
+  simp [wlp, PartialCorrectness.DivM.wp_eq]
   split <;> simp
 
 omit [MAlgDet m l] in

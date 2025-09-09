@@ -161,19 +161,19 @@ lemma lift_cont_eq {l σ : Type u} [CompleteLattice l] [CompleteLattice σ] (c :
     rfl
 
 instance {l} [CompleteLattice l] : LogicLiftT l l where
-  lift_top := by simp [liftM, monadLift, MonadLift.monadLift]; intros; rfl
-  lift_bot := by simp [liftM, monadLift, MonadLift.monadLift]; intros; rfl
+  lift_top := by simp [monadLift]; intros; rfl
+  lift_bot := by simp [monadLift]; intros; rfl
 
 instance [CompleteLattice l] [CompleteLattice k] [CompleteLattice p] [linst₁ : LogicLiftT l k] [linst₂ : LogicLift k p] : LogicLiftT l p where
   lift_top := by
-    simp [instMonadLiftTOfMonadLift, liftM]; intro
+    simp [instMonadLiftTOfMonadLift]; intro
     have : (monadLift (m := Cont l) (n := Cont k) (fun (_ : _ -> l) => ⊤)) = ⊤ := by {
       apply linst₁.lift_top
       assumption }
     rw [this]
     apply linst₂.lift_top
   lift_bot := by
-    simp [instMonadLiftTOfMonadLift, liftM]; intro
+    simp [instMonadLiftTOfMonadLift]; intro
     have : (monadLift (m := Cont l) (n := Cont k) (fun (_ : _ -> l) => ⊥)) = ⊥ := by {
       apply linst₁.lift_bot
       assumption }
@@ -182,8 +182,8 @@ instance [CompleteLattice l] [CompleteLattice k] [CompleteLattice p] [linst₁ :
 
 
 instance {l σ : Type u} [CompleteLattice l] : LogicLift l (σ -> l) where
-  lift_top := by simp [liftM, monadLift, MonadLift.monadLift]; intros; rfl
-  lift_bot := by simp [liftM, monadLift, MonadLift.monadLift]; intros; rfl
+  lift_top := by simp [monadLift, MonadLift.monadLift]; intros; rfl
+  lift_bot := by simp [monadLift, MonadLift.monadLift]; intros; rfl
 
 
 class MAlgLift
@@ -203,7 +203,7 @@ def MAlgLift.mk_rep  (m : semiOutParam (Type u -> Type v)) (l : semiOutParam (Ty
     constructor; intro α f x
     simp [MAlg.lift]; rw [←lift_map]
     rw [μ_lift (f <$> x)]
-    simp [Functor.map_map]
+    simp [Functor.map_map]; rfl
 
 def MAlgLift.mk_id  (m : semiOutParam (Type u -> Type v)) (l : semiOutParam (Type u)) [Monad m] [CompleteLattice l] [MAlgOrdered m l]
   (n : (Type u -> Type w)) [LawfulMonad m] [Monad n] [LawfulMonad n] [CompleteLattice k] [MAlgOrdered n l]

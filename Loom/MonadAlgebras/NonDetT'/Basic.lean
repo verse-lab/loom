@@ -94,7 +94,7 @@ lemma NonDetT.wp_bind  {l : Type u} [CompleteLattice l] [MAlgOrdered m l] [Lawfu
   (post : β -> l):
   NonDetT.wp (x.bind f) post = NonDetT.wp x (fun x => NonDetT.wp (f x) post) := by
     unhygienic induction x
-    <;> simp [NonDetT.wp, bind, pure, -le_himp_iff, -iSup_le_iff, NonDetT.bind]
+    <;> simp [NonDetT.wp, pure, -le_himp_iff, -iSup_le_iff, NonDetT.bind]
     { simp [f_ih] }
     simp [f_ih]
 
@@ -159,7 +159,7 @@ lemma NonDetT.wp_iInf {ι : Type u} {α : Type u} {l : Type u} [CompleteBooleanA
   (x : NonDetT m α) (post : ι -> α -> l) :
   _root_.wp x (fun a => iInf post a) = ⨅ i, _root_.wp x (post i) := by
   simp [NonDetT.wp_eq_wp]
-  unhygienic induction x <;> simp [NonDetT.wp, iInf_const, pure, *]
+  unhygienic induction x <;> simp [NonDetT.wp, pure, *]
   { erw [_root_.wp_iInf] }
   rw [iInf_psigma', iInf_comm]; congr!; simp [iInf_psigma']
 
@@ -209,7 +209,7 @@ lemma NonDetT.wp_bind [LawfulMonad m] {α β : Type u} {l : Type u} [CompleteLat
   (post : β -> l):
   NonDetT.wp (x.bind f) post = NonDetT.wp x (fun x => NonDetT.wp (f x) post) := by
     unhygienic induction x
-    <;> simp [NonDetT.wp, bind, pure, -le_himp_iff, -iSup_le_iff, NonDetT.bind]
+    <;> simp [NonDetT.wp, pure, -le_himp_iff, -iSup_le_iff, NonDetT.bind]
     { simp [f_ih] }
     simp [f_ih]
 

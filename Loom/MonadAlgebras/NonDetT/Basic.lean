@@ -106,7 +106,7 @@ lemma NonDetT.wp_bind  {l : Type u} [CompleteLattice l] [MAlgOrdered m l] [Lawfu
   (post : β -> l):
   NonDetT.wp (x.bind f) post = NonDetT.wp x (fun x => NonDetT.wp (f x) post) := by
     unhygienic induction x
-    <;> simp [NonDetT.wp, bind, pure, -le_himp_iff, -iSup_le_iff, NonDetT.bind]
+    <;> simp [NonDetT.wp, pure, -le_himp_iff, -iSup_le_iff, NonDetT.bind]
     { simp [f_ih] }
     { simp [f_ih] }
     simp [cont_ih]
@@ -191,9 +191,9 @@ lemma MonadNonDet.wp_forIn {β : Type u} (init : β) (f : Unit -> β -> NonDetT 
   refine le_iSup_of_le (fun | .yield b' => inv b' | .done b' => inv b' ⊓ on_done' b') ?_
   simp [spec, hstep]
 
-@[loomWpSimp, spec]
+@[loomWpSimp, loomSpec]
 noncomputable
-def WPGen.forWithInvariantLoop [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.MonoBind m] {β}
+def WPGen.forWithInvariantLoop {β}
   {init : β} {f : Unit -> β → NonDetT m (ForInStep β)}
   (inv : β → List l) (on_done' : β → l)
   (wpg : ∀ b, WPGen (f () b)) :
@@ -262,7 +262,7 @@ lemma NonDetT.wp_bind [LawfulMonad m] {α β : Type u} {l : Type u} [CompleteLat
   (post : β -> l):
   NonDetT.wp (x.bind f) post = NonDetT.wp x (fun x => NonDetT.wp (f x) post) := by
     unhygienic induction x
-    <;> simp [NonDetT.wp, bind, pure, -le_himp_iff, -iSup_le_iff, NonDetT.bind]
+    <;> simp [NonDetT.wp, pure, -le_himp_iff, -iSup_le_iff, NonDetT.bind]
     { simp [f_ih] }
     { simp [f_ih] }
     simp [cont_ih]
@@ -345,9 +345,9 @@ lemma MonadNonDet.wp_forIn {β : Type u} (init : β) (f : Unit -> β -> NonDetT 
   refine le_iSup_of_le (fun | .yield b' => inv b' | .done b' => inv b' ⊓ on_done' b') ?_
   simp [spec, hstep]
 
-@[loomWpSimp, spec]
+@[loomWpSimp, loomSpec]
 noncomputable
-def WPGen.forWithInvariantLoop [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.MonoBind m] {β}
+def WPGen.forWithInvariantLoop {β}
   {init : β} {f : Unit -> β → NonDetT m (ForInStep β)}
   (inv : β → List l) (on_done' : β → l)
   (wpg : ∀ b, WPGen (f () b)) :
@@ -420,7 +420,7 @@ lemma NonDetT.wp_bind [LawfulMonad m] {α β : Type u} {l : Type u} [CompleteLat
   (post : β -> l):
   NonDetT.wp (x.bind f) post = NonDetT.wp x (fun x => NonDetT.wp (f x) post) := by
     unhygienic induction x
-    <;> simp [NonDetT.wp, bind, pure, -le_himp_iff, -iSup_le_iff, NonDetT.bind]
+    <;> simp [NonDetT.wp, pure, -le_himp_iff, -iSup_le_iff, NonDetT.bind]
     { simp [f_ih] }
     { simp [f_ih] }
     simp [cont_ih]
@@ -508,9 +508,9 @@ lemma MonadNonDet.wp_forIn {β : Type u} (init : β) (f : Unit -> β -> NonDetT 
   simp [spec, hstep]
 
 
-@[loomWpSimp, spec]
+@[loomWpSimp, loomSpec]
 noncomputable
-def WPGen.forWithInvariantLoop [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.MonoBind m] {β}
+def WPGen.forWithInvariantLoop {β}
   {init : β} {f : Unit -> β → NonDetT m (ForInStep β)}
   (inv : β → List l) (on_done' : β → l) (measure : β → Nat)
   (wpg : ∀ b, WPGen (f () b)) : WPGen (forIn Lean.Loop.mk init (fun u b => do
@@ -574,7 +574,7 @@ lemma NonDetT.wp_bind [LawfulMonad m] {α β : Type u} {l : Type u} [CompleteLat
   (post : β -> l):
   NonDetT.wp (x.bind f) post = NonDetT.wp x (fun x => NonDetT.wp (f x) post) := by
     unhygienic induction x
-    <;> simp [NonDetT.wp, bind, pure, -le_himp_iff, -iSup_le_iff, NonDetT.bind]
+    <;> simp [NonDetT.wp, pure, -le_himp_iff, -iSup_le_iff, NonDetT.bind]
     { simp [f_ih] }
     { simp [f_ih] }
     simp [cont_ih]
@@ -658,9 +658,9 @@ lemma MonadNonDet.wp_forIn {β : Type u} (init : β) (f : Unit -> β -> NonDetT 
   simp; refine le_iSup_of_le ?_ ?_; assumption
   simp [spec, hstep]
 
-@[loomWpSimp, spec]
+@[loomWpSimp, loomSpec]
 noncomputable
-def WPGen.forWithInvariantLoop [∀ α, Lean.Order.CCPO (m α)] [Lean.Order.MonoBind m] {β}
+def WPGen.forWithInvariantLoop {β}
   {init : β} {f : Unit -> β → NonDetT m (ForInStep β)}
   (inv : β → List l) (on_done' : β → l) (measure: β -> Nat) (wpg : ∀ b, WPGen (f () b)): WPGen (forIn Lean.Loop.mk init (fun u b => do
         invariantGadget (inv b)

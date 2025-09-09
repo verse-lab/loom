@@ -20,13 +20,13 @@ def triple (pre : l) (c : m α) (post : α -> l) : Prop :=
   pre ≤ wp c post
 
 lemma wp_pure (x : α) (post : α -> l) : wp (m := m) (pure x) post = post x := by
-  simp [wp, liftM, monadLift_pure]
+  simp [wp, liftM]
   rfl
 
 lemma triple_pure (pre : l) (x : α) (post : α -> l) :
   triple pre (pure (f := m) x) post <-> pre ≤ (post x)
   := by
-    rw [triple, wp]; simp [liftM, monadLift_pure]; rfl
+    rw [triple, wp]; simp [liftM]; rfl
 
 end
 
@@ -400,11 +400,11 @@ lemma PartialCorrectness.DivM.wp_eq (α : Type) (x : DivM α) (post : α -> Prop
     | .div => True
     | .res r => post r := by
   simp [wp, liftM, monadLift, MAlg.lift, Functor.map, PartialCorrectness.instMAlgOrderedDivMProp]
-  cases x <;> simp [LE.pure]
+  cases x <;> simp
 
 lemma StateT.wp_eq (c : StateT σ m α) (post : α -> σ -> l) :
   wp c post = fun s => wp (m := m) (c s) (fun xs => post xs.1 xs.2) := by
-  simp [wp, liftM, monadLift, MAlg.lift_StateT, MonadLift.monadLift, StateT.lift];
+  simp [wp, liftM, monadLift, MAlg.lift_StateT];
 
 lemma StateT.wp_lift (c : m α) (post : α -> σ -> l) :
   wp (liftM (n := StateT σ m) c) post = fun s => wp (m := m) c (post · s) := by
@@ -414,11 +414,11 @@ lemma StateT.wp_lift (c : m α) (post : α -> σ -> l) :
 
 lemma ReaderT.wp_eq (c : ReaderT σ m α) (post : α -> σ -> l) :
   wp c post = fun s => wp (m := m) (c s) (post · s) := by
-  simp [wp, liftM, monadLift, MAlg.lift_ReaderT, MonadLift.monadLift];
+  simp [wp, liftM, monadLift, MAlg.lift_ReaderT];
 
 lemma ReaderT.wp_lift (c : m α) (post : α -> σ -> l) :
   wp (liftM (n := ReaderT σ m) c) post = fun s => wp (m := m) c (post · s) := by
-  simp [wp, liftM, monadLift, MAlg.lift_ReaderT, MonadLift.monadLift, StateT.lift]
+  simp [wp, liftM, monadLift, MAlg.lift_ReaderT, MonadLift.monadLift]
 
 omit [LawfulMonad m] in
 lemma MAlgLift.wp_lift [Monad n] [CompleteLattice k] [MAlgOrdered n k] [MonadLiftT m n]
@@ -444,7 +444,7 @@ lemma MAlgLift.wp_throw
   [inst: MAlgLiftT (ExceptT ε m) l n k] :
     wp (liftM (n := n) (throw (m := ExceptT ε m) e)) post = ⌜hd e⌝ := by
     rw [MAlgLift.wp_lift, ExceptT.wp_throw]
-    simp only [LE.pure, monadLift_self]; split <;> simp [inst.cl.lift_top, inst.cl.lift_bot]
+    simp only [LE.pure]; split <;> simp [inst.cl.lift_top, inst.cl.lift_bot]
 
 end ExceptT
 

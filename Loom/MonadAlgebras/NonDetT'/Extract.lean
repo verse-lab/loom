@@ -403,16 +403,14 @@ lemma ExtractNonDet.extract_refines (pre : l) (s : NonDetT m α) (inst : Extract
   intro tr imp; apply le_trans'; apply ExtractNonDet.extract_refines_wp
   simp; aesop
 
-variable [∀ α, CCPO (m α)] [MAlgPartial m]
-
 omit [CCPOBot m] [MAlgDet m l] [LawfulMonad m] in
-lemma wp_csup (xc : Set (m α)) (post : α -> l) :
+lemma wp_csup (xc : Set (m α)) (post : α -> l) [∀ α, CCPO (m α)] [MAlgPartial m]:
   Lean.Order.chain xc ->
   ⨅ c ∈ xc, wp c post ≤ wp (Lean.Order.CCPO.csup xc) post := by
   apply MAlgPartial.csup_lift
 
 omit [CCPOBot m] [MAlgDet m l] [LawfulMonad m] in
-lemma wp_bot :
+lemma wp_bot [∀ α, CCPO (m α)] [MAlgPartial m]:
   wp (bot : m α) = fun _ => (⊤ : l) := by
   ext post; refine eq_top_iff.mpr ?_
   apply le_trans'; apply wp_csup; simp [chain]
@@ -420,7 +418,7 @@ lemma wp_bot :
   intro; erw [Set.mem_empty_iff_false]; simp
 
 omit [MAlgDet m l] in
-lemma ExtractNonDet.extract_refines_wp_weak [CCPOBotLawful m] (s : NonDetT m α) (inst : ExtractNonDet WeakFindable s) :
+lemma ExtractNonDet.extract_refines_wp_weak [∀ α, CCPO (m α)] [MAlgPartial m] [CCPOBotLawful m] (s : NonDetT m α) (inst : ExtractNonDet WeakFindable s) :
   wp s post <= wp s.extractWeak post := by
   unhygienic induction inst
   { simp [wp_pure, NonDetT.extractWeak] }
@@ -440,7 +438,7 @@ lemma ExtractNonDet.extract_refines_wp_weak [CCPOBotLawful m] (s : NonDetT m α)
 
 
 omit [MAlgDet m l] in
-lemma ExtractNonDet.extract_refines_triple_weak [CCPOBotLawful m] (pre : l) (s : NonDetT m α) (inst : ExtractNonDet WeakFindable s) :
+lemma ExtractNonDet.extract_refines_triple_weak [∀ α, CCPO (m α)] [MAlgPartial m] [CCPOBotLawful m] (pre : l) (s : NonDetT m α) (inst : ExtractNonDet WeakFindable s) :
   triple pre s post ->
   triple pre s.extractWeak post := by
   intro tr; apply le_trans'; apply ExtractNonDet.extract_refines_wp_weak
