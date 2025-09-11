@@ -151,27 +151,11 @@ method cube3 (a : Nat) (b : Nat) (c : Nat) return (res : Nat)
 #check cube3.match_1
 #check cube3.match_1.splitter
 
-open Lean Meta Elab Term in
-run_elab do
-  let name := ``cube2.match_1
-  let targetName := name ++ `WPGen
-  logInfo m!"res: {targetName}"
-  let res := (← getEnv).find? targetName
-  if res matches none then
-    logInfo m!"{targetName} does not exist, generate it"
-    let some (newLvls, wpgen) ← generateWPForMatcher name | throwError s!"cannot generate WPGen for matcher {name}"
-    addDecl <|
-      Declaration.defnDecl <|
-        mkDefinitionValEx targetName newLvls.toList (← inferType wpgen) wpgen
-        (Lean.ReducibilityHints.regular 0)
-        (DefinitionSafety.safe) []
-    enableRealizationsForConst targetName
-    applyAttributes targetName (← do
-      let attr1 ← `(Parser.Term.attrInstance| spec )
-      let attr2 ← `(Parser.Term.attrInstance| loomWpSimp)
-      elabAttrs #[attr1, attr2])
-  else
-    logInfo m!"{targetName} already exists, skip generation"
+#check cube2.match_1.WPGen
+
+run_meta do
+  Lean.Meta.realizeConst ``cube2.match_1 `cube2.match_1.WPGen
+    <| (Loom.Matcher.defineWPGen ``cube2.match_1 |>.run')
 
 #print cube2.match_1.WPGen
 
@@ -195,12 +179,25 @@ prove_correct cube2 by
 #print cube.match_3
 #print cube.match_5
 #check cube.match_3.splitter
+def aa := 1
 
-set_option trace.Loom.debug true in
+-- #check aa.fun_cases
+-- set_option trace.Loom.debug true in
+open Lean in
 run_meta do
-  let res ← generateWPForMatcher ``cube2.match_1
+  let res := (← getEnv).find? <| ``aa ++ `fun_cases
+  logInfo m!"res: {res.isNone}"
   pure ()
-
+#check aa.fun_cases
+open Lean in
+run_meta do
+  let res := (← getEnv).contains <| ``aa ++ `fun_cases
+  logInfo m!"res: {res}"
+  let res ← resolveGlobalConstNoOverloadCore <| ``aa ++ `fun_cases
+  logInfo m!"res: {res}"
+  pure ()
+#check Lean.ReservedNameAction
+#check Lean.registerReservedNamePredicate
 set_option trace.Loom.debug true in
 prove_correct cube by
   unfold cube
@@ -275,26 +272,6 @@ where
 
   prop := by
     sorry
-
-
-/-
-Only consider the case where each match alternative is a monadic computation `m α`.
-
-How will the arguments of a matcher's `WPGen` look like?
-- Consider the matcher itself. When we set `motive` to `fun _ => m α`, then each argument
-  corresponds to the monadic computations for which we need to construct `WPGen`s
-  as subgoals.
-- From the types of those arguments, we can figure out the types of the `WPGen` subgoals.
-- Now consider its `splitter`. Each argument of the `splitter` corresponds to one
-  "branch" of the `WPGen.get`; "branches" are connected by `⊓` (in analogy to `∧`).
-  In one "branch", we have a series of `⨅ ..., ⌜ ... ⌝ ⇨ ...` (in analogy to `∀ ..., ... → ...`).
-  The `⌜ ... ⌝`'s consist of the inner arguments of each argument of the `splitter`
-  and also equalities on the discriminant(s) of the `match`.
-- Proving `WPGen.prop` with regard to this `WPGen.get` is relatively straightforward.
-
-Store the generated `WPGen` element for a certain matcher since it might be used later.
-
--/
 
 method unwrap_nat_and_double (o: Option Nat) return (res: Option Nat)
   ensures (res = default ∧ o.isNone)
