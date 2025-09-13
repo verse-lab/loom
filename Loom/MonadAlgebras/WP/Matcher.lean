@@ -20,8 +20,8 @@ namespace Loom.Matcher
 theorem simp1 {l : Type u} [CompleteBooleanAlgebra l] {p : Prop} (proof : p) {a b : l} (h : a ≤ b) :
   ⌜p⌝ ⇨ a ≤ b := by simp [proof] ; exact h
 
-theorem simp2 {l : Type u} {α : Sort v} [CompleteBooleanAlgebra l] {a b : l} {c : α} (h : a ≤ b) :
-  ⌜c = c⌝ ⇨ a ≤ b := by simp ; exact h
+-- theorem simp2 {l : Type u} {α : Sort v} [CompleteBooleanAlgebra l] {a b : l} {c : α} (h : a ≤ b) :
+--   ⨅ (x : c = c), a ≤ b := by simp ; exact h
 
 /-- Given `e` as the `Expr` of `∀ (x₁ : t₁) ⋯ (xₙ : tₙ), ⋯`, this returns
     `[(x₁, Expr(t₁), bi₁), ⋯, (xₙ, Expr(tₙ), biₙ)]`, where `biᵢ` is the `BinderInfo` of `xᵢ`. -/
@@ -365,7 +365,7 @@ def constructWPGen (matcherName : Name) : TermElabM (Option MatcherWPGen) := do
     -- for convenience, here leave some arguments to be resolved by typeclass resolution
     mkAppOptM ``WPGen #[.some mExpr, .some monadInstExpr, .some αExpr, .some lExpr, .none, .some omaInstExpr, .some x]
   let branchConds ← do
-    pure <| List.map (fun x => (x.1, x.2.1)) <| getForallPremises partialMatcher
+    pure <| Array.map (fun x => (x.1, x.2.1)) <| List.toArray <| getForallPremises partialMatcher
   let subMonadArgsWithInfo ← branchConds.mapM fun (nm, br) => do
     -- special check: if the first argument of `br` does not appear in its body,
     -- then remove it
@@ -379,24 +379,30 @@ def constructWPGen (matcherName : Name) : TermElabM (Option MatcherWPGen) := do
         then (MatcherArgCase.normal, xs)
         else (MatcherArgCase.dropFirst, xs.drop 1)
       pure ((xs'.size, case), (nm, ← mkForallFVars xs' mαExpr))
-  let (subMonadArgsInfo, subMonadArgs) := subMonadArgsWithInfo.toArray.unzip
+  let (subMonadArgsInfo, subMonadArgs) := subMonadArgsWithInfo.unzip
   trace[Loom.debug] "subMonadArgs: {subMonadArgs.map Prod.snd}"
   withLocalDecls (← subMonadArgs.mapM fun (nm, t) => do
       let nm' ← mkFreshUserName nm
       pure (nm', BinderInfo.implicit, fun _ => pure t)) fun subMonadArgsFVars => do
 
   -- make up the sub `WPGen` goals
+  -- considering the potential recursive call, need to record some equalities
   let subWPGenArgs ← subMonadArgs.mapIdxM fun i (nm, t) => do
     let nm' := nm.appendBefore "wpg"
     let ty ← forallTelescope t fun xs _ => do
-      let tmp := mkAppN subMonadArgsFVars[i]! xs
-      let tmp ← wpgenTypeBuilder tmp
-      mkForallFVars xs tmp
+      let tmp ← wpgenTypeBuilder <| mkAppN subMonadArgsFVars[i]! xs
+      let motiveBody ← Expr.getForallBody <$> instantiateForall branchConds[i]!.2 xs
+      let withEqs ← motiveBody.withApp fun _ args => do
+        -- TODO this should have an optimization; some equalities might be redundant
+        let eqs ← discrs.mapIdxM fun i lhs => mkEq lhs args[i]!
+        mkArrowN eqs tmp
+      -- NOTE: here `mkForallFVars (discrs ++ xs) withEqs` is too general;
+      -- should stick to `discrs` (i.e., not including them into arguments)
+      mkForallFVars xs withEqs
     pure (nm', ty)
   trace[Loom.debug] "subWPGenArgs: {subWPGenArgs}"
-  withLocalDecls (← subWPGenArgs.mapM fun (nm, t) => do
-      let nm' ← mkFreshUserName nm
-      pure (nm', BinderInfo.default, fun _ => pure t)) fun subWPGenArgsFVars => do
+  withLocalDeclsDND (← subWPGenArgs.mapM fun (nm, t) => do
+      pure (← mkFreshUserName nm, t)) fun subWPGenArgsFVars => do
 
   -- make up the type of the target `WPGen`
   let targetMatcher ← do
@@ -436,30 +442,37 @@ def constructWPGen (matcherName : Name) : TermElabM (Option MatcherWPGen) := do
       let subWPGen := subWPGenArgsFVars[i]!
       let br' ← forallTelescope br fun xs motiveBody => do
         let newBody ← do
-          -- NOTE: this is based on the invariant that #numArgs of a sub `WPGen`
-          -- is equal to #numArgs of the corresponding sub monadic computation
-          let numArgsRequired := subMonadArgsInfo[i]!.1
-          let subWPGenGet ← mkAppM ``WPGen.get #[mkAppN subWPGen (xs.take numArgsRequired), postExpr]
-          motiveBody.withApp fun _ args => do
+          let tmp ← motiveBody.withApp fun _ args => do
             -- TODO this should have an optimization; some equalities might be redundant
             let eqs ← discrs.mapIdxM fun i lhs => mkEq lhs args[i]!
-            mkArrowN eqs subWPGenGet
+            mkArrowN eqs (mkConst ``True)  -- `True` is dummy
+          forallTelescope tmp fun ys _ => do
+            -- NOTE: this is based on the invariant that the non-equality arguments of a sub `WPGen`
+            -- are the ones of the corresponding sub monadic computation
+            let numArgsRequired := subMonadArgsInfo[i]!.1
+            let subWPGenGet ← mkAppM ``WPGen.get #[mkAppN subWPGen (xs.take numArgsRequired ++ ys), postExpr]
+            mkForallFVars ys subWPGenGet
         mkForallFVars xs newBody
       trace[Loom.debug] "branch {i} after adding equalities: {br} ==> {br'}"
-      let res ← forallTelescope br' fun xs motiveBody' => do
-        xs.foldrM (init := motiveBody') fun x e => do
+      -- `dependencies` will be used in the proof below
+      let (dependencies, res) ← forallTelescope br' fun xs motiveBody' => do
+        xs.foldrM (init := ([], motiveBody')) fun x (dependencies, e) => do
           let xty ← inferType x
-          if ← isProp xty then
-            let injectedProp ← mkAppOptM ``LE.pure #[.some lExpr, .none, .none, .none, .some xty]
-            mkAppOptM ``himp #[.some lExpr, .none, .some injectedProp, .some e]
-          else
+          -- checking by dependency might be more accurate here, because
+          -- even when `xty` is a `Prop`, it can be depended on
+          if x.occurs e then
             let tmp ← mkLambdaFVars #[x] e
-            mkAppOptM ``iInf #[.some lExpr, .some xty, .none, .some tmp]
+            let tmp ← mkAppOptM ``iInf #[.some lExpr, .some xty, .none, .some tmp]
+            pure (true :: dependencies, tmp)
+          else
+            let injectedProp ← mkAppOptM ``LE.pure #[.some lExpr, .none, .none, .none, .some xty]
+            let tmp ← mkAppOptM ``himp #[.some lExpr, .none, .some injectedProp, .some e]
+            pure (false :: dependencies, tmp)
       trace[Loom.debug] "branch {i} after transformation: {br'} ==> {res}"
-      -- `br'.getNumHeadForalls` should be equal to the number of arguments of
+      -- `dependencies.size` should be equal to the number of arguments of
       -- `br` plus the number of equalities added
-      pure (br'.getNumHeadForalls, res)
-    let (backup, wpgenGetBranchesAfter) := wpgenGetBranches.unzip
+      pure (res, dependencies)
+    let (wpgenGetBranchesAfter, backup) := wpgenGetBranches.unzip
     -- combine the branches together; `⊓` is left-associative
     -- NOTE: this might also be changed into another encoding, e.g., `⨅ i ∈ (Fin ..), ...`
     let topAsInit ← mkAppOptM ``Top.top #[.some lExpr, .none]
@@ -472,12 +485,23 @@ def constructWPGen (matcherName : Name) : TermElabM (Option MatcherWPGen) := do
   -- make up the proof for `WPGen.post`
   let wpgenPost ← do
     let motive ← do
+      -- make another copy of `discrs`
+      let (_, discrsBuilder) ← discrs.foldlM (init := (#[], #[])) fun (xspre, res) x => do
+        let nm ← mkFreshUserName (← x.fvarId!.getUserName)
+        let xty ← inferType x
+        let ty xspre' := pure <| xty.replaceFVars xspre xspre'
+        pure (xspre.push x, res.push (nm, ty))
+      -- use that copy in the matcher on the RHS of `≤`
       let lhs ← instantiateLambda wpgenGet #[postExpr]
       let rhs ← mkAppOptM ``wp
         #[.some mExpr, .some monadInstExpr, .some αExpr, .some lExpr, .none,
           .some omaInstExpr, .some targetMatcher, .some postExpr]
-      let le ← mkAppM ``LE.le #[lhs, rhs]
-      mkLambdaFVars discrs le
+      withLocalDeclsD discrsBuilder fun discrs' => do
+        let rhs' := rhs.replaceFVars discrs discrs'
+        let eqs ← discrs'.mapIdxM fun i lhs => mkEq discrs[i]! lhs
+        let le ← mkAppM ``LE.le #[lhs, rhs']
+        let tmp ← mkArrowN eqs le
+        mkLambdaFVars discrs' tmp
     trace[Loom.debug] "motive for the splitter in proof: {motive}"
     let paramsAndDiscrs' := paramsAndDiscrs.set! matcherInfo.getMotivePos motive
     let partialSplitter := mkAppN splitter paramsAndDiscrs'
@@ -490,16 +514,31 @@ def constructWPGen (matcherName : Name) : TermElabM (Option MatcherWPGen) := do
       -- `intro`
       let res ← forallTelescope br fun xs body => do
         -- instantiate the sub `WPGen` to use
-        let subWPGen := subWPGenArgsFVars[i]!
-        let numArgsRequired := subMonadArgsInfo[i]!.1
-        let subWPGenProp ← mkAppM ``WPGen.prop #[mkAppN subWPGen (xs.take numArgsRequired), postExpr]
+        -- let subWPGen := subWPGenArgsFVars[i]!
+        -- let numArgsRequired := subMonadArgsInfo[i]!.1
+        -- let xsprefix := xs.take numArgsRequired
+        -- let rfls ← xsprefix.mapM (mkEqRefl ·)
+        -- let subWPGenProp ← mkAppM ``WPGen.prop #[mkAppN subWPGen (xsprefix ++ rfls), postExpr]
+        -- trace[Loom.debug] "subWPGenProp: {subWPGenProp}"
+
+        -- using `forallTelescope` here to avoid prematurely unfolding `body`,
+        -- since `body` would be `(fun (eqs) => ...) ...`
+        -- unfold it now!
+        let body ← whnf body
+        forallTelescope body fun eqs body => do
+
         -- build the proof by looking at the corresponding branch of `wpgenGet`
         let goal ← mkFreshExprMVar body
+        let goals ← goal.mvarId!.casesRec fun localDecl => do
+          return eqs.contains <| Expr.fvar localDecl.fvarId
+        let goal := .mvar goals[0]!
+
         let goal_ ← withinBranch i numBranches lExpr goal
         -- do the prefix part
-        let goal' ← xs.foldlM (init := goal_) fun mainGoal x => do
+        let dependencies := backup[i]!.toArray
+        let goal' ← xs.zip dependencies |>.foldlM (init := goal_) fun mainGoal (x, dep) => do
           let xty ← inferType x
-          if ← isProp xty then
+          if !dep then
             let tmp ← mkAppOptM ``Loom.Matcher.simp1 #[.some lExpr, .none, .some xty, .some x]
             let goals ← mainGoal.mvarId!.apply tmp
             pure <| .mvar goals[0]!
@@ -512,9 +551,18 @@ def constructWPGen (matcherName : Name) : TermElabM (Option MatcherWPGen) := do
             let goals ← mainGoal.mvarId!.apply tmp
             pure <| .mvar goals[0]!
         -- try `rfl` in the trailing part
-        let n := backup[i]!
-        let goal'' ← (n - xs.size) |>.foldM (init := goal') fun _ _ mainGoal => do
-          let goals ← mainGoal.mvarId!.applyConst ``Loom.Matcher.simp2
+        -- TODO code repetition
+        let goal'' ← (dependencies.size - xs.size) |>.foldM (init := goal') fun _ _ mainGoal => do
+          -- let goals ← mainGoal.mvarId!.applyConst ``Loom.Matcher.simp2
+          let aa ← mkFreshExprMVar none
+          let eq ← mkEq aa aa
+          let rfl ← mkEqRefl aa
+          let f ← mkFreshExprMVar (← mkArrow eq lExpr)
+          let a ← mkFreshExprMVar lExpr
+          let tmp ← mkAppOptM ``iInf_le_of_le #[.some lExpr, .some eq, .none,
+            .some f /- hard to inference, so provided explicitly -/ ,
+            .some a, .some rfl]
+          let goals ← mainGoal.mvarId!.apply tmp
           pure <| .mvar goals[0]!
         -- might need to use the matcher eqn
         let goal''' ←
@@ -525,12 +573,14 @@ def constructWPGen (matcherName : Name) : TermElabM (Option MatcherWPGen) := do
               g.assumption
             pure goal'''
           catch _ => pure goal''
-        let _ ← goal'''.mvarId!.apply subWPGenProp
+        -- let _ ← goal'''.mvarId!.apply subWPGenProp
+        let _ ← goal'''.mvarId!.applyConst ``WPGen.prop
         let res ← instantiateMVars goal
-        mkLambdaFVars xs res
+        mkLambdaFVars (xs ++ eqs) res
       trace[Loom.debug] "sub-proof for branch {i}: {br} ==> {res}"
       pure res
-    mkLambdaFVars #[postExpr] <| mkAppN partialSplitter wpgenPostSubProofs
+    let discrsRfls ← discrs.mapM (mkEqRefl ·)
+    mkLambdaFVars #[postExpr] <| mkAppN partialSplitter (wpgenPostSubProofs ++ discrsRfls)
 
   -- put together
   let wpgen ← mkAppM ``WPGen.mk #[wpgenGet, wpgenPost]
@@ -541,8 +591,8 @@ def constructWPGen (matcherName : Name) : TermElabM (Option MatcherWPGen) := do
     (paramsAndDiscrs.take matcherInfo.numParams) ++
     implicitArgs ++
     subMonadArgsFVars ++
-    subWPGenArgsFVars ++
-    (paramsAndDiscrs.drop matcherInfo.getFirstDiscrPos)
+    (paramsAndDiscrs.drop matcherInfo.getFirstDiscrPos) ++
+    subWPGenArgsFVars
   let wpgen ← mkLambdaFVars arguments wpgen
   trace[Loom.debug] "generated WPGen: {wpgen}"
   trace[Loom.debug] "has mvar? {wpgen.hasMVar}"
