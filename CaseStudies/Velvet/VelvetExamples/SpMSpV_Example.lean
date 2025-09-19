@@ -270,7 +270,7 @@ theorem spv_dot_gt
       rw [spv_dot] at sum_eq
       have neq: ¬(SpVT.size spv1 ≤ pnt1 ∨ SpVT.size spv2 ≤ pnt2) := by omega
       try simp only [loomAbstractionSimp] at *
-      simp [neq, ind_neq, ind_le] at sum_eq
+      simp [neq, ind_neq] at sum_eq
       have ilt: ¬((SpVT.ind spv1)[pnt1] < (SpVT.ind spv2)[pnt2]) := by
         try simp only [loomAbstractionSimp] at *
         omega
@@ -320,7 +320,7 @@ theorem getValSpV_eq (spv: SpVAbs) (j: ℕ) (h_ind: j < SpVT.size spv): spv[(SpV
       rintro j₁ j₁_lt
       rw [(SpVT.h_sz_eq spv).left] at h_ind
       have inj := SpVT.h_inc spv j₁ j (lt_trans j₁_lt h_ind) h_ind j₁_lt
-      simp [GetElem.getElem] at inj
+      simp at inj
       simp [lt_iff_le_and_ne.mp inj] }
     simp [toList, h_ind]; rw [(SpVT.h_sz_eq spv).right, ←(SpVT.h_sz_eq spv).left]; simp [h_ind]
   simp [GetElem.getElem] at just_case
@@ -432,7 +432,7 @@ theorem VSpV_correct_triple (out: arrVal) (arr: arrVal) (spv: SpVAbs):
       { rintro ⟨u, ⟨outNew⟩⟩; simp
         intro sum_eq sz
         exact VSpV_correct_pure outNew arr spv h_b sz sum_eq }
-      simp [triple]
+      simp
       have triple_true := VSpV_correct out arr spv
       simp [triple, WithName] at triple_true
       exact triple_true
@@ -486,7 +486,7 @@ theorem spv_dot_pure_gen (spv1 spv2: SpVAbs) (n pnt1 pnt2: ℕ)
   | case1 p1 p2 h =>
     have all_zero: (∀ x ∈ Finset.range n, (if max (if SpVT.size spv1 ≤ p1 then n else (SpVT.ind spv1)[p1]) (if SpVT.size spv2 ≤ p2 then n else (SpVT.ind spv2)[p2]) ≤ x then spv1[x] * spv2[x] else 0) = 0) := by
       intro x hx
-      simp [h]
+      simp
       rcases h with ob1 | ob2
       { simp [ob1]
         simp at hx
@@ -708,7 +708,7 @@ theorem spv_dot_pure (spv1 spv2: SpVAbs) (n: ℕ)
       intro x hx
       simp at hx
       by_cases em1: SpVT.size spv1 = 0 <;> simp [em1]
-      { simp [lt_iff_le_not_le.mp hx]
+      { simp [lt_iff_le_not_ge.mp hx]
         simp [getValSpV_empty spv1 x (by intro i hi; omega)] }
       by_cases em2: SpVT.size spv2 = 0 <;> simp [em2]
       { intros
