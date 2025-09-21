@@ -78,25 +78,28 @@ prove_correct decodeStr' by
     unfold get_cnt_sum
     rfl
   · simp[*]; rfl
-  · simp[*]
+  · simp_all
+
 
 #eval (decodeStr' #[{cnt:= 10, c:= 'd'}, {cnt := 3, c:= 'e'}, {cnt := 5, c:= 'f'}]).run
 
+def decodeStrLeanList (encoded_str: List Encoding) : List Char :=
+  match encoded_str with
+  | List.nil => List.nil
+  | List.cons hd tl => (List.replicate hd.cnt hd.c) ++ (decodeStrLeanList tl)
+
+def decodeStrLean' (encoded_str: Array Encoding) : Array Char :=
+  Array.mk (decodeStrLeanList encoded_str.toList)
+
 def decodeStrLean (encoded_str: Array Encoding) : Array Char := 
-  if h: encoded_str.size > 0 then (
-    let elem := encoded_str[0]
-    (Array.replicate  elem.cnt elem.c) ++ (decodeStrLean (encoded_str.extract 1))
-  )
-  else #[]
+  let mp := Array.map (fun e => Array.replicate e.cnt e.c) encoded_str
+  mp.flatten
 
-#eval (decodeStrLean #[{cnt:= 10, c:= 'd'}, {cnt := 3, c:= 'e'}, {cnt := 5, c:= 'f'}])
-
-lemma decodeStrTriple : forall encoded_str, is_valid_run_sequence encoded_str -> 
-  ( (decodeStrLean encoded_str).size = get_cnt_sum encoded_str.toList)  := by sorry
-
-lemma decodeStrLean_append : forall arr1 arr2, 
-  decodeStrLean (arr1 ++ arr2) = ( decodeStrLean arr1 ) ++ ( decodeStrLean arr2 ) := by sorry
-
+lemma decodeStrLean_append : forall arr1 arr2,
+  decodeStrLean (arr1 ++ arr2) = ( decodeStrLean arr1 ) ++ ( decodeStrLean arr2 ) := by
+    intros arr1 arr2
+    unfold decodeStrLean 
+    simp_all
 
 
 method encodeStr (str: Array Char) return (res: Array Encoding)
@@ -156,7 +159,7 @@ prove_correct encodeStr by
     simp_all
     have inv' := invariant_11 (i+l)
     simp[*] at inv'
-    have : i+l < j  := by trivial
+    have : i+l < j  := by grind
     have heq := (inv' this)
     have : i + l < str.size := by
       grind
@@ -172,8 +175,7 @@ prove_correct encodeStr by
     simp[*]
   · unfold is_valid_run_sequence 
     simp
-  · simp[*]
-    grind
-  · assumption
+  · grind
+  · grind
 
 end RunLengthEncoding
