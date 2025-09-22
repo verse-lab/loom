@@ -22,5 +22,4 @@ method KthElement(arr: Array Int) (k: Nat) return (result: Int)
   return arr[k - 1]!
 
 prove_correct KthElement by
-  unfold KthElement 
   loom_solve

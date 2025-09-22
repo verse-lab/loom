@@ -27,7 +27,7 @@ method gcd (a : Nat) (b : Nat) return (res : Nat)
     else
       let remainder := a % b
       let result ← gcd b remainder
-      return result
+      return result.1
   termination_by b
   decreasing_by
     apply Nat.mod_lt
@@ -37,9 +37,7 @@ method gcd (a : Nat) (b : Nat) return (res : Nat)
 attribute [solverHint] Nat.mod_lt
 
 prove_correct gcd by
-  unfold gcd
   loom_solve
-  grind
 termination_by b
 decreasing_by all_goals(
   -- Looking at the goals, we can see the precondition is in the context

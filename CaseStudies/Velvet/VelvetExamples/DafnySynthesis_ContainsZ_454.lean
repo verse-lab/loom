@@ -31,6 +31,5 @@ do
   return result
 
 prove_correct ContainsZ by
-  unfold ContainsZ
   loom_solve
   

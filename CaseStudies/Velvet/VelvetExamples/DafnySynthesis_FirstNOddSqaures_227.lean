@@ -33,5 +33,4 @@ method SumOfSquaresOfFirstNOddNumbers (n: Nat) return (sum: Nat)
 
 
 prove_correct SumOfSquaresOfFirstNOddNumbers by
-  unfold SumOfSquaresOfFirstNOddNumbers
   loom_solve

@@ -325,7 +325,7 @@ elab_rules : command
       triple
         $pre
         ($name $ids*)
-        (fun ⟨$retId, $ret⟩ => $post) := by $proofSeq)
+        (fun ⟨$retId, $ret⟩ => $post) := by $proofSeq
       $suf:suffix)
     Command.elabCommand thmCmd
     velvetObligations.modify (·.erase name.getId)

@@ -35,8 +35,19 @@ do
         n := n / 10
     return sum
 
-attribute [local solverHint] Nat.mod_add_div
+-- Key lemma: SumDigits unfolds according to its definition when n > 0
+lemma SumDigits_unfold (n : Nat) (h : n > 0) :
+  SumDigits n = (n % 10) + SumDigits (n / 10) := by
+  rw [SumDigits]
+  have h' : n ≠ 0 := Nat.ne_of_gt h
+  simp [h']
+
+-- Additional lemma: SumDigits is 0 when n = 0
+lemma SumDigits_zero : SumDigits 0 = 0 := by
+  unfold SumDigits
+  simp
+
+attribute [local solverHint] Nat.mod_add_div SumDigits_unfold SumDigits_zero
 
 prove_correct SumOfDigits by
-  unfold SumOfDigits SumDigits
-  loom_solve
+  loom_solve 

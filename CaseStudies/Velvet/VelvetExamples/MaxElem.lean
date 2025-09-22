@@ -41,7 +41,6 @@ method maxElem (arr: Array Int) return (res: Int)
     return mx
 
 prove_correct maxElem by
-  unfold maxElem
   unfold isMax
   loom_solve
   · intro k hk

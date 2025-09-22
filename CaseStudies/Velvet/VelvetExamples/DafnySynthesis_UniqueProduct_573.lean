@@ -67,5 +67,4 @@ do
     return p
 
 prove_correct UniqueProduct by
-  unfold UniqueProduct
   loom_solve

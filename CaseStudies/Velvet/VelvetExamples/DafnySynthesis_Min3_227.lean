@@ -31,5 +31,4 @@ method MinOfThree(a: Int) ( b: Int ) (c: Int) return (min: Int)
 
 
 prove_correct MinOfThree by
-  unfold MinOfThree
   loom_solve

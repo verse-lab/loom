@@ -33,5 +33,4 @@ attribute [local solverHint] Nat.mod_lt
 
 -- loom_solve couldn't finish the proof probably because of mod, added the hint and proof goes through
 prove_correct LastDigit by
-  unfold LastDigit 
   loom_solve

@@ -28,5 +28,4 @@ method CubeSurfaceArea (size: Int) return (area: Int)
     return 6 * size * size
 
 prove_correct CubeSurfaceArea by
-  unfold CubeSurfaceArea
   loom_solve

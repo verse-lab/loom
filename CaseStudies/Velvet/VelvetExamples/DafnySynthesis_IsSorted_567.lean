@@ -57,5 +57,4 @@ lemma adjacent_to_global_sorted (a : Array Int) :
 attribute [local solverHint] adjacent_to_global_sorted
 
 prove_correct IsSorted by
-  unfold IsSorted
   loom_solve

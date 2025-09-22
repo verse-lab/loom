@@ -47,7 +47,6 @@ method CubeElements (a: Array Int) return (cubed: Array Int)
 attribute [local solverHint] Array.size_replicate Array.size_set 
 
 prove_correct CubeElements by
-  unfold CubeElements
   loom_solve <;> simp_all
   intros k hik
   unfold Array.setIfInBounds
@@ -59,4 +58,4 @@ prove_correct CubeElements by
   have inv' : cubedArray[k]! = a[k]! * a[k]! * a[k]! := by 
     grind
   have hk' : k < cubedArray.size := by grind
-  /- simp_all -/
+  simp_all

@@ -28,5 +28,4 @@ method Minimum (a: Int) (b: Int) return (minValue: Int)
 
 
 prove_correct Minimum by
-  unfold Minimum
   loom_solve

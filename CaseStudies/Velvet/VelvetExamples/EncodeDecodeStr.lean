@@ -29,6 +29,7 @@ def get_cnt_sum (l: List Encoding) :=
   | List.nil => 0
   | List.cons x xs => x.cnt + get_cnt_sum xs
   
+@[grind]
 lemma get_cnt_sum_hd e l : get_cnt_sum (e::l) = e.cnt + get_cnt_sum l := by
   conv  => {
     lhs
@@ -40,8 +41,10 @@ lemma get_cnt_sum_append l1 l2:  get_cnt_sum (l1 ++ l2) = get_cnt_sum l1 + get_c
   induction l1 with
   | nil => simp; rfl
   | cons e l1' ih =>
-    simp [ih]
+    simp_all
     grind
+
+    
 
 @[reducible]
 def is_valid_run_sequence (encoded_str: Array Encoding) := 
@@ -67,7 +70,6 @@ method decodeStr' (encoded_str: Array Encoding)
 
 
 prove_correct decodeStr' by
-  unfold decodeStr'
   loom_solve
   · simp[*] at *
     have : decoded.size = get_cnt_sum (List.take i encoded_str.toList) := by trivial
@@ -141,7 +143,6 @@ lemma array_extract_split_i_j_k (arr : Array α) (i j k: Nat) :
   grind
 
 prove_correct encodeStr by
-  unfold encodeStr
   loom_solve
   · intros k hik hkj
     grind
@@ -157,7 +158,8 @@ prove_correct encodeStr by
     intros l hl hl2
     rw [Array.size_replicate] at hl
     simp_all
-    have inv' := invariant_11 (i+l)
+    have inv : ∀ (k : ℕ), i ≤ k → k < j → str[k]! = str[i] := by trivial
+    have inv' := inv (i+l)
     simp[*] at inv'
     have : i+l < j  := by grind
     have heq := (inv' this)

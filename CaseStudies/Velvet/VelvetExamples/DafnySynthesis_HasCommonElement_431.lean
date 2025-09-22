@@ -44,5 +44,4 @@ do
     return result
 
 prove_correct HasCommonElement by
-  unfold HasCommonElement
   loom_solve

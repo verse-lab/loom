@@ -32,7 +32,6 @@ Another way to interact with the proof system is to provide hints to the SMT sol
 attribute [local solverHint] Nat.mod_lt
 
 prove_correct LastDigit by
-  unfold LastDigit
   loom_solve
 ```
 
@@ -200,7 +199,6 @@ prove_correct <method_name> by
 **Example:**
 ```lean
 prove_correct CubeElements by
-  unfold CubeElements
   loom_solve
 ```
 
@@ -213,7 +211,6 @@ When `loom_solve` fails to complete a proof due to missing mathematical knowledg
 attribute [local solverHint] Nat.mod_lt
 
 prove_correct LastDigit by
-  unfold LastDigit
   loom_solve
 ```
 
@@ -222,7 +219,6 @@ prove_correct LastDigit by
 attribute [local solverHint] Array.size_replicate Array.size_set
 
 prove_correct CubeElements by
-  unfold CubeElements
   loom_solve
 ```
 
@@ -233,7 +229,6 @@ For complex proofs that `loom_solve` cannot handle completely, you can combine a
 **Pattern 1: Fallback to interactive tactics**
 ```lean
 prove_correct method by
-  unfold method
   loom_solve
   -- SMT failed on remaining goals, use interactive tactics
   grind
@@ -242,7 +237,6 @@ prove_correct method by
 **Pattern 2: Manual proof after automation**
 ```lean
 prove_correct method by
-  unfold method
   loom_solve <;> simp_all
   -- Handle remaining subgoals manually
   intros k hk
@@ -262,7 +256,6 @@ lemma adjacent_to_global_sorted (a : Array Int) :
 attribute [local solverHint] adjacent_to_global_sorted
 
 prove_correct IsSorted by
-  unfold IsSorted
   loom_solve
 ```
 
@@ -364,7 +357,6 @@ method simple_recursion (x : Nat) return (res: Nat)
 **Verification with Recursion:**
 ```lean
 prove_correct simple_recursion by
-  unfold simple_recursion
   loom_solve  -- Often sufficient for simple recursive methods
 ```
 
@@ -385,7 +377,6 @@ method gcd (a : Nat) (b : Nat) return (res : Nat)
   decreasing_by sorry -- proof that a % b < b
 
 prove_correct gcd by
-  unfold gcd
   loom_solve
   termination_by b
   decreasing_by sorry -- same termination proof
@@ -518,10 +509,9 @@ invariant result.size = a.size  -- often needed for verification
 
 #### Complex Proof Strategies
 
-**For simple methods**: Start with `unfold` + `loom_solve`:
+**For simple methods**: Start with `loom_solve`:
 ```lean
 prove_correct SimpleMethod by
-  unfold SimpleMethod
   loom_solve
 ```
 
@@ -530,14 +520,12 @@ prove_correct SimpleMethod by
 attribute [local solverHint] Nat.mod_lt Nat.div_le_iff_le_mul_right
 
 prove_correct ArithmeticMethod by
-  unfold ArithmeticMethod
   loom_solve
 ```
 
 **For complex methods**: Use the hybrid approach with interactive tactics:
 ```lean
 prove_correct ComplexMethod by
-  unfold ComplexMethod
   loom_solve <;> simp_all
   -- Handle remaining goals manually
   intros; by_cases <;> grind
@@ -592,7 +580,6 @@ method LastDigit (n: Nat) return (d: Nat)
 attribute [local solverHint] Nat.mod_lt
 
 prove_correct LastDigit by
-  unfold LastDigit
   loom_solve
 ```
 
@@ -641,7 +628,6 @@ method CubeElements (a: Array Int) return (cubed: Array Int)
 attribute [local solverHint] Array.size_replicate Array.size_set
 
 prove_correct CubeElements by
-  unfold CubeElements
   loom_solve <;> simp_all
   -- Additional interactive proving for complex array reasoning
 ```

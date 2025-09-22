@@ -34,7 +34,6 @@ do
 attribute [local solverHint] Array.size_set Array.size_replicate Array.getElem_setIfInBounds
 
 prove_correct ToLowercase by
-  unfold ToLowercase
   loom_solve
   · simp_all
   · intros k hk hik

@@ -31,5 +31,4 @@ do
     return result
 
 prove_correct ContainsConsecutiveNumbers by
-  unfold ContainsConsecutiveNumbers
   loom_solve

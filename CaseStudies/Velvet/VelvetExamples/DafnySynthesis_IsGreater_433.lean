@@ -53,6 +53,5 @@ method IsGreater
     return result
 
 prove_correct IsGreater by
-  unfold IsGreater
   loom_solve
   

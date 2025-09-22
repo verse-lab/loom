@@ -20,6 +20,5 @@ method Multiply (a: Int) (b: Int) return (result: Int)
     return a * b
 
 prove_correct Multiply by
-  unfold Multiply 
   loom_solve
   apply True.intro
