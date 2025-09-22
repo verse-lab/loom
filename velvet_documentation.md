@@ -178,11 +178,76 @@ prove_correct <method_name> by
 
 *   **`unfold <method_name>`**: Unfolds the definition of the method.
 *   **`loom_solve`**: An automated tactic to solve the proof obligations.
+*   **`grind`**: A general-purpose tactic for finishing proofs after SMT fails.
+*   **`simp_all`**: Simplifies all hypotheses and the goal.
+*   **`aesop`**: A tableau-based proof search tactic.
 
 **Example:**
 ```lean
 prove_correct CubeElements by
   unfold CubeElements
+  loom_solve
+```
+
+#### Solver Hints
+
+When `loom_solve` fails to complete a proof due to missing mathematical knowledge, you can provide **solver hints** using the `attribute [local solverHint]` declaration. These hints guide the SMT solver by making relevant lemmas available.
+
+**Example with modulo arithmetic:**
+```lean
+attribute [local solverHint] Nat.mod_lt
+
+prove_correct LastDigit by
+  unfold LastDigit
+  loom_solve
+```
+
+**Example with array operations:**
+```lean
+attribute [local solverHint] Array.size_replicate Array.size_set
+
+prove_correct CubeElements by
+  unfold CubeElements
+  loom_solve
+```
+
+#### Interactive Proof Strategies
+
+For complex proofs that `loom_solve` cannot handle completely, you can combine automated and interactive tactics:
+
+**Pattern 1: Fallback to interactive tactics**
+```lean
+prove_correct method by
+  unfold method
+  loom_solve
+  -- SMT failed on remaining goals, use interactive tactics
+  grind
+```
+
+**Pattern 2: Manual proof after automation**
+```lean
+prove_correct method by
+  unfold method
+  loom_solve <;> simp_all
+  -- Handle remaining subgoals manually
+  intros k hk
+  by_cases h : k = i <;> simp_all
+```
+
+**Pattern 3: Helper lemmas**
+When proofs are complex, define helper lemmas and use them as solver hints:
+```lean
+-- Define helper lemma
+lemma adjacent_to_global_sorted (a : Array Int) :
+    (∀ k, 0 ≤ k ∧ k < a.size - 1 → a[k]! ≤ a[k+1]!) →
+    (∀ i j, 0 ≤ i ∧ i < j ∧ j < a.size → a[i]! ≤ a[j]!) := by
+  -- proof here
+
+-- Use as solver hint
+attribute [local solverHint] adjacent_to_global_sorted
+
+prove_correct IsSorted by
+  unfold IsSorted
   loom_solve
 ```
 
@@ -200,6 +265,10 @@ While Velvet's syntax is inspired by Dafny, there are several key differences in
 | **Array Access**    | `a[i]`                              | `a[i]!` (Note the `!`)                        |
 | **Array Update**    | `a[i] := value;`                    | `a := Array.set! a i value`                   |
 | **Loop Post-cond.** | `ensures` on `while` (less common)  | `done_with` clause for `while`                |
+| **Boolean Equivalence** | `<==>`                         | `↔`                                           |
+| **Logical And/Or**  | `&&`, `\|\|`                        | `∧`, `∨`                                      |
+| **Existential**     | `exists`                            | `∃`                                           |
+| **Universal**       | `forall`                            | `∀`                                           |
 
 #### Example: `for` loop translation
 
@@ -219,3 +288,263 @@ while i < a.size do
     -- loop body
     i := i + 1
 ```
+
+### Advanced Features
+
+#### Custom Data Types and Structures
+
+Velvet supports defining custom data structures using Lean's `structure` syntax:
+
+```lean
+structure Encoding where
+  cnt: Nat
+  c: Char
+  deriving Inhabited
+```
+
+These structures can be used in method signatures and arrays:
+```lean
+method encodeStr (str: Array Char) return (res: Array Encoding)
+```
+
+#### Complex Loop Invariants
+
+For more sophisticated algorithms, you may need complex invariants that track multiple properties:
+
+```lean
+while j < high
+invariant low <= i ∧ i <= j ∧ j <= high
+invariant arrayToMultiset arr = arrayToMultiset oldArr
+invariant (forall k, low <= k -> k < i -> arr[k]! < pivotVal)
+invariant (forall k , i <= k -> k < j -> arr[k]! >= pivotVal)
+invariant arr[high]! = oldArr[high]!
+do
+    -- loop body
+```
+
+#### Mutable Parameters
+
+Methods can take mutable parameters using the `mut` keyword:
+
+```lean
+method qsortPartition (mut arr: Array Int) (low: Nat) (high: Nat)
+  return (pivotIndex: Nat)
+```
+
+The modified array is automatically available as `arrNew` in postconditions:
+```lean
+ensures arrNew[pivotIndex]! = arr[high]!
+```
+
+#### Compound Loop Conditions
+
+While loops can have compound conditions that help with termination:
+
+```lean
+while i < a.size - 1 ∧ sorted
+    invariant 0 ≤ i ∧ i ≤ a.size - 1
+    invariant sorted = true → (∀ k, 0 ≤ k ∧ k < i → a[k]! ≤ a[k+1]!)
+    invariant sorted = false → ∃ k, 0 ≤ k ∧ k < a.size - 1 ∧ a[k]! > a[k+1]!
+    done_with (i = a.size - 1 ∨ sorted = false)
+```
+
+#### Helper Functions and Lemmas
+
+For complex verification, define helper functions and prove lemmas about them:
+
+```lean
+def get_cnt_sum (l: List Encoding) :=
+  match l with
+  | List.nil => 0
+  | List.cons x xs => x.cnt + get_cnt_sum xs
+
+lemma get_cnt_sum_append l1 l2:
+    get_cnt_sum (l1 ++ l2) = get_cnt_sum l1 + get_cnt_sum l2 := by
+  induction l1 with
+  | nil => simp; rfl
+  | cons e l1' ih =>
+    simp [ih]
+    grind
+```
+
+Use these in specifications:
+```lean
+method decodeStr' (encoded_str: Array Encoding)
+   return (res: Array Char)
+   ensures (res.size = get_cnt_sum encoded_str.toList)
+```
+
+### Common Porting Patterns
+
+When porting from Dafny to Velvet, several patterns emerge frequently:
+
+#### Type Translations
+
+**Integer types**: Dafny's `int` typically becomes `Int` in Velvet, but consider using `Nat` for non-negative values to get better SMT support:
+
+```lean
+-- Dafny: method LastDigit(n: int) requires n >= 0
+-- Velvet: better to use Nat directly
+method LastDigit (n: Nat) return (d: Nat)
+```
+
+**Precondition simplification**: When using `Nat`, non-negativity constraints become unnecessary:
+```lean
+-- Dafny: requires n >= 0 && size > 0
+-- Velvet: just require size > 0 (if n is Nat)
+```
+
+#### Loop Invariant Translation
+
+**Basic pattern**: Maintain the logical structure but adapt to Velvet syntax:
+```lean
+-- Dafny:
+-- invariant 0 <= i <= a.Length
+-- invariant forall k :: 0 <= k < i ==> result[k] == transform(a[k])
+
+-- Velvet:
+invariant 0 ≤ i ∧ i ≤ a.size
+invariant ∀ k, 0 ≤ k ∧ k < i → result[k]! = transform a[k]!
+```
+
+**Array size invariants**: Always include size preservation invariants:
+```lean
+invariant result.size = a.size  -- often needed for verification
+```
+
+#### Complex Proof Strategies
+
+**For simple methods**: Start with `unfold` + `loom_solve`:
+```lean
+prove_correct SimpleMethod by
+  unfold SimpleMethod
+  loom_solve
+```
+
+**For arithmetic-heavy methods**: Add relevant mathematical lemmas as hints:
+```lean
+attribute [local solverHint] Nat.mod_lt Nat.div_le_iff_le_mul_right
+
+prove_correct ArithmeticMethod by
+  unfold ArithmeticMethod
+  loom_solve
+```
+
+**For complex methods**: Use the hybrid approach with interactive tactics:
+```lean
+prove_correct ComplexMethod by
+  unfold ComplexMethod
+  loom_solve <;> simp_all
+  -- Handle remaining goals manually
+  intros; by_cases <;> grind
+```
+
+#### Common Verification Challenges
+
+**Issue**: SMT solver cannot handle modular arithmetic
+**Solution**: Add `Nat.mod_lt` as a solver hint
+
+**Issue**: Array size properties not automatically proven
+**Solution**: Add explicit size invariants and use `Array.size_replicate`, `Array.size_set` hints
+
+**Issue**: Complex logical equivalences in specifications
+**Solution**: Break down into helper lemmas and prove them separately
+
+**Issue**: Loop termination not obvious
+**Solution**: Use `done_with` clauses that clearly express termination conditions
+
+#### Best Practices for Porting
+
+1. **Start simple**: Port the basic structure first, then add complexity
+2. **Use typed signatures**: Prefer `Nat` over `Int` when values are non-negative
+3. **Keep original code**: Comment out original Dafny code for reference
+4. **Incremental verification**: Get basic structure verified before adding complex invariants
+5. **Name your lemmas**: Use `have` statements with descriptive names instead of relying on auto-generated names
+6. **Test solver hints**: Add mathematical lemmas as hints when SMT solving fails
+
+### Complete Examples from Porting
+
+#### Example 1: Simple Arithmetic Method
+
+**Original Dafny (task_id_435):**
+```dafny
+method LastDigit(n: int) returns (d: int)
+    requires n >= 0
+    ensures 0 <= d < 10
+    ensures n % 10 == d
+{
+    d := n % 10;
+}
+```
+
+**Velvet Translation:**
+```lean
+method LastDigit (n: Nat) return (d: Nat)
+    ensures d < 10
+    ensures n % 10 = d
+    do
+    return n % 10
+
+attribute [local solverHint] Nat.mod_lt
+
+prove_correct LastDigit by
+  unfold LastDigit
+  loom_solve
+```
+
+**Key insights:**
+- Used `Nat` instead of `Int` to eliminate non-negativity precondition
+- Added `Nat.mod_lt` hint for modular arithmetic
+- Direct return statement instead of assignment
+
+#### Example 2: Array Processing with Loop
+
+**Original Dafny (task_id_447):**
+```dafny
+method CubeElements(a: array<int>) returns (cubed: array<int>)
+    ensures cubed.Length == a.Length
+    ensures forall i :: 0 <= i < a.Length ==> cubed[i] == a[i] * a[i] * a[i]
+{
+    var cubedArray := new int[a.Length];
+    for i := 0 to a.Length
+        invariant 0 <= i <= a.Length
+        invariant cubedArray.Length == a.Length
+        invariant forall k :: 0 <= k < i ==> cubedArray[k] == a[k] * a[k] * a[k]
+    {
+        cubedArray[i] := a[i] * a[i] * a[i];
+    }
+    return cubedArray;
+}
+```
+
+**Velvet Translation:**
+```lean
+method CubeElements (a: Array Int) return (cubed: Array Int)
+    ensures cubed.size = a.size
+    ensures ∀ i, 0 ≤ i ∧ i < a.size → cubed[i]! = a[i]! * a[i]! * a[i]!
+    do
+    let mut cubedArray := Array.replicate a.size 0
+    let mut i := 0
+    while i < a.size
+    invariant cubedArray.size = a.size
+    invariant 0 ≤ i ∧ i ≤ a.size
+    invariant ∀ k, 0 ≤ k ∧ k < i → cubedArray[k]! = a[k]! * a[k]! * a[k]!
+    do
+        cubedArray := cubedArray.set! i (a[i]! * a[i]! * a[i]!)
+        i := i + 1
+    return cubedArray
+
+attribute [local solverHint] Array.size_replicate Array.size_set
+
+prove_correct CubeElements by
+  unfold CubeElements
+  loom_solve <;> simp_all
+  -- Additional interactive proving for complex array reasoning
+```
+
+**Key insights:**
+- `for` loop became `while` loop with manual increment
+- Array creation uses `Array.replicate` with default value
+- Array update uses `Array.set!` with reassignment
+- Added array size hints for verification
+- Used both automated and interactive proving strategies
