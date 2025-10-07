@@ -56,11 +56,11 @@ method test2 (n : β) (l : List α) return (res : Nat)
       let b ← test2 n k
       pure b.1.succ
 -- set_option trace.Loom.debug true in
-prove_correct test2 by
+prove_correct test2
+decreasing_by
+  all_goals (simp_all ; grind) by
   unfold test2
   loom_solve <;> aesop
-decreasing_by
-  all_goals (simp_all ; grind)
 
 method test3 (a : Nat) (b : Nat) (c : Nat) return (res : Nat)
   ensures res > 9
