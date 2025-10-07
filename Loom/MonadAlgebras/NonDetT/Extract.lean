@@ -471,6 +471,7 @@ lemma ExtractNonDet.extract_refines_wp (s : NonDetT m α) (inst : ExtractNonDet 
   intro b; apply le_trans'; apply a_ih_1; simp [hprop]
   simp [NonDetT.wp_eq_wp]
 
+/- Theorem 6.1 for PartialCorrectness: triple on NonDetT monad implies triple on extracted monad -/
 set_option linter.unusedSectionVars false in
 lemma ExtractNonDet.extract_refines (pre : l) (s : NonDetT m α) (inst : ExtractNonDet WeakFindable s) :
   triple pre s post ->
@@ -516,6 +517,7 @@ lemma ExtractNonDet.extract_refines_wp_weak (s : NonDetT m α) (inst : ExtractNo
   intro b; apply le_trans'; apply a_ih_1; simp [hprop]
   simp [NonDetT.wp_eq_wp]
 
+/- Theorem 6.1 for PartialCorrectness: triple on NonDetT monad implies triple on extracted monad -/
 set_option linter.unusedSectionVars false in
 lemma ExtractNonDet.extract_refines_triple_weak (pre : l) (s : NonDetT m α) (inst : ExtractNonDet WeakFindable s) :
   triple pre s post ->

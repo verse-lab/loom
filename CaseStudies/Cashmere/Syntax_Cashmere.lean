@@ -319,9 +319,11 @@ elab_rules : command
       ($proof))
     let balanceOld := mkIdent `balanceOld
     let bal := mkIdent `balance
+    /- triple generation for Cashmere methods -/
     let thmCmd <- withRef tkp `(command| lemma $lemmaName $bindersIdents* :
       ∀ $(balanceOld) : Bal,
       triple
+        /- precondition about initial balance -/
         (fun $(bal):ident : Bal => ($bal:ident = $(balanceOld)) ∧ $pre)
         ($name $ids*)
         (fun $retId => fun $ret : Bal => $post) := by $proofSeq $suf)

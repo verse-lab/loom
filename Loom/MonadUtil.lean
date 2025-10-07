@@ -4,6 +4,7 @@ import Mathlib.Order.CompleteLattice.Basic
 universe u v w
 
 
+/- Continuation monad definition -/
 abbrev Cont (t : Type v) (α : Type u) := (α -> t) -> t
 
 instance (t : Type v) : Monad (Cont t) where

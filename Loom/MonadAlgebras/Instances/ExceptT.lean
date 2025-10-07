@@ -12,6 +12,7 @@ lemma Except.bind'_bind {m : Type u -> Type v} {ε α β} [Monad m] [LawfulMonad
   (i >>= fun a => Except.bind' a f) = bind (m := ExceptT ε m) i f := by
   simp [Except.bind', bind, ExceptT.bind]; rfl
 
+/- Ordered Monad Algebra instance for ExceptT -/
 noncomputable
 def MAlgExcept (ε : Type u) (df : ε -> Prop) (l : Type u) (m : Type u -> Type v)
   [CompleteLattice l]
@@ -118,6 +119,7 @@ instance
     simp [MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure, ExceptT.map, ExceptT.mk, OfHd, MAlgExcept]
     rw [map_eq_pure_bind]; apply MAlgOrdered.bind; ext (_|_) <;> simp
 
+/- Monad Transformer Algebra instance for ExceptT -/
 noncomputable
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
   [IsHandler (ε := ε) hd]

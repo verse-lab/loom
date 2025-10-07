@@ -1,6 +1,7 @@
 import Loom.MonadAlgebras.Defs
 import Loom.MonadAlgebras.Instances.Basic
 
+/- Ordered Monad Algebra instance for StateT -/
 instance (σ : Type u) (l : Type u) (m : Type u -> Type v)
   [CompleteLattice l]
   [Monad m] [LawfulMonad m] [inst: MAlgOrdered m l] : MAlgOrdered (StateT σ m) (σ -> l) where
@@ -88,6 +89,7 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MAlgOrdered
   noFailure := by
     intro _ _; simp [MAlg.lift_StateT, inst'.noFailure]; rfl
 
+/- Monad Transformer Algebra instance for StateT -/
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MAlgOrdered m l] :
   MAlgLift m l (StateT σ m) (σ -> l) where
     μ_lift := by

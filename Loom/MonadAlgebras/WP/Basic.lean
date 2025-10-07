@@ -15,14 +15,18 @@ variable [CompleteLattice l]
 section
 variable [mprop : MAlgOrdered m l]
 
+/- WP definition -/
 def wp (c : m α) (post : α -> l) : l := liftM (n := Cont l) c post
+/- Hoare triple definition -/
 def triple (pre : l) (c : m α) (post : α -> l) : Prop :=
   pre ≤ wp c post
 
+/- WP of pure (defintion 4 from the paper) -/
 lemma wp_pure (x : α) (post : α -> l) : wp (m := m) (pure x) post = post x := by
   simp [wp, liftM]
   rfl
 
+/- WP of bind (defintion 5 from the paper) -/
 lemma triple_pure (pre : l) (x : α) (post : α -> l) :
   triple pre (pure (f := m) x) post <-> pre ≤ (post x)
   := by
@@ -40,6 +44,7 @@ lemma wp_map {β} (x : m α) (f : α -> β) (post : β -> l) :
   wp (f <$> x) post = wp x (fun x => post (f x)) := by
     rw [map_eq_pure_bind, wp_bind]; simp [wp_pure]
 
+/- monotonicity for WP (definition 9 from the paper) -/
 lemma wp_cons (x : m α) (post post' : α -> l) :
   (∀ y, post y ≤ post' y) ->
   wp x post ≤ wp x post' := by
@@ -147,6 +152,7 @@ section Loops
 
 open Lean.Order
 
+/- partial loop from MonoBind and CCPO instances -/
 @[specialize, inline]
 def Loop.forIn.loop {m : Type u -> Type v} [Monad m] [∀ α, CCPO (m α)] [MonoBind m] (f : Unit → β → m (ForInStep β)) (b : β) : m β := do
     match ← f () b with
@@ -385,6 +391,7 @@ lemma ExceptionAsFailure.ExceptT.wp_lift (c : m α) (post : α -> l) :
   wp (liftM (n := ExceptT ε m) c) post = wp (m := m) c post := by
   apply ExceptT.wp_lift_hd
 
+/- WP for DivM in TotalCorrectness -/
 open TotalCorrectness in
 lemma TotalCorrectness.DivM.wp_eq (α : Type) (x : DivM α) (post : α -> Prop) :
   wp x post =
@@ -394,6 +401,7 @@ lemma TotalCorrectness.DivM.wp_eq (α : Type) (x : DivM α) (post : α -> Prop) 
   simp [wp, liftM, monadLift, MAlg.lift, Functor.map, TotalCorrectness.instMAlgOrderedDivMProp]
   cases x <;> simp [LE.pure]
 
+/- WP for DivM in PartialCorrectness -/
 lemma PartialCorrectness.DivM.wp_eq (α : Type) (x : DivM α) (post : α -> Prop) :
   wp x post =
     match x with
@@ -402,24 +410,29 @@ lemma PartialCorrectness.DivM.wp_eq (α : Type) (x : DivM α) (post : α -> Prop
   simp [wp, liftM, monadLift, MAlg.lift, Functor.map, PartialCorrectness.instMAlgOrderedDivMProp]
   cases x <;> simp
 
+/- WP for StateT in underlying monad -/
 lemma StateT.wp_eq (c : StateT σ m α) (post : α -> σ -> l) :
   wp c post = fun s => wp (m := m) (c s) (fun xs => post xs.1 xs.2) := by
   simp [wp, liftM, monadLift, MAlg.lift_StateT];
 
+/- WP for lift to StateT -/
 lemma StateT.wp_lift (c : m α) (post : α -> σ -> l) :
   wp (liftM (n := StateT σ m) c) post = fun s => wp (m := m) c (post · s) := by
   simp [wp, liftM, monadLift, MAlg.lift_StateT, MonadLift.monadLift, StateT.lift];
   have liftE : ∀ α, MAlg.lift (m := m) (α := α) = wp := by intros; ext; simp [wp, liftM, monadLift]
   ext s; rw [map_eq_pure_bind, liftE, liftE, wp_bind]; simp [wp_pure]
 
+/- WP for ReaderT in underlying monad  -/
 lemma ReaderT.wp_eq (c : ReaderT σ m α) (post : α -> σ -> l) :
   wp c post = fun s => wp (m := m) (c s) (post · s) := by
   simp [wp, liftM, monadLift, MAlg.lift_ReaderT];
 
+/- WP for lift to ReaderT -/
 lemma ReaderT.wp_lift (c : m α) (post : α -> σ -> l) :
   wp (liftM (n := ReaderT σ m) c) post = fun s => wp (m := m) c (post · s) := by
   simp [wp, liftM, monadLift, MAlg.lift_ReaderT, MonadLift.monadLift]
 
+/- WP lift from MAlgLift-/
 omit [LawfulMonad m] in
 lemma MAlgLift.wp_lift [Monad n] [CompleteLattice k] [MAlgOrdered n k] [MonadLiftT m n]
   -- [MonadLiftT (Cont l) (Cont k)]
@@ -434,10 +447,12 @@ section ExceptT
 
 variable [inst: CompleteLattice l] [MAlgOrdered m l] [IsHandler (ε := ε) hd]
 
+/- WP for exception in ExceptT -/
 lemma ExceptT.wp_throw (e : ε) :
   wp (α := α) (throw (m := ExceptT ε m) e) = fun _ => ⌜hd e⌝ := by
     ext; simp [wp_except_handler_eq, throw, throwThe, MonadExceptOf.throw, mk, wp_pure]
 
+/- WP lift from Monad Transformer Algebra -/
 lemma MAlgLift.wp_throw
   [Monad n] [CompleteLattice k] [MAlgOrdered n k] [MonadLiftT m n]
   [MonadLiftT (ExceptT ε m) n]
@@ -452,14 +467,17 @@ section StateT
 
 variable [inst: CompleteLattice l] [MAlgOrdered m l]
 
+/- WP for get in StateT -/
 lemma StateT.wp_get (post : σ -> σ -> l) :
   wp (get (m := StateT σ m)) post = fun s => post s s := by
   simp [StateT.wp_eq, get, getThe, MonadStateOf.get, StateT.get, wp_pure]
 
+/- WP for set in StateT -/
 lemma StateT.wp_set {res: σ} (post : PUnit -> σ -> l) :
   wp (set (m := StateT σ m) res) post = fun _ => post PUnit.unit res := by
   simp [StateT.wp_eq, set, StateT.set, wp_pure]
 
+/- WP for modifyGet in StateT -/
 lemma StateT.wp_modifyGet (post : α -> σ -> l) :
   wp (modifyGet (m := StateT σ m) f) post = fun s => post (f s).1 (f s).2 := by
   simp [StateT.wp_eq, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet, wp_pure]
@@ -470,6 +488,7 @@ section ReaderT
 
 variable [inst: CompleteLattice l] [MAlgOrdered m l]
 
+/- WP for read in ReaderT -/
 lemma ReaderT.wp_read (post : σ -> σ -> l) :
   wp (read (m := ReaderT σ m)) post = fun s => post s s := by
   simp [ReaderT.wp_eq, read, readThe, MonadReaderOf.read, ReaderT.read, wp_pure]
@@ -481,6 +500,7 @@ section Gen
 
 open Plausible
 
+/- WP for rand in Gen -/
 lemma Gen.wp_rand {α : Type} (c : Gen α) :
   triple ⊤ c (fun _ => ⊤) := by
     simp [triple, MAlgGenInst, ReaderT.wp_eq, StateT.wp_eq]

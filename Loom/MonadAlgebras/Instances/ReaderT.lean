@@ -1,6 +1,7 @@
 import Loom.MonadAlgebras.Defs
 import Loom.MonadAlgebras.Instances.Basic
 
+/- Ordered Monad Algebra instance for ReaderT -/
 instance (σ : Type u) (l : Type u) (m : Type u -> Type v)
   [CompleteLattice l]
   [Monad m] [LawfulMonad m] [inst: MAlgOrdered m l] : MAlgOrdered (ReaderT σ m) (σ -> l) where
@@ -91,6 +92,7 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MAlgOrdered
   noFailure := by
     intro _ _; simp [MAlg.lift_ReaderT, inst'.noFailure]; rfl
 
+/- Monad Transformer Algebra instance for ReaderT -/
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MAlgOrdered m l] :
   MAlgLift m l (ReaderT σ m) (σ -> l) where
     μ_lift := by

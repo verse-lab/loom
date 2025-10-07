@@ -47,6 +47,7 @@ lemma pure_intro_r {l : Type u} [CompleteLattice l] (x y : l) :
 
 variable (m : Type v -> Type u)
 
+/- Monad Algebra typeclass for a Monad m and an assertion language l -/
 class MAlg [Monad m] (l : outParam (Type v)) where
   μ : m l -> l
   pure : ∀ l, μ (pure l) = l
@@ -69,6 +70,7 @@ instance EffectObservationOfMAlg (l : Type u) {m : Type u -> Type v} [Monad m] [
     simp only [map_bind]; apply MAlg.bind
     ext; simp [MAlg.pure]
 
+/- Ordered Monad Algebra typeclass for a Monad m and an assertion language l -/
 class MAlgOrdered (l : outParam (Type v)) [Monad m] [CompleteLattice l] where
   μ : m l -> l
   μ_ord_pure : ∀ l, μ (pure l) = l
@@ -76,6 +78,7 @@ class MAlgOrdered (l : outParam (Type v)) [Monad m] [CompleteLattice l] where
     ∀ (f g : α -> m l), μ ∘ f ≤ μ ∘ g ->
       ∀ x : m α, μ (x >>= f) ≤ μ (x >>= g)
 
+/- Deriving Monad Algebra instance from an Ordered Monad Algebra instance -/
 instance OfMAlgPartialOrdered {m : Type u -> Type v} {l : Type u} [Monad m] [CompleteLattice l] [mprop : MAlgOrdered m l] : MAlg m l where
   μ := MAlgOrdered.μ
   pure := MAlgOrdered.μ_ord_pure
@@ -186,6 +189,7 @@ instance {l σ : Type u} [CompleteLattice l] : LogicLift l (σ -> l) where
   lift_bot := by simp [monadLift, MonadLift.monadLift]; intros; rfl
 
 
+/- Monad Transformer Algebra typeclass -/
 class MAlgLift
   (m : semiOutParam (Type u -> Type v)) (l : semiOutParam (Type u)) [Monad m] [CompleteLattice l] [MAlgOrdered m l]
   (n : (Type u -> Type w)) (k : outParam (Type u)) [Monad n] [CompleteLattice k] [MAlgOrdered n k]

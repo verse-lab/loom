@@ -11,6 +11,7 @@ universe u v w
 
 section NonDetermenisticTransformer
 
+/- NonDetT transformer definition -/
 inductive NonDetT (m : Type u -> Type v) : (α : Type u) -> Type _ where
   | pure {α} (ret : α) : NonDetT m α
   | vis {α} {β} (x : m β) (f : β → NonDetT m α) : NonDetT m α
@@ -57,10 +58,13 @@ def NonDetT.pickSuchThat (τ : Type u) (p : τ → Prop) : NonDetT m τ :=
 def NonDetT.repeat (init : α) (f : α -> NonDetT m (ForInStep α)) : NonDetT m α :=
   NonDetT.repeatCont init f pure
 
+/- Non Determenism Monad typeclass -/
 class MonadNonDet (m : Type u → Type v) where
   pick : (τ : Type u) →  m τ
+  -- get a value with given property
   pickSuchThat : (τ : Type u) → (τ → Prop) → m τ
   assume : Prop → m PUnit.{u+1}
+  -- loop instance
   rep {α : Type u} : α → (α → m (ForInStep α)) → m α
 
 export MonadNonDet (pick assume pickSuchThat rep)
@@ -75,6 +79,7 @@ instance : MonadNonDet (NonDetT m) where
 namespace PartialCorrectness
 namespace DemonicChoice
 
+/- WP for NonDetT -/
 noncomputable
 def NonDetT.wp {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : {α : Type u} -> NonDetT m α -> Cont l α
   | _, .pure ret => pure ret
@@ -111,6 +116,7 @@ lemma NonDetT.wp_bind  {l : Type u} [CompleteLattice l] [MAlgOrdered m l] [Lawfu
     { simp [f_ih] }
     simp [cont_ih]
 
+/- μ for NonDetT from NonDetT.wp -/
 noncomputable
 def NonDetT.μ  {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : NonDetT m l -> l := fun x => NonDetT.wp x id
 
@@ -119,6 +125,7 @@ instance : MonadLift m (NonDetT m) where
 
 variable [LawfulMonad m]
 
+/- Ordered Monad Algebra instance for NonDetT -/
 noncomputable
 scoped
 instance {l : Type u} [CompleteLattice l] [MAlgOrdered m l] [LawfulMonad m] : MAlgOrdered (NonDetT m) l where
@@ -183,6 +190,7 @@ lemma MonadNonDet.wp_repeat {α : Type u} (init : α) (f : α -> NonDetT m (ForI
 instance [MonadNonDet m] : ForIn m Lean.Loop Unit where
   forIn {β} _ _ init f := @MonadNonDet.rep m _ β init (f ())
 
+/- iteration lemma -/
 lemma MonadNonDet.wp_forIn {β : Type u} (init : β) (f : Unit -> β -> NonDetT m (ForInStep β))
   (inv : β -> l) (on_done' : β -> l) :
   (∀ b, inv b <= wp (f () b) (fun | .yield b' => inv b' | .done b' => inv b' ⊓ on_done' b')) ->
@@ -191,6 +199,7 @@ lemma MonadNonDet.wp_forIn {β : Type u} (init : β) (f : Unit -> β -> NonDetT 
   refine le_iSup_of_le (fun | .yield b' => inv b' | .done b' => inv b' ⊓ on_done' b') ?_
   simp [spec, hstep]
 
+/- VC generation for iteration -/
 @[loomWpSimp, loomSpec]
 noncomputable
 def WPGen.forWithInvariantLoop {β}
@@ -219,6 +228,7 @@ def WPGen.forWithInvariantLoop {β}
   -- intro h; simp [invariantGadget, onDoneGadget]
   -- solve_by_elim [MonadNonDet.wp_forIn]
 
+/- Monad Transformer Algebra for NonDetT -/
 noncomputable
 scoped
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
@@ -233,6 +243,7 @@ end DemonicChoice
 
 namespace AngelicChoice
 
+/- WP for NonDetT -/
 noncomputable
 def   NonDetT.wp {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : {α : Type u} -> NonDetT m α -> Cont l α
   | _, .pure ret => pure ret
@@ -267,6 +278,7 @@ lemma NonDetT.wp_bind [LawfulMonad m] {α β : Type u} {l : Type u} [CompleteLat
     { simp [f_ih] }
     simp [cont_ih]
 
+/- μ for NonDetT from NonDetT.wp -/
 noncomputable
 def NonDetT.μ {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : NonDetT m l -> l := fun x => NonDetT.wp x id
 
@@ -275,6 +287,7 @@ instance : MonadLift m (NonDetT m) where
 
 variable [LawfulMonad m]
 
+/- Ordered Monad Algebra instance for NonDetT -/
 noncomputable
 scoped
 instance {l : outParam (Type u)} [CompleteLattice l] [MAlgOrdered m l] [LawfulMonad m] : MAlgOrdered (NonDetT m) l where
@@ -337,6 +350,7 @@ lemma MonadNonDet.wp_repeat {α : Type u} (init : α) (f : α -> NonDetT m (ForI
 instance [MonadNonDet m] : ForIn m Lean.Loop Unit where
   forIn {β} _ _ init f := @MonadNonDet.rep m _ β init (f ())
 
+/- iteration lemma -/
 lemma MonadNonDet.wp_forIn {β : Type u} (init : β) (f : Unit -> β -> NonDetT m (ForInStep β))
   (inv : β -> l) (on_done' : β -> l) :
   (∀ b, inv b <= wp (f () b) (fun | .yield b' => inv b' | .done b' => inv b' ⊓ on_done' b')) ->
@@ -345,6 +359,7 @@ lemma MonadNonDet.wp_forIn {β : Type u} (init : β) (f : Unit -> β -> NonDetT 
   refine le_iSup_of_le (fun | .yield b' => inv b' | .done b' => inv b' ⊓ on_done' b') ?_
   simp [spec, hstep]
 
+/- VC generation for iteration -/
 @[loomWpSimp, loomSpec]
 noncomputable
 def WPGen.forWithInvariantLoop {β}
@@ -369,6 +384,7 @@ def WPGen.forWithInvariantLoop {β}
       intro b; apply (wpg b).intro
       all_goals solve_by_elim
 
+/- Monad Transformer Algebra for NonDetT -/
 noncomputable
 scoped
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
@@ -388,6 +404,7 @@ namespace TotalCorrectness
 
 namespace DemonicChoice
 
+/- WP for NonDetT -/
 noncomputable
 def NonDetT.wp {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : {α : Type u} -> NonDetT m α -> Cont l α
   | _, .pure ret => pure ret
@@ -425,6 +442,7 @@ lemma NonDetT.wp_bind [LawfulMonad m] {α β : Type u} {l : Type u} [CompleteLat
     { simp [f_ih] }
     simp [cont_ih]
 
+/- μ for NonDetT from NonDetT.wp -/
 noncomputable
 def NonDetT.μ {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : NonDetT m l -> l := fun x => NonDetT.wp x id
 
@@ -433,6 +451,7 @@ instance : MonadLift m (NonDetT m) where
 
 variable [LawfulMonad m]
 
+/- Ordered Monad Algebra instance for NonDetT -/
 noncomputable
 scoped
 instance {l : outParam (Type u)} [CompleteLattice l] [MAlgOrdered m l] [LawfulMonad m] : MAlgOrdered (NonDetT m) l where
@@ -498,6 +517,7 @@ lemma MonadNonDet.wp_repeat {α : Type u} (init : α) (f : α -> NonDetT m (ForI
 instance [MonadNonDet m] : ForIn m Lean.Loop Unit where
   forIn {β} _ _ init f := @MonadNonDet.rep m _ β init (f ())
 
+/- iteration lemma -/
 lemma MonadNonDet.wp_forIn {β : Type u} (init : β) (f : Unit -> β -> NonDetT m (ForInStep β))
   (inv : β -> l) (on_done' : β -> l) (measure: β → Nat):
   (∀ b, inv b <= wp (f () b) (fun | .yield b' => inv b' ⊓ ⌜ measure b' < measure b ⌝ | .done b' => inv b' ⊓ on_done' b')) ->
@@ -508,6 +528,7 @@ lemma MonadNonDet.wp_forIn {β : Type u} (init : β) (f : Unit -> β -> NonDetT 
   simp [spec, hstep]
 
 
+/- VC generation for iteration -/
 @[loomWpSimp, loomSpec]
 noncomputable
 def WPGen.forWithInvariantLoop {β}
@@ -532,6 +553,7 @@ def WPGen.forWithInvariantLoop {β}
       intro b; apply (wpg b).intro
       solve_by_elim
 
+/- Monad Transformer Algebra for NonDetT -/
 noncomputable
 scoped
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
@@ -545,6 +567,7 @@ end DemonicChoice
 
 namespace AngelicChoice
 
+/- WP for NonDetT -/
 noncomputable
 def   NonDetT.wp {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : {α : Type u} -> NonDetT m α -> Cont l α
   | _, .pure ret => pure ret
@@ -579,6 +602,7 @@ lemma NonDetT.wp_bind [LawfulMonad m] {α β : Type u} {l : Type u} [CompleteLat
     { simp [f_ih] }
     simp [cont_ih]
 
+/- μ for NonDetT from NonDetT.wp -/
 noncomputable
 def NonDetT.μ {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : NonDetT m l -> l := fun x => NonDetT.wp x id
 
@@ -587,6 +611,7 @@ instance : MonadLift m (NonDetT m) where
 
 variable [LawfulMonad m]
 
+/- Ordered Monad Algebra instance for NonDetT -/
 noncomputable
 scoped
 instance {l : outParam (Type u)} [CompleteLattice l] [MAlgOrdered m l] [LawfulMonad m] : MAlgOrdered (NonDetT m) l where
@@ -649,6 +674,7 @@ lemma MonadNonDet.wp_repeat {α : Type u} (init : α) (f : α -> NonDetT m (ForI
 instance [MonadNonDet m] : ForIn m Lean.Loop Unit where
   forIn {β} _ _ init f := @MonadNonDet.rep m _ β init (f ())
 
+/- iteration lemma -/
 lemma MonadNonDet.wp_forIn {β : Type u} (init : β) (f : Unit -> β -> NonDetT m (ForInStep β))
   (inv : β -> l) (on_done' : β -> l) (measure : β -> Nat) :
   (∀ b, inv b <= wp (f () b) (fun | .yield b' => inv b' ⊓ ⌜ measure b' < measure b ⌝ | .done b' => inv b' ⊓ on_done' b')) ->
@@ -658,6 +684,7 @@ lemma MonadNonDet.wp_forIn {β : Type u} (init : β) (f : Unit -> β -> NonDetT 
   simp; refine le_iSup_of_le ?_ ?_; assumption
   simp [spec, hstep]
 
+/- VC generation for iteration -/
 @[loomWpSimp, loomSpec]
 noncomputable
 def WPGen.forWithInvariantLoop {β}
@@ -681,6 +708,7 @@ def WPGen.forWithInvariantLoop {β}
       intro b; apply (wpg b).intro
       solve_by_elim
 
+/- Monad Transformer Algebra for NonDetT -/
 noncomputable
 scoped
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]

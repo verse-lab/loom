@@ -41,6 +41,8 @@ The repository consists of 2 key parts:
 
 This folder contains the theoretical foundation of the framework: 
 
+- typeclass definitions for Ordered Monad Algebras (`MAlgOrdered`)  and Monad Transformer Algebras (`MAlgLift`) in `Loom/MonadAlgebras/Defs.lean`
+
 - instances of Monad Transformer Algebras for key monads with effect (`ExceptT`, `StateT`, `ReaderT`) in `Loom/MonadAlgebras/Instances`
 
 - `NonDetT/NonDetT'` definitions and Weakest Precondition generators for Monad Transformers with Non-Determenisms in `Loom/MonadAlgebras`
@@ -55,7 +57,13 @@ This folder contains two framework examples powered by Loom: `Velvet` and `Cashm
 
 - `Velvet` is a framework for Dafny-style specification and verification of imperative programs. 
 
+  Theory about separated proofs for termination and correctness in Velvet is in `CaseStudies/Velvet/VelvetTheory.lean`,
+  related example file is `CaseStudies/Velvet/VelvetExamples/Total_Partial_example.lean`
+
 - `Cashmere` is a simple framework used to showcase variety of monadic effects `Loom` can provide.
+
+  Theory about Incorrectness reasoning in Cashmere is located in `CaseStudies/Cashmere/CashmereTheory.lean`,
+  related example file is `CaseStudies/Cashmere/CashmereIncorrectnessLogic.lean`
 
 - Both of them are supplied with `loom_solver`, `loom_solve`, `loom_solve!` and `loom_solve?` tactics.
 

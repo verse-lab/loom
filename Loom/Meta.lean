@@ -487,6 +487,8 @@ attribute [loomWPGenRewrite]
   PartialCorrectness.AngelicChoice.MonadNonDet.wp_pick
 
 
+/- #derive_lifted_wp command, used to enable automatic VC generation in verifiers built on top of Loom.
+   For an example, please refer to file CaseStudies/Cashmere/Cashmere.lean -/
 elab "#derive_lifted_wp" args:explicitBinders ? "for" "(" name:term ":" type:term ")" "as" m:ident out:ident : command => do
   let args_list ← liftTermElabM do
     match args with

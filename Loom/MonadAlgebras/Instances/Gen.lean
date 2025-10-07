@@ -8,6 +8,7 @@ open Plausible
 
 universe u
 
+/- Ordered Monad Algebra instance for Gen -/
 instance MAlgGenInst : MAlgOrdered Gen (ULift Nat -> ULift StdGen -> Prop) :=
   inferInstanceAs
     (MAlgOrdered

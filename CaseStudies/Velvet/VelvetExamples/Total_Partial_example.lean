@@ -125,6 +125,7 @@ open TotalCorrectness DemonicChoice in
 prove_correct insertionSort_result by
   have triple_termination := insertionSort_termination_correct arr
   have triple_res := insertionSort_part_correct arr
+  -- applying lemma about separation of termination proof and correctness proof
   exact VelvetM.total_decompose_triple
     (insertionSort_termination arr) (insertionSort_part arr) (insertionSort_result arr)
     (eqx := by rfl) (eqy := by rfl)

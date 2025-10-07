@@ -175,6 +175,9 @@ lemma VelvetM.total_decompose {α : Type} (x : VelvetM α) (post₁ post₂ : α
       simp [←[totl| NonDetT.wp_eq_wp], ←[part| NonDetT.wp_eq_wp]]
       simp [loomLogicSimp])
 
+/- "partial_total_split" lemma from the paper:
+   given triples for termination in TotalCorrectness and functional correctness in PartialCorrectness,
+   it is possible to get a triple for functional correctness in TotalCorrectness -/
 lemma VelvetM.total_decompose_triple {α : Type} {pre : Prop} {post : α -> Prop}
   (x y z: VelvetM α) (termination: [totl| triple pre x fun _ => True]) (postcondition: [part| triple pre y post]) {eqx: x = z} {eqy: y = z}:
   [totl| triple pre z post] := by

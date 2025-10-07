@@ -15,6 +15,10 @@ open Lean.Elab.Term.DoNames
 
 open ExceptionAsFailure
 
+/- all the necessarily instances for CashmereM = NonDetT (ExceptT String (StateT Bal DivM))
+   are generated automatically, including
+   μ - Ordered Monad Algebra instance for CashmereM -/
+
 instance demonic_exception: MonadExceptOf String CashmereM where
   throw e := liftM (m := ExceptT String (StateT Bal DivM)) (throw e)
   tryCatch := fun x _ => x
