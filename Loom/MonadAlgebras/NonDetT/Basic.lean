@@ -58,7 +58,7 @@ def NonDetT.pickSuchThat (τ : Type u) (p : τ → Prop) : NonDetT m τ :=
 def NonDetT.repeat (init : α) (f : α -> NonDetT m (ForInStep α)) : NonDetT m α :=
   NonDetT.repeatCont init f pure
 
-/- Non Determenism Monad typeclass -/
+/- Non Determinism Monad typeclass -/
 class MonadNonDet (m : Type u → Type v) where
   pick : (τ : Type u) →  m τ
   -- get a value with given property

@@ -11,6 +11,7 @@ universe u v w
 
 section NonDeterministicTransformer
 
+/- NonDetT transformer definition -/
 inductive NonDetT (m : Type u -> Type v) : (α : Type u) -> Type _ where
   | pure {α} (ret : α) : NonDetT m α
   | vis {α} {β} (x : m β) (f : β → NonDetT m α) : NonDetT m α
@@ -53,6 +54,7 @@ def NonDetT.assume (as : Prop) : NonDetT m PUnit :=
 def NonDetT.pickSuchThat (τ : Type u) (p : τ → Prop) : NonDetT m τ :=
   NonDetT.pickCont τ p pure
 
+/- Non Determinism Monad typeclass -/
 class MonadNonDet (m : Type u → Type v) where
   pick : (τ : Type u) →  m τ
   pickSuchThat : (τ : Type u) → (τ → Prop) → m τ
@@ -69,6 +71,7 @@ instance : MonadNonDet (NonDetT m) where
 -- namespace PartialCorrectness
 namespace DemonicChoice
 
+/- WP for NonDetT -/
 def NonDetT.wp {l : Type u} {α : Type u} [CompleteLattice l] [MAlgOrdered m l] : NonDetT m α -> Cont l α
   | .pure ret => pure ret
   | .vis x f => fun post => _root_.wp x fun a => wp (f a) post
@@ -98,6 +101,7 @@ lemma NonDetT.wp_bind  {l : Type u} [CompleteLattice l] [MAlgOrdered m l] [Lawfu
     { simp [f_ih] }
     simp [f_ih]
 
+/- μ for NonDetT from NonDetT.wp -/
 noncomputable
 def NonDetT.μ  {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : NonDetT m l -> l := fun x => NonDetT.wp x id
 
@@ -106,6 +110,7 @@ instance : MonadLift m (NonDetT m) where
 
 variable [LawfulMonad m]
 
+/- Ordered Monad Algebra instance for NonDetT -/
 noncomputable
 scoped
 instance {l : Type u} [CompleteLattice l] [MAlgOrdered m l] [LawfulMonad m] : MAlgOrdered (NonDetT m) l where

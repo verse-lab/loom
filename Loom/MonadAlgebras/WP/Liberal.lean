@@ -52,7 +52,7 @@ lemma wp_wlp (c : m α) (post : α -> l) :
   wp c post <= wlp c post := by
     simp [wlp, wp]
 
-section Determenism
+section Determinism
 variable [MAlgDet m l]
 
 lemma wlp_and (c : m α) (post₁ post₂ : α -> l) :

@@ -99,7 +99,7 @@ lemma triple_spec (pre : l) (c : m α) (post : α -> l) :
 
 end
 
-section Determenism
+section Determinism
 
 variable [inst: CompleteLattice l] [MAlgOrdered m l]
 
@@ -145,7 +145,7 @@ lemma wp_or [MAlgDet m l] (c : m α) (post₁ post₂ : α -> l) :
   simp; constructor <;> apply wp_cons <;> simp
 
 
-end Determenism
+end Determinism
 
 
 section Loops
