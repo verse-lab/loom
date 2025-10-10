@@ -28,11 +28,60 @@ We have tested this artifact on `arm64` MacBook Air 2022 with an M2 processor
 and 16GB of RAM. We recommend running this artifact on a machine with at least
 16GB of RAM.
 
--- Instert build instructions here --
+## Build and Setup
 
-## Setup
+To build the artifact, you need [VSCode](https://code.visualstudio.com) and
+[Lean 4 VSCode extension](https://marketplace.visualstudio.com/items?itemName=leanprover.lean4)
+installed. Their installation is straightforward and do not require any special
+knowledge.
 
--- Insert setup instructions here --
+You will also need [cvc5](https://github.com/cvc5/cvc5) installed and available
+on your PATH to run Velvet examples. To do this, you will need to:
+- download an appropriate static version for your OS and processor from
+  [this page](https://github.com/cvc5/cvc5/releases)
+- find executable `cvc5` under `bin/` subdirectory of the downloaded archive
+- ensure that this executable is now on your path
+  for MacOS/Linux
+  ```bash
+  sudo mv /path/to/cvc5 /usr/local/bin
+  ```
+  check: 
+  ```bash
+  cvc5 --version
+  ```
+  The command above should output `cvc5`'s version and additional information.
+
+After verifying that `cvc5` is available, you can open artifact folder in VSCode
+and open any Lean file. Press Lean symbol at the top right and then
+`Toggle InfoView`. You might need to press `Restart File` button in Lean
+InfoView to see the result.
+
+**IMPORTANT** Note that first run (Lean 4 installation) and following build
+(after restarting the file) might take some time, usually less than 20 minutes.
+
+After building, you will be able to inspect Lean 4 files and InfoView freely.
+
+### Common Problems
+
+- You might be requested to update `smt` dependency. To do so, in your terminal:
+  - change directory to the `Loom` subdirectory of this artifact 
+  - type
+    ```bash
+    lake update smt
+    ```
+  - reopen VSCode and artifact folder in VSCode
+- If build fails, try to:
+  - close VSCode
+  - in your terminal, change directory to the `Loom` subdirectory of this
+    artifact
+  - type
+    ```bash
+    lake clean
+    lake exe cache get
+    lake build
+    ```
+    in your terminal
+  - reopen VSCode and artifact folder
 
 ## Structure and Contents
 
@@ -210,7 +259,7 @@ Weakest Liberal Preconditions definitions and lemmas can be found in file
 - definitions on Fig. 9 (Page 20) can be found in file
   `Veil/Veil/Theory/Defs.lean`
   - `VeilM` definition corresponds to lines 48-49
-  - `VeilM.canRaise` corresponds to ??
+  - `VeilM.succeedsWhenIgnoring` corresponds to lines 151-152
   - `VeilM.meetsSpecificationIfSuccessful` corresponds to lines 87-88
   - `VeilM.toTwoState` corresponds to lines 103-104
 - NOPaxos Case Study can be found in `Veil/Examples/NOPaxos` directory
@@ -296,11 +345,13 @@ directory
   verifiers (Cashmere, Velvet and Veil are such examples). Velvet and Veil can
   be used as standalone verifiers to automatically verify imperative programs
   and distributed protocols respectively.
-- **(Dependencies)** Dependencies and their installation are explained in the
-  README. The only dependencies are
+- **(Dependencies)** The only dependencies are
   - Lean 4 itself
   - Lean 4 Mathlib
-  - `lean-auto` for proof automation
+  - `lean-auto` for proof automation README provides instructions on Lean 4
+    VSCode extension installation. Mathlib and `lean-auto` will be installed by
+    VSCode extension automatically. `cvc5` solver installation (needed for
+    Velvet examples) is also described in the README.
 - **(Proof completeness)** Proofs do not depend on `sorry` or `admit` and are
   accepted by Lean 4.
 
