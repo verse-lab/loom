@@ -376,8 +376,40 @@ git = "https://github.com/verse-lab/loom.git"
 rev = "main"
 ```
 
-To get started with verifiers that are built on top of Loom, we recommend
+- to get started with verifiers that are built on top of Loom, we recommend
 exploring `CaseStudies/VelvetExamples` directory or
 `CaseStudies/Cashmere/Cashmere.lean` file.
+- to understand how Loom works internally we recommend exploring `Loom` directory.
 
-To explore internals of Loom framework we recommend exploring `Loom` directory.
+### I want to build a verifier similar to Velvet/Cashmere. How to proceed?
+
+To do this, you will need to:
+- add Loom as a dependency in your project by following the instructions above
+- create a directory for your verifier
+- create a file which will include metatheory for your verifier. In particular,
+  you will need to define your monad stack to account for different effects you
+  would like to support. Example monad stacks:
+  - `VelvetM α := NonDetT DivM α`
+  - `CashmereM := NonDetT (ExceptT String (StateT Bal DivM))`
+- if you want to have custom effects that are not implemented in public Loom
+  version, you will need to:
+  - express your effect as a monad transformer.
+  - provide `MAlgOrdered` instance appropriate for your transformer (you can
+    check Loom's implementation for basic effects for reference).
+  - provide `MAlgLift` instance appropriate for your transformer (you can
+    check Loom's implementation for basic effects for reference).
+  - provide lemmas about `WPGen` similar to ones defined in
+    `Loom/Loom/MonadAlgebras/WP/Gen.lean`. This is crucial for smooth VC
+    generation in your verifier.
+- copy `Loom/CaseStudies/Cashmere/Syntax_Cashmere.lean` or
+  `Loom/CaseStudies/Velvet/Syntax.lean` to your directory. This file will define
+  most of macros (and therefore most of the syntax) for your verifier. Adjust
+  the file for your needs by changing how `method` and `prove_correct`
+  elaboration works (in case you copied Velvet file).
+- create a Lean file with examples you would like to verify. Import the root of
+  `Loom/CaseStudies`, your syntax file and your metatheory file.
+- you might need to use `#derive_lifted_wp` command to use your `WPGen` lemmas
+  for effects that are not on top of monad stack. See
+  `Loom/CaseStudies/Cashmere/Cashmere.lean` for an example.
+- (Optional) customize your automation by changing `loom_unfold` and
+  `loom_solver` tactics in your syntax file.
