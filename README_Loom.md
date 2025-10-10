@@ -29,7 +29,7 @@ We have tested this artifact on:
 - `amd64` HP Laptop 15-db1xxx 2019 with AMD Ryzen 5 3500U and 16GB of RAM. We
   recommend running this artifact on a machine with at least 16GB of RAM. We are
   also providing a VM with Xubuntu 20.04.4 64bit for testing on `amd64`.
-  Password for VM is `popl26`.
+  Password for VM is `osboxes.org`.
 
 ## Build and Setup
 
@@ -92,78 +92,81 @@ After building, you will be able to inspect Lean 4 files and InfoView freely.
 
 ## Structure and Contents
 
-- `Loom/`: implementation of the framework itself and 2 new verifiers built on
-  top of Loom: Velvet and Cashmere
-  - `Loom/`: the implementation of Loom framework,
-    - `Meta.lean`: definitions for working with Lean 4 environment and 
-    `#derive_lifted_wp` command definition
-    - `MonadUtil.lean`: `Cont` monad definition
-    - `MonadAlgebras/`: Monad Transformer Algebra defintions and lemmas
-      - `Defs.lean`: definitions of typeclasses for Monad Transformer Algebra
-        and typeclasses
-      - `Instances/`: Monad Transformer Algebra and Ordered Monad Algebra
-        instances for basic Monad Transformers
-        - `Basic.lean`: typeclass instances for `DivM` monad
-        - `ExceptT.lean`: typeclass instances for `ExceptT` monad transformer
-        - `Gen.lean`: typeclass instances for `Gen` monad
-        - `ReaderT.lean`: typeclass instances for `ReaderT` monad transformer
-        - `StateT.lean`: typeclass instances for `StateT` monad transformer
-      - `NonDetT/`: implementation of a monad transformer for non-determinism
-        with loops
-        - `Basic.lean`: definition of a monad transformer for non-determinism
-          with loops and instances for Monad Transformer Algebra, Ordered Monad
-          Algebra typeclasses
-        - `Extract.lean`: implementation of executable semantics for
-          non-determinism monad transformer
-      - `NonDetT'/`: implementation of a monad transformer for non-determinism
-        - `Basic.lean`: definition of a monad transformer for non-determinism
-          and instances for Monad Transformer Algebra, Ordered Monad Algebra
-          typeclasses
-        - `Extract.lean`: implementation of executable semantics for
-          non-determinism monad transformer
-      - `WP/`: lemmas and tactics for Weakest Preconditions and VC generation in
-        Loom
-        - `Attr.lean`: definitions for working with Lean 4 environment for VC
-          generation
-        - `Basic.lean`: definition of Weakest Precondition and lemmas about WP
-          for basic monad transformers (`StateT`, `ReaderT`, `ExceptT`)
-        - `DoNames'.lean`: Lean do-notation extension to enable variables and
-          hypothesis naming in verifiers that are built on top of Loom
-        - `Gen.lean`: basic `WHILE` language syntax and lemmas for VC generation
-          in verifiers that are built on top of Loom
-        - `Liberal.lean`: definitions and lemmas for weakest liberal
-          precondition
-        - `Tactic.lean`: tactics for automatic VC generation for verifiers that
-          are built on top of Loom
-  - `CaseStudies/`: implementation of Velvet and Cashmere verifiers
-    - `Extension.lean`: definitions for keeping track of proof obligations in 
-      Cashmere and Velvet
-    - `Tactic.lean`: tactics for proof automation in Cashmere and Velvet
-    - `TestingUtil.lean`: command for deriving decidability of pre- and post-
-      conditions
-    - `Theory.lean`: lemmas for arrays and partial sums used by automation
-    - `Cashmere/`: Cashmere verifier implementation
-      - `Cashmere.lean`: code examples that are verified in Cashmere
-      - `CashmereIncorrectnessLogic.lean`: example of using Angelic
-        non-determinism for bug finding in Cashmere
-      - `CashmereTheory.lean`: theorem about Incorrectness Logic in Cashmere
-      - `Syntax_Cashmere.lean`: Cashmere DSL and macros definitions
-    - `Velvet/`: Velvet verifier implementation
-      - `Std.lean`: typeclasses and macros for arrays used in Velvet programs
-      - `Syntax.lean`: Velvet DSL and macros definitions
-      - `VelvetTheory.lean`: theorem about deriving total correctness from 
-        partial correctness and termination proof
-      - `VelvetExamples/`: examples of programs verified in Velvet
-        - `Examples_Total.lean`: Insertion Sort, Square Root and Cubic Root
-          examples verified in total correctness; manual proof for failed
-          automation example
-        - `Examples.lean`: Insertion Sort and Square Root examples verified in
-          partial correctness; simple testing example
-        - `SpMSpV_Example.lean`: Sparse Matrix by Sparse Vector multiplication
-          example; 2 layer proof and `triple` reusing example
-        - `Total_Partial_example.lean`: example of proving total correctness by
-          combining `triple`s about partial correctness and termination
-- `Veil/` - Veil version upgraded with Loom
+- `popl26-artifact.ova.zip` - archive with VM setup view in VSCode. Password is
+  `osboxes.org`.
+- `Loom_Artifact.zip` - archive with source code
+  - `Loom/`: implementation of the framework itself and 2 new verifiers built on
+    top of Loom: Velvet and Cashmere
+    - `Loom/`: the implementation of Loom framework,
+      - `Meta.lean`: definitions for working with Lean 4 environment and 
+      `#derive_lifted_wp` command definition
+      - `MonadUtil.lean`: `Cont` monad definition
+      - `MonadAlgebras/`: Monad Transformer Algebra defintions and lemmas
+        - `Defs.lean`: definitions of typeclasses for Monad Transformer Algebra
+          and typeclasses
+        - `Instances/`: Monad Transformer Algebra and Ordered Monad Algebra
+          instances for basic Monad Transformers
+          - `Basic.lean`: typeclass instances for `DivM` monad
+          - `ExceptT.lean`: typeclass instances for `ExceptT` monad transformer
+          - `Gen.lean`: typeclass instances for `Gen` monad
+          - `ReaderT.lean`: typeclass instances for `ReaderT` monad transformer
+          - `StateT.lean`: typeclass instances for `StateT` monad transformer
+        - `NonDetT/`: implementation of a monad transformer for non-determinism
+          with loops
+          - `Basic.lean`: definition of a monad transformer for non-determinism
+            with loops and instances for Monad Transformer Algebra, Ordered
+            Monad Algebra typeclasses
+          - `Extract.lean`: implementation of executable semantics for
+            non-determinism monad transformer
+        - `NonDetT'/`: implementation of a monad transformer for non-determinism
+          - `Basic.lean`: definition of a monad transformer for non-determinism
+            and instances for Monad Transformer Algebra, Ordered Monad Algebra
+            typeclasses
+          - `Extract.lean`: implementation of executable semantics for
+            non-determinism monad transformer
+        - `WP/`: lemmas and tactics for Weakest Preconditions and VC generation
+          in Loom
+          - `Attr.lean`: definitions for working with Lean 4 environment for VC
+            generation
+          - `Basic.lean`: definition of Weakest Precondition and lemmas about WP
+            for basic monad transformers (`StateT`, `ReaderT`, `ExceptT`)
+          - `DoNames'.lean`: Lean do-notation extension to enable variables and
+            hypothesis naming in verifiers that are built on top of Loom
+          - `Gen.lean`: basic `WHILE` language syntax and lemmas for VC
+            generation in verifiers that are built on top of Loom
+          - `Liberal.lean`: definitions and lemmas for weakest liberal
+            precondition
+          - `Tactic.lean`: tactics for automatic VC generation for verifiers
+            that are built on top of Loom
+    - `CaseStudies/`: implementation of Velvet and Cashmere verifiers
+      - `Extension.lean`: definitions for keeping track of proof obligations in
+        Cashmere and Velvet
+      - `Tactic.lean`: tactics for proof automation in Cashmere and Velvet
+      - `TestingUtil.lean`: command for deriving decidability of pre- and post-
+        conditions
+      - `Theory.lean`: lemmas for arrays and partial sums used by automation
+      - `Cashmere/`: Cashmere verifier implementation
+        - `Cashmere.lean`: code examples that are verified in Cashmere
+        - `CashmereIncorrectnessLogic.lean`: example of using Angelic
+          non-determinism for bug finding in Cashmere
+        - `CashmereTheory.lean`: theorem about Incorrectness Logic in Cashmere
+        - `Syntax_Cashmere.lean`: Cashmere DSL and macros definitions
+      - `Velvet/`: Velvet verifier implementation
+        - `Std.lean`: typeclasses and macros for arrays used in Velvet programs
+        - `Syntax.lean`: Velvet DSL and macros definitions
+        - `VelvetTheory.lean`: theorem about deriving total correctness from 
+          partial correctness and termination proof
+        - `VelvetExamples/`: examples of programs verified in Velvet
+          - `Examples_Total.lean`: Insertion Sort, Square Root and Cubic Root
+            examples verified in total correctness; manual proof for failed
+            automation example
+          - `Examples.lean`: Insertion Sort and Square Root examples verified in
+            partial correctness; simple testing example
+          - `SpMSpV_Example.lean`: Sparse Matrix by Sparse Vector multiplication
+            example; 2 layer proof and `triple` reusing example
+          - `Total_Partial_example.lean`: example of proving total correctness
+            by combining `triple`s about partial correctness and termination
+  - `Veil/` - Veil version upgraded with Loom
 
 ### Definitions and Theorems from Paper Overview (Section 2)
 
