@@ -24,9 +24,11 @@ available on GitHub at
 
 ## Requirements
 
-We have tested this artifact on `arm64` MacBook Air 2022 with an M2 processor
-and 16GB of RAM. We recommend running this artifact on a machine with at least
-16GB of RAM.
+We have tested this artifact on:
+- `arm64` MacBook Air 2022 with an M2 processor and 16GB of RAM. 
+- `amd64` HP Laptop 15-db1xxx 2019 with AMD Ryzen 5 3500U and 16GB of RAM.
+We recommend running this artifact on a machine with at least
+16GB of RAM. We are also providing a VM with Ubuntu 24.04 LTS for testing on `AArch64` 
 
 ## Build and Setup
 
