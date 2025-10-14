@@ -1,3 +1,4 @@
+
 # Loom: A Framework for Foundational Multi-Modal Program Verifiers (Artifact)
 
 [POPL'26 submission #695](https://popl26.hotcrp.com/paper/695)
@@ -41,8 +42,8 @@ https://doi.org/10.5281/zenodo.17331921.
 For the purposes of artifact evaluation, we provide both a source-code ZIP file
 for Loom and Veil, as well as a Linux `amd64` virtual machine image (OVA).
 
-**We recommend reviewers use the virtual machine for evaluation.** It suffices to evaluate _either_ ZIP file _or_ the VM; you DO NOT have to
-evaluate both.
+**We recommend reviewers use the virtual machine for evaluation.** It suffices
+to evaluate _either_ ZIP file _or_ the VM; you DO NOT have to evaluate both.
 
 **For the OVA file, an `amd64` machine with Virtual Box installed (7.1 or later
 recommended) and at least 16GB of RAM is required.**
@@ -69,7 +70,8 @@ an M4 processor and 64GB of RAM.
 ## Artifact Evaluation Instructions
 
 **As mentioned above, we recommend reviewers use the OVA virtual machine image
-for evaluation.** (We also provide instructions for evaluating the ZIP file artifact, but do not recommend this approach.)
+for evaluation.** (We also provide instructions for evaluating the ZIP file
+artifact, but do not recommend this approach.)
 
 ### (1) Set-Up Dependencies
 
@@ -127,8 +129,13 @@ To check that you can build and run the artifact, follow these steps:
 3. Open VS Code in the VM and open the artifact folder by clicking on "File ->
 Open Folder..." and selecting the artifact folder (which includes the `Loom`
 and `Veil` directories) in the `loom` user's home directory.
-4. Open `Loom/CaseStudies/Velvet/VelvetExamples/Examples_Total.lean`, press the
+4. Open `Loom/CaseStudies/Velvet/VelvetExamples/Examples_Total.lean`, press
 Ctrl+Shift+B and select "Lean 4 Server: Restart File".
+5. Check that the file builds successfully. For instance, Check that the
+`prove_correct` on [line
+96](./Loom/CaseStudies/Velvet/VelvetExamples/Examples_Total.lean#L96) succeeds.
+(It is fine to see "Trusting SMT solvers" warnings, but there should be no
+errors.)
 
 #### Source Code ZIP file
 
@@ -150,53 +157,101 @@ selecting "Lean 4 Server: Restart File".
 **IMPORTANT** The first run (Lean 4 installation) and the build (after
 restarting the file) takes around 20 minutes on a typical machine.
 
+### (3) Full Evaluation
+
+Go through the list of claims in the next section and visually inspect the code
+associated with each claim, as needed.
+
 ## List of claims
 
-Here were list pointers to the implementations of results mentiones in each section of the paper.
+Here were list pointers to the implementations of results mentiones in each
+section of the paper.
 
 ### Section 2. Overview
 
-Section 2 of the paper presents Cashmere: a toy imperative WHILE-style language to deal for implementing simple monetary operations. We implement Cashmere in `Loom/CaseStudies/Cashmere/`. In particular:
+Section 2 of the paper presents Cashmere: a toy imperative WHILE-style language
+to deal for implementing simple monetary operations. We implement Cashmere in
+`Loom/CaseStudies/Cashmere/`. In particular:
 
-- All the case studies programs from Sections 2.1-2.7 of the paper can be found in [`./Loom/CaseStudies/Cashmere/`](./CaseStudies/Cashmere/Cashmere.lean) in the correspondent order. 
-- The incorrectness proof from Section 2.8 is located in [`./Loom/CaseStudies/Cashmere/`](./CaseStudies/Cashmere/CashmereIncorrectnessLogic.lean). We put it in a different file as it requires a different instance of Monad Algebra. 
+* All the case studies programs from Sections 2.1-2.7 of the paper can be found
+in [`./Loom/CaseStudies/Cashmere/`](./Loom/CaseStudies/Cashmere/Cashmere.lean) in
+the correspondent order.
+* The incorrectness proof from Section 2.8 is located in
+[`./Loom/CaseStudies/Cashmere/`](./Loom/CaseStudies/Cashmere/CashmereIncorrectnessLogic.lean).
+We put it in a different file as it requires a different instance of Monad
+Algebra.
 
 ### Section 3. Deriving Verifiers via Monad Transformer Algebras
 
-Section 3 of the paper outlines the main theoretical contributions of the paper. More specifically here we develop a metatheory for subclass of Dijkstra Monads allowing for "push-button" derivation of generators of Floyd-Hoare-style verifi-cation conditions. Novel contributions of the work starts with Section 3.3 of the paper where we introduce Monad Algebras and is reflected in the artifact in the following way:
+Section 3 of the paper outlines the main theoretical contributions of the
+paper. More specifically here we develop a metatheory for subclass of Dijkstra
+Monads allowing for "push-button" derivation of generators of Floyd-Hoare-style
+verification conditions. Novel contributions of the work starts with Section
+3.3 of the paper where we introduce Monad Algebras and is reflected in the
+artifact in the following way:
 
-1. [`MAlg`](./Loom/MonadAlgebras/Defs.lean#L51) type class implements Definition 3.1 of Monad Algebra
-2. [`MAlgOrdered`](./Loom/MonadAlgebras/Defs.lean#L74-L75) type class implements Definition 3.2 of Monad Algebra. The relation between these two type classes is established via [`OfMAlgPartialOrdered`](./Loom/MonadAlgebras/Defs.lean#L82)
-3. [`wp`](./Loom/MonadAlgebras/WP/Basic.lean#L19) definition derives the Weakest-Precondition morphism from `MAlg`. This corresponds to equation (10) from the paper. The Theorem 3.3 stating the properties of such Weakest-Precondition morphism is captured via [`wp_pure`](./Loom/MonadAlgebras/WP/Basic.lean#L25), [`wp_bind`](./Loom/MonadAlgebras/WP/Basic.lean#L39) and [`wp_cons`](./Loom/MonadAlgebras/WP/Basic.lean#L48) lemmas.
-4. As we explain in Section 4, notion of Monad Transformer Algebra from the paper is mechanised via lifting formalism to match the style of native Lean Monad library. In particular, [`MAlgLift`](./Loom/MonadAlgebras/Defs.lean#L193) and [`LogicLift`](./Loom/MonadAlgebras/Defs.lean#L141) definitions capture the Definition 3.4 of Monad Transformer Algebra. Read Section 4 of the paper for more details. 
+1. [`MAlg`](./Loom/Loom/MonadAlgebras/Defs.lean#L51) type class implements
+Definition 3.1 of Monad Algebra
+2. [`MAlgOrdered`](./Loom/Loom/MonadAlgebras/Defs.lean#L74-L75) type class
+implements Definition 3.2 of Monad Algebra. The relation between these two type
+classes is established via
+[`OfMAlgPartialOrdered`](./Loom/Loom/MonadAlgebras/Defs.lean#L82)
+3. [`wp`](./Loom/Loom/MonadAlgebras/WP/Basic.lean#L19) definition derives the
+Weakest-Precondition morphism from `MAlg`. This corresponds to equation (10)
+from the paper. The Theorem 3.3 stating the properties of such
+Weakest-Precondition morphism is captured via
+[`wp_pure`](./Loom/Loom/MonadAlgebras/WP/Basic.lean#L25),
+[`wp_bind`](./Loom/Loom/MonadAlgebras/WP/Basic.lean#L39) and
+[`wp_cons`](./Loom/Loom/MonadAlgebras/WP/Basic.lean#L48) lemmas.
+4. As we explain in Section 4, notion of Monad Transformer Algebra from the
+paper is mechanised via lifting formalism to match the style of native Lean
+Monad library. In particular, [`MAlgLift`](./Loom/Loom/MonadAlgebras/Defs.lean#L193)
+and [`LogicLift`](./Loom/Loom/MonadAlgebras/Defs.lean#L141) definitions capture the
+Definition 3.4 of Monad Transformer Algebra. Read Section 4 of the paper for
+more details.
 
 ### Section 4. Encoding and Automating Loom Meta-Theory with Lean Type Classes
 
-In addition to the previous section, Section 4 of the paper introduces the `#derive_lifted_wp` command. This command is implemented via [`Loom/Loom/Meta/#derive_lifted_wp`](./Loom/Meta.lean#L431). You can find the use cases of this command in [Cashmere](./CaseStudies/Cashmere/Cashmere.lean#L31).
+In addition to the previous section, Section 4 of the paper introduces the
+`#derive_lifted_wp` command. This command is implemented via
+[`Loom/Loom/Meta/#derive_lifted_wp`](./Loom/Loom/Meta.lean#L431). You can find the
+use cases of this command in
+[Cashmere](./Loom/CaseStudies/Cashmere/Cashmere.lean#L31).
 
 ### Section 5. Monad Algebra for Divergence
 
-Section 5 of the paper outlines the mechanism to define partial functions in Lean, and explains how to link it to the notion of monad algebras. As partial functions (mentioned in Section 5.1 of the paper) mechanism is a native Lean feature, here we will only provide pointers to the implementation of its integration with Monad Algebras (Sections 5.2). 
+Section 5 of the paper outlines the mechanism to define partial functions in
+Lean, and explains how to link it to the notion of monad algebras. As partial
+functions (mentioned in Section 5.1 of the paper) mechanism is a native Lean
+feature, here we will only provide pointers to the implementation of its
+integration with Monad Algebras (Sections 5.2).
 
-- [`MAlgPartial`](./Loom/MonadAlgebras/Defs.lean#L118) type class implements the Partial Monad Algebra notion introduces in Definition 5.4
-- To express the `iter` operator from Section 5.1 we use `Loop.forIn.loop`: its analogue from Lean standard library. 
-- The proofs of invariant-based rules for `iter` listed in Fig 6. are captured in [`PartialCorrectness.repeat_inv`](./Loom/MonadAlgebras/WP/Basic.lean#L192) and [`ToatlCorrectness.repeat_inv`](./Loom/MonadAlgebras/WP/Basic.lean#L225) lemmas. 
+* [`MAlgPartial`](./Loom/Loom/MonadAlgebras/Defs.lean#L118) type class implements
+the Partial Monad Algebra notion introduces in Definition 5.4
+* To express the `iter` operator from Section 5.1 we use `Loop.forIn.loop`: its
+analogue from Lean standard library.
+* The proofs of invariant-based rules for `iter` listed in Fig 6. are captured
+in [`PartialCorrectness.repeat_inv`](./Loom/Loom/MonadAlgebras/WP/Basic.lean#L192)
+and [`ToatlCorrectness.repeat_inv`](./Loom/Loom/MonadAlgebras/WP/Basic.lean#L225)
+lemmas.
 
 ### Section 6. Specifying and Executing Non-Deterministic Computations
 
 Section 6 of the paper provides an approach on how to encode effects with
 non-determinism in Loom.
+
 Section also explains the mechanism
 for executing programs with non-determinism effects and its soundness using `Findable` typeclass.
-- [`Extract`](./Loom/MonadAlgebras/NonDetT/Extract.lean#L126) datatype from
-  Fig.8(a) represents a witness for execution of non-determinism.
-- [`NonDetT.run`](./Loom/MonadAlgebras/NonDetT/Extract.lean#L210) function from
-  Fig.8(b) enables execution of programs with non-determinism.
-- [Theorem 6.1](./Loom/MonadAlgebras/NonDetT/Extract.lean#L431) proves that the
-  implemented execution is sound.
-- [`NonDetT.prop`](./Loom/MonadAlgebras/NonDetT/Extract.lean#L254) uses
-  [Weakest Liberal Preconditions](./Loom/MonadAlgebras/WP/Liberal.lean#L38) to
-  ensure "reachability" concept needed for sound execution.
+
+* [`Extract`](./Loom/Loom/MonadAlgebras/NonDetT/Extract.lean#L126) datatype from
+Fig.8(a) represents a witness for execution of non-determinism.
+* [`NonDetT.run`](./Loom/Loom/MonadAlgebras/NonDetT/Extract.lean#L210) function from
+Fig.8(b) enables execution of programs with non-determinism.
+* [Theorem 6.1](./Loom/Loom/MonadAlgebras/NonDetT/Extract.lean#L431) proves that the
+implemented execution is sound.
+* [`NonDetT.prop`](./Loom/Loom/MonadAlgebras/NonDetT/Extract.lean#L254) uses
+[Weakest Liberal Preconditions](./Loom/Loom/MonadAlgebras/WP/Liberal.lean#L38) to
+ensure "reachability" concept needed for sound execution.
 
 ### Section 7. Combining Runtime and Deductive Verification of Distributed Protocols
 
@@ -227,18 +282,27 @@ Section 7 describes how Veil uses Loom. In particular:
 
 ### Section 8. Combining Automated and Interactive Proofs in a Dafny-Style Verifier
 
-Section 8 of the paper gives an overview for implementation of Dafny-like verifier based on Loom - Velvet.
-In Velvet, the user can: 
-- test programs before attempting verification (see an [example](./CaseStudies/Velvet/VelvetExamples/Examples.lean#L102))
-- separately prove functional correctness and termination using [`partial_total_split`](./CaseStudies/Velvet/VelvetTheory.lean#L181) theorem (see an [example](./CaseStudies/Velvet/VelvetExamples/Total_Partial_example.lean#L127))
-- combine automated SMT-based proofs and manual Lean 4 proofs (see an [example](./CaseStudies/Velvet/VelvetExamples/Examples_Total.lean#L142))
-- use Lean 4 Mathlib to prove complex program specifications and reuse triples produced automatically (see an [example](./CaseStudies/Velvet/VelvetExamples/SpMSpV_Example.lean#L764))
+Section 8 of the paper gives an overview for implementation of Dafny-like
+verifier based on Loom - Velvet. In Velvet, the user can:
+
+* test programs before attempting verification (see an
+[example](./Loom/CaseStudies/Velvet/VelvetExamples/Examples.lean#L102))
+* separately prove functional correctness and termination using
+[`partial_total_split`](./Loom/CaseStudies/Velvet/VelvetTheory.lean#L181) theorem
+(see an
+[example](./Loom/CaseStudies/Velvet/VelvetExamples/Total_Partial_example.lean#L127))
+* combine automated SMT-based proofs and manual Lean 4 proofs (see an
+[example](./Loom/CaseStudies/Velvet/VelvetExamples/Examples_Total.lean#L142))
+* use Lean 4 Mathlib to prove complex program specifications and reuse triples
+produced automatically (see an
+[example](./Loom/CaseStudies/Velvet/VelvetExamples/SpMSpV_Example.lean#L764))
 
 
 ## Structure and Contents
 
-- `popl26-artifact.ova.zip` - archive with VM setup view in VSCode. Password is
-  `osboxes.org`.
+- `loom_artifact.ova.zip` - archive with VM setup view in VSCode. User is
+`loom` with password `popl26`.
+
 - `Loom_Artifact.zip` - archive with source code
   - `Loom/`: implementation of the framework itself and 2 new verifiers built on
     top of Loom: Velvet and Cashmere
@@ -312,6 +376,110 @@ In Velvet, the user can:
           - `Total_Partial_example.lean`: example of proving total correctness
             by combining `triple`s about partial correctness and termination
   - `Veil/` - Veil version upgraded with Loom
+   - `Theory/Defs.lean`: definitions of `VeilM` and semantic interpretations
+   - `Examples/NOPaxos/`: NOPaxos implementation
+
+## Badge Checklist
+
+### Functional
+
+- **(Completeness)** All examples mentioned in the paper have correspondning
+  references to specific files in source code.
+- **(Consistency)** The artifact supports the claims made in the paper. All the
+  examples powered by new framework are present in the artifact for inspection.
+  All theoretical claims made in the paper are formalized in Lean 4.
+- **(Documentation)** The README provides a clear mapping from statements in
+the paper to actual lines in source code as well as general structure and file
+organization. Both Cashmere and Velvet provide set of non-trivial programs
+verified using Loom and comments that explain key features of the verifiers.
+
+### Reusable
+
+- **(Reusability beyond the paper)** Loom can be used to build new verifiers.
+To use Loom as a dependency, please check **Reusability Guide**. Velvet can be
+used directly to verify imperative programs by extending existing example files
+or creating new ones in `Loom/CaseStudies/Velvet/VelvetExamples` directory.
+Veil and its new features can be used to verify complex distributed protocols.
+For specific instructions please refer to the respective projects' READMEs.
+- **(Extensions)** The artifact is publicly available on GitHub.
+- **(Instructions)** The artifact provides clear instructions for build and
+installation of dependencies.
+- **(Proof reusability)** Proofs in the artifact can be reused to build new
+verifiers (Cashmere, Velvet and Veil are such examples). Velvet and Veil can be
+used as standalone verifiers to automatically verify imperative programs and
+distributed protocols respectively.
+- **(Dependencies)** The only dependencies for Loom are:
+  - Lean 4 itself
+  - Lean 4 Mathlib and `lean-auto` for proof automation, automatically
+  installed when building Loom
+  - `cvc5`, whose installation process is described in the README
+  - Veil automatically installs all its dependencies when building.
+- **(Proof completeness)** Proofs do not depend on `sorry` or `admit` and are
+accepted by Lean 4.
+
+## Reusability Guide
+
+Loom is [publicly available](https://github.com/verse-lab/loom) under the
+Apache 2.0 license.
+
+To use Loom in your project, add the following to your `lakefile.lean`:
+
+```lean
+require "verse-lab" / "loom" @ git "main"
+```
+
+Or add the following to your `lakefile.toml`:
+
+```toml
+[[require]]
+name = "Loom"
+git = "https://github.com/verse-lab/loom.git"
+rev = "main"
+```
+
+To get started with verifiers that are built on top of Loom, we recommend
+exploring `CaseStudies/VelvetExamples` directory or the
+`CaseStudies/Cashmere/Cashmere.lean` file.
+
+To understand how Loom works internally we recommend exploring the `Loom`
+directory.
+
+### I want to build a verifier similar to Velvet/Cashmere. How to proceed?
+
+To do this, you will need to:
+- add Loom as a dependency in your project by following the instructions above
+- create a directory for your verifier
+- create a file which will include metatheory for your verifier. In particular,
+  you will need to define your monad stack to account for different effects you
+  would like to support. Example monad stacks:
+  - `VelvetM α := NonDetT DivM α`
+  - `CashmereM := NonDetT (ExceptT String (StateT Bal DivM))`
+- if you want to have custom effects that are not implemented in public Loom
+  version, you will need to:
+  - express your effect as a monad transformer;
+  - provide `MAlgOrdered` instance appropriate for your transformer (you can
+    check Loom's implementation for basic effects for reference);
+  - provide `MAlgLift` instance appropriate for your transformer (you can
+    check Loom's implementation for basic effects for reference);
+  - provide lemmas about `WPGen` similar to ones defined in
+    `Loom/Loom/MonadAlgebras/WP/Gen.lean`.
+- copy `Loom/CaseStudies/Cashmere/Syntax_Cashmere.lean` or
+  `Loom/CaseStudies/Velvet/Syntax.lean` to your directory. This file will define
+  most of macros (and therefore most of the syntax) for your verifier. Adjust
+  the file for your needs by changing how `method` and `prove_correct`
+  elaboration works
+- create a Lean file with examples you would like to verify. Import the root of
+  `Loom/CaseStudies`, your syntax file and your metatheory file.
+- you might need to use `#derive_lifted_wp` command to use your `WPGen` lemmas
+  for effects that are not on top of monad stack. See
+  `Loom/CaseStudies/Cashmere/Cashmere.lean` for an example.
+- (Optional) customize your automation by changing `loom_unfold` and
+  `loom_solver` tactics in your syntax file.
+
+## (Optional) Full correspondence between the paper and the artifact
+
+Artifact reviewers: You do not have to check all of these. They are here for
+completeness.
 
 ### Definitions and Theorems from Paper Overview (Section 2)
 
@@ -454,115 +622,3 @@ directory
     152-163
   - specification described on Fig. 13 (Page 23) is obtained in theorem
     `SpMSpV_correct_triple` on lines 764-789
-
-## Badge Checklist
-
-### Functional
-
-- **(Completeness)** All examples mentioned in the paper have correspondning
-  reference to specific files in source code.
-  - examples from Section 2 are available in `Loom/CaseStudies/Cashmere`
-    directory
-  - key theoretical definitions mentioned in Section 3 are available in
-    `Loom/Loom` directory and README file points out the exact corresponding
-    locations in source code
-  - implementation of divergence without co-inductive definitions has clear
-    references in README to actual proofs in source code
-  - non-determinism monad transformer implementation has detailed code
-    references in README for definitions and proofs
-  - Veil framework upgrade presented in the paper is available and key features
-    (such as simulation) have references in README
-  - examples for Velvet verifier have clear mapping to concrete lines in source
-    code
-- **(Consistency)** The artifact supports the claims made in the paper. All the
-  examples powered by new framework are present in the artifact for inspection.
-  README provides a guide on how to reproduce interactive features in Velvet.
-  All theoretical claims made in the paper are formalized in Lean 4.
-- **(Documentation)** README provides clear mapping from statements in the paper
-  to actual lines in source code as well as general structure and file
-  organization. This allows to assess main contributions and navigate through
-  examples. Both Cashmere and Velvet provide set of non-trivial programs
-  verified smoothly by using Loom and comments that explain key features of the
-  verifiers.
-
-### Reusable
-
-- **(Reusability beyond the paper)** Loom can be used to build new verifiers. To
-  use Loom as a dependency, please check **Reusability Guide**. Velvet can be
-  used directly to verify imperative programs by extending existing example
-  files or creating new ones in `Loom/CaseStudies/Velvet/VelvetExamples`
-  directory. Veil and its new features can be used to verify complex distributed
-  protocols. For specific instructions please refer to project's README.
-- **(Extensions)** The artifact is publicly available on GitHub.
-- **(Instructions)** The artifact provides clear instructions for build and
-  installation of dependencies.
-- **(Proof reusability)** Proofs in the artifact can be reused to build new
-  verifiers (Cashmere, Velvet and Veil are such examples). Velvet and Veil can
-  be used as standalone verifiers to automatically verify imperative programs
-  and distributed protocols respectively.
-- **(Dependencies)** The only dependencies are
-  - Lean 4 itself
-  - Lean 4 Mathlib and `lean-auto` for proof automation, automatically
-  installed when building Loom
-  - `cvc5`, whose installation process is described in the README
-
-- **(Proof completeness)** Proofs do not depend on `sorry` or `admit` and are
-  accepted by Lean 4.
-
-## Reusability Guide
-
-Loom is [publicly available](https://github.com/verse-lab/loom) under Apache 2.0
-license.
-
-To use Loom in your project, add the following to your `lakefile.lean`:
-
-```lean
-require "verse-lab" / "loom" @ git "main"
-```
-
-Or add the following to your `lakefile.toml`:
-
-```toml
-[[require]]
-name = "Loom"
-git = "https://github.com/verse-lab/loom.git"
-rev = "main"
-```
-
-- to get started with verifiers that are built on top of Loom, we recommend
-exploring `CaseStudies/VelvetExamples` directory or
-`CaseStudies/Cashmere/Cashmere.lean` file.
-- to understand how Loom works internally we recommend exploring `Loom` directory.
-
-### I want to build a verifier similar to Velvet/Cashmere. How to proceed?
-
-To do this, you will need to:
-- add Loom as a dependency in your project by following the instructions above
-- create a directory for your verifier
-- create a file which will include metatheory for your verifier. In particular,
-  you will need to define your monad stack to account for different effects you
-  would like to support. Example monad stacks:
-  - `VelvetM α := NonDetT DivM α`
-  - `CashmereM := NonDetT (ExceptT String (StateT Bal DivM))`
-- if you want to have custom effects that are not implemented in public Loom
-  version, you will need to:
-  - express your effect as a monad transformer.
-  - provide `MAlgOrdered` instance appropriate for your transformer (you can
-    check Loom's implementation for basic effects for reference).
-  - provide `MAlgLift` instance appropriate for your transformer (you can
-    check Loom's implementation for basic effects for reference).
-  - provide lemmas about `WPGen` similar to ones defined in
-    `Loom/Loom/MonadAlgebras/WP/Gen.lean`. This is crucial for smooth VC
-    generation in your verifier.
-- copy `Loom/CaseStudies/Cashmere/Syntax_Cashmere.lean` or
-  `Loom/CaseStudies/Velvet/Syntax.lean` to your directory. This file will define
-  most of macros (and therefore most of the syntax) for your verifier. Adjust
-  the file for your needs by changing how `method` and `prove_correct`
-  elaboration works (in case you copied Velvet file).
-- create a Lean file with examples you would like to verify. Import the root of
-  `Loom/CaseStudies`, your syntax file and your metatheory file.
-- you might need to use `#derive_lifted_wp` command to use your `WPGen` lemmas
-  for effects that are not on top of monad stack. See
-  `Loom/CaseStudies/Cashmere/Cashmere.lean` for an example.
-- (Optional) customize your automation by changing `loom_unfold` and
-  `loom_solver` tactics in your syntax file.
