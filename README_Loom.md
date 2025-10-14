@@ -167,33 +167,22 @@ Section 3 of the paper outlines the main theoretical contributions of the paper.
 
 1. [`MAlg`](./Loom/MonadAlgebras/Defs.lean#L51) type class implements Definition 3.1 of Monad Algebra
 2. [`MAlgOrdered`](./Loom/MonadAlgebras/Defs.lean#L74-L75) type class implements Definition 3.2 of Monad Algebra. The relation between these two type classes is established via [`OfMAlgPartialOrdered`](./Loom/MonadAlgebras/Defs.lean#L82)
+3. [`wp`](./Loom/MonadAlgebras/WP/Basic.lean#L19) definition derives the Weakest-Precondition morphism from `MAlg`. This corresponds to equation (10) from the paper. The Theorem 3.3 stating the properties of such Weakest-Precondition morphism is captured via [`wp_pure`](./Loom/MonadAlgebras/WP/Basic.lean#L25), [`wp_bind`](./Loom/MonadAlgebras/WP/Basic.lean#L39) and [`wp_cons`](./Loom/MonadAlgebras/WP/Basic.lean#L48) lemmas.
+4. As we explain in Section 4, notion of Monad Transformer Algebra from the paper is mechanised via lifting formalism to match the style of native Lean Monad library. In particular, [`MAlgLift`](./Loom/MonadAlgebras/Defs.lean#L193) and [`LogicLift`](./Loom/MonadAlgebras/Defs.lean#L141) definitions capture the Definition 3.4 of Monad Transformer Algebra. Read Section 4 of the paper for more details. 
 
-Key claims made in the paper are:
-- It is possible to use Loom to build verifiers embedded in Lean 4 Proof Assistant (Section 2.8)
-- Theorem 3.3 from Section 3.3: WP is defined as `wp` on line 19 of
-  `Loom/Loom/MonadAlgebras/WP/Basic.lean` defined via `MAlg.lift` on lines 58-59
-  of `Loom/Loom/MonadAlgebras/Defs.lean` by instance in lines 61-62 of
-  `Loom/Loom/MonadAlgebras/Defs.lean`, then lemmas for `wp` are proven in file
-  `Loom/Loom/MonadAlgebras/WP/Basic.lean`
-  - (4) on lines 25-27
-  - (5) on lines 39-41
-  - (9) on lines 48-52
-- Definition 3.4 (Monad Transformer Algebra) on lines 624-629 Fig.5 (Page 14)
-  corresponds to lines 193-199 in file `Loom/Loom/MonadAlgebras/Defs.lean`
-- Modeling of divergent computations from Section 5 of the paper is implemented
-  for `DivM` monad in file `Loom/Loom/MonadAlgebras/Instances/Basic.lean`
-- Implementation of Non-Determinism Transformer from Section 6 is implemented in
-  files `Loom/Loom/MonadAlgebras/NonDetT/Basic.lean` and
-  `Loom/Loom/MonadAlgebras/NonDetT'/Basic.lean`. Execution of programs with
-  Non-Determinism and its soundness (Section 6.2) is implemented in files
-  `Loom/Loom/MonadAlgebras/NonDetT/Extract.lean` and
-  `Loom/Loom/MonadAlgebras/NonDetT'/Extract.lean`
-- Velvet verifier (Section 8) implementation is at `Loom/CaseStudies/Velvet`
-  folder. 
-  - Proof of lemma `partial_total_split` (Section 8.1) can be found on lines
-    181-190 in file `Loom/CaseStudies/Velvet/VelvetTheory.lean` under the name
-    `VelvetM.total_decompose_triple`.
-  - Example using this: `Loom/CaseStudies/Velvet/VelvetExamples/Total_Partial_example.lean`
+### Section 4. Encoding and Automating Loom Meta-Theory with Lean Type Classes
+
+In addition to the previous section, Section 4 of the paper introduces the `#derive_lifted_wp` command. This command is implemented via [`Loom/Loom/Meta/#derive_lifted_wp`](./Loom/Meta.lean#L431). You can find the use cases of this command in [Cashmere](./CaseStudies/Cashmere/Cashmere.lean#L31).
+
+### Section 5. Monad Algebra for Divergence
+
+Section 5 of the paper outlines the mechanism to define partial functions in Lean, and explains how to link it to the notion of monad algebras. As partial functions (mentioned in Section 5.1 of the paper) mechanism is a native Lean feature, here we will only provide pointers to the implementation of its integration with Monad Algebras (Sections 5.2). 
+
+- [`MAlgPartial`](./Loom/MonadAlgebras/Defs.lean#L118) type class implements the Partial Monad Algebra notion introduces in Definition 5.4
+- To express the `iter` operator from Section 5.1 we use `Loop.forIn.loop`: its analogue from Lean standard library. 
+- The proofs of invariant-based rules for `iter` listed in Fig 6. are captured in [`PartialCorrectness.repeat_inv`](./Loom/MonadAlgebras/WP/Basic.lean#L192) and [`ToatlCorrectness.repeat_inv`](./Loom/MonadAlgebras/WP/Basic.lean#L225) lemmas. 
+
+### Section 6. Specifying and Executing Non-Deterministic Computations
 
 ## Structure and Contents
 
