@@ -5,21 +5,21 @@ universe u v w
 
 
 /- Continuation monad definition -/
-abbrev Cont (t : Type v) (α : Type u) := (α -> t) -> t
+abbrev LoomCont (t : Type v) (α : Type u) := (α -> t) -> t
 
-instance (t : Type v) : Monad (Cont t) where
+instance (t : Type v) : Monad (LoomCont t) where
   pure x := fun f => f x
   bind x f := fun g => x (fun a => f a g)
 
-def Cont.inv {t : Type v} {α : Type u} [BooleanAlgebra t] (wp : Cont t α) : Cont t α :=
+def LoomCont.inv {t : Type v} {α : Type u} [BooleanAlgebra t] (wp : LoomCont t α) : LoomCont t α :=
   fun f => (wp fun x => (f x)ᶜ)ᶜ
 
 @[simp]
-def Cont.monotone {t : Type v} {α : Type u} [Preorder t] (wp : Cont t α) :=
+def LoomCont.monotone {t : Type v} {α : Type u} [Preorder t] (wp : LoomCont t α) :=
   ∀ (f f' : α -> t), (∀ a, f a ≤ f' a) → wp f ≤ wp f'
 
 structure W (t : Type v) [Preorder t] (α : Type u) where
-  wp : Cont t α
+  wp : LoomCont t α
   wp_montone : wp.monotone
 
 @[ext]
@@ -30,7 +30,7 @@ instance (t : Type v) [Preorder t] : Monad (W t) where
   pure x := ⟨fun f => f x, by solve_by_elim⟩
   bind x f := ⟨fun g => x.wp (fun a => (f a).wp g), by simp; intros; solve_by_elim [W.wp_montone]⟩
 
-instance {l σ : Type u} : MonadLift (Cont l) (Cont (σ -> l)) where
+instance {l σ : Type u} : MonadLift (LoomCont l) (LoomCont (σ -> l)) where
   monadLift x := fun f s => x (f · s)
 
 

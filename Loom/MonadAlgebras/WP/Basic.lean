@@ -16,7 +16,7 @@ section
 variable [mprop : MAlgOrdered m l]
 
 /- WP definition -/
-def wp (c : m α) (post : α -> l) : l := liftM (n := Cont l) c post
+def wp (c : m α) (post : α -> l) : l := liftM (n := LoomCont l) c post
 /- Hoare triple definition -/
 def triple (pre : l) (c : m α) (post : α -> l) : Prop :=
   pre ≤ wp c post
@@ -48,7 +48,7 @@ lemma wp_map {β} (x : m α) (f : α -> β) (post : β -> l) :
 lemma wp_cons (x : m α) (post post' : α -> l) :
   (∀ y, post y ≤ post' y) ->
   wp x post ≤ wp x post' := by
-    intros h; simp [wp, liftM, monadLift]; apply Cont.monotone_lift; intros y
+    intros h; simp [wp, liftM, monadLift]; apply LoomCont.monotone_lift; intros y
     apply h
 
 lemma triple_cons (x : m α) {pre pre' : l} {post post' : α -> l} :
@@ -80,7 +80,7 @@ section
 variable [CompleteLattice l] [MAlgOrdered m l]
 
 noncomputable
-def spec (pre : l) (post : α -> l) : Cont l α :=
+def spec (pre : l) (post : α -> l) : LoomCont l α :=
   fun p => pre ⊓ ⌜post ≤ p⌝
 
 lemma triple_spec (pre : l) (c : m α) (post : α -> l) :
@@ -93,7 +93,7 @@ lemma triple_spec (pre : l) (c : m α) (post : α -> l) :
     intro t p; unfold spec
     by_cases h: post ≤ p
     { apply inf_le_of_left_le; apply le_trans; apply t
-      solve_by_elim [Cont.monotone_lift (x := c)] }
+      solve_by_elim [LoomCont.monotone_lift (x := c)] }
     have : (post ≤ p) = False := by simp [h]
     simp [this, falseE]
 
@@ -435,7 +435,7 @@ lemma ReaderT.wp_lift (c : m α) (post : α -> σ -> l) :
 /- WP lift from MAlgLift-/
 omit [LawfulMonad m] in
 lemma MAlgLift.wp_lift [Monad n] [CompleteLattice k] [MAlgOrdered n k] [MonadLiftT m n]
-  -- [MonadLiftT (Cont l) (Cont k)]
+  -- [MonadLiftT (LoomCont l) (LoomCont k)]
   [mAlgLift : MAlgLiftT m l n k] (c : m α):
   wp (liftM (n := n) c) = fun (post : α -> k) => mAlgLift.cl.lift.monadLift (wp c) post := by
   ext;

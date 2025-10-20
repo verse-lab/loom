@@ -81,7 +81,7 @@ namespace DemonicChoice
 
 /- WP for NonDetT -/
 noncomputable
-def NonDetT.wp {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : {α : Type u} -> NonDetT m α -> Cont l α
+def NonDetT.wp {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : {α : Type u} -> NonDetT m α -> LoomCont l α
   | _, .pure ret => pure ret
   | _, .vis x f => fun post => _root_.wp x fun a => wp (f a) post
   | _, .pickCont τ p f => fun post => let p : Set τ := p; ⨅ a ∈ (p : Set τ), wp (f a) post
@@ -245,7 +245,7 @@ namespace AngelicChoice
 
 /- WP for NonDetT -/
 noncomputable
-def   NonDetT.wp {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : {α : Type u} -> NonDetT m α -> Cont l α
+def   NonDetT.wp {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : {α : Type u} -> NonDetT m α -> LoomCont l α
   | _, .pure ret => pure ret
   | _, .vis x f => fun post => _root_.wp x fun a => wp (f a) post
   | _, .pickCont _ p f => fun post => ⨆ a, ⌜p a⌝ ⊓ wp (f a) post
@@ -406,7 +406,7 @@ namespace DemonicChoice
 
 /- WP for NonDetT -/
 noncomputable
-def NonDetT.wp {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : {α : Type u} -> NonDetT m α -> Cont l α
+def NonDetT.wp {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : {α : Type u} -> NonDetT m α -> LoomCont l α
   | _, .pure ret => pure ret
   | _, .vis x f => fun post => _root_.wp x fun a => wp (f a) post
   | _, .pickCont τ p f => fun post => let p : Set τ := p; ⨅ a ∈ (p : Set τ), wp (f a) post
@@ -569,7 +569,7 @@ namespace AngelicChoice
 
 /- WP for NonDetT -/
 noncomputable
-def   NonDetT.wp {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : {α : Type u} -> NonDetT m α -> Cont l α
+def   NonDetT.wp {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : {α : Type u} -> NonDetT m α -> LoomCont l α
   | _, .pure ret => pure ret
   | _, .vis x f => fun post => _root_.wp x fun a => wp (f a) post
   | _, .pickCont _ p f => fun post => ⨆ a, ⌜p a⌝ ⊓ wp (f a) post

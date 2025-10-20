@@ -132,7 +132,7 @@ builtin_initialize
   register_parser_alias termBeforeInvariant
 
 structure WPGen (x : m α) where
-  get : Cont l α
+  get : LoomCont l α
   -- sideCond : l := ⊤
   prop : ∀ post, get post <= wp x post
 

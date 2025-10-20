@@ -457,10 +457,10 @@ elab "#gen_spec" name:ident args:explicitBinders ? "for" prim:term : command => 
 attribute [loomLogicLiftSimp]
   LogicLiftT.lift
   instMonadLiftTOfMonadLift
-  instMonadLiftContOfLogicLift
+  instMonadLiftLoomContOfLogicLift
   MAlgLift.cl
   LogicLift.refl
-  instMonadLiftTContOfLogicLiftT
+  instMonadLiftTLoomContOfLogicLiftT
   instMonadLiftT
   id
 

@@ -3,9 +3,6 @@ version = "0.1.0"
 keywords = ["math"]
 defaultTargets = ["Loom", "CaseStudies"]
 
-[[lean_lib]]
-name = "CaseStudies"
-
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
 
@@ -19,5 +16,14 @@ name = "auto"
 scope = "leanprover-community"
 rev = "2c088e7617d6e2018386de23b5df3b127fae4634"
 
+[[require]]
+name = "REPL"
+git = "https://github.com/leanprover-community/repl"
+rev = "8e951c49f202d47dba756cfffe8b918aedf1ea71"
+
 [[lean_lib]]
 name = "Loom"
+
+[[lean_lib]]
+name = "CaseStudies"
+

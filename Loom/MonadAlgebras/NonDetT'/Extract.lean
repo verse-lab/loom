@@ -238,7 +238,7 @@ def NonDetT.runWeak {α : Type u} (s : NonDetT m α) (ex : ExtractNonDet WeakFin
   NonDetT.extractWeak s ex
 
 noncomputable
-abbrev NonDetT.prop {α : Type u} : (s : NonDetT m α) -> Cont l α
+abbrev NonDetT.prop {α : Type u} : (s : NonDetT m α) -> LoomCont l α
   | .pure x => Pure.pure x
   | .vis x f => fun post => wlp x fun y => NonDetT.prop (f y) post
   | .pickCont _ p f => fun post =>

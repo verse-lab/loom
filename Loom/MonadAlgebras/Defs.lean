@@ -56,12 +56,12 @@ class MAlg [Monad m] (l : outParam (Type v)) where
     μ (x >>= f) = μ (x >>= g)
 
 abbrev MAlg.lift {m : Type u -> Type v} {l : Type u} [Monad m] [MAlg m l] :
-  {α : Type u} -> m α -> Cont l α := fun x f => μ $ f <$> x
+  {α : Type u} -> m α -> LoomCont l α := fun x f => μ $ f <$> x
 
-instance (l : Type u) {m : Type u -> Type v} [Monad m] [MAlg m l] : MonadLiftT m (Cont l) where
+instance (l : Type u) {m : Type u -> Type v} [Monad m] [MAlg m l] : MonadLiftT m (LoomCont l) where
   monadLift := MAlg.lift
 
-instance EffectObservationOfMAlg (l : Type u) {m : Type u -> Type v} [Monad m] [LawfulMonad m] [MAlg m l] : LawfulMonadLiftT m (Cont l) where
+instance EffectObservationOfMAlg (l : Type u) {m : Type u -> Type v} [Monad m] [LawfulMonad m] [MAlg m l] : LawfulMonadLiftT m (LoomCont l) where
   monadLift_pure := by
     intro α x; simp [monadLift, pure]; unfold MAlg.lift; simp [map_pure, MAlg.pure]
   monadLift_bind := by
@@ -90,20 +90,20 @@ lemma MAlgOrdered.bind {α : Type u} {m} {l : Type u} [Monad m] [CompleteLattice
     ∀ (x : m α) (f g : α -> m l), μ ∘ f = μ ∘ g ->
      μ (x >>= f) = μ (x >>= g) := MAlg.bind
 
-lemma Cont.monotone_lift {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [CompleteLattice l] [MAlgOrdered m l] :
+lemma LoomCont.monotone_lift {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [CompleteLattice l] [MAlgOrdered m l] :
   ∀ {α : Type u} (x : m α), MAlg.lift x |>.monotone := by
-  unfold Cont.monotone; intros; simp [MAlg.lift]; rw [map_eq_pure_bind, map_eq_pure_bind]
+  unfold LoomCont.monotone; intros; simp [MAlg.lift]; rw [map_eq_pure_bind, map_eq_pure_bind]
   apply MAlgOrdered.μ_ord_bind; intro; simp [MAlgOrdered.μ_ord_pure, *]
 
 @[simp]
 lemma MAlg.μ_eq {m l} [Monad m] [CompleteLattice l] [MAlgOrdered m l] : MAlg.μ (m := m) = MAlgOrdered.μ (m := m) := by rfl
 
 lemma MAlg.monadLift_bind {α β} {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [CompleteLattice l] [MAlgOrdered m l]
-  (x : m α) (f g : α -> Cont l β) :
+  (x : m α) (f g : α -> LoomCont l β) :
     f <= g ->
     (lift x >>= f) ≤ (lift x >>= g) := by
     intro fLg h; simp [Bind.bind]
-    apply Cont.monotone_lift; intros h; apply fLg
+    apply LoomCont.monotone_lift; intros h; apply fLg
 
 /-- Class for deterministic monadic algebras -/
 class MAlgDet (l : outParam (Type v)) [Monad m] [CompleteLattice l] [MAlgOrdered m l] where
@@ -132,18 +132,18 @@ class NoFailure (m : Type u -> Type v) [Monad m] [CompleteLattice l] [MAlgOrdere
     MAlg.lift c (fun _ => ⊤) = ⊤
 
 class LogicLiftT (l : (Type u)) ( k : Type u) [CompleteLattice l] [CompleteLattice k] where
-  [lift : MonadLiftT (Cont l) (Cont k)]
+  [lift : MonadLiftT (LoomCont l) (LoomCont k)]
   lift_top {α : Type u} :
-    monadLift (m := Cont l) (n := Cont k) (fun (_ : α -> l) => ⊤) = ⊤
+    monadLift (m := LoomCont l) (n := LoomCont k) (fun (_ : α -> l) => ⊤) = ⊤
   lift_bot {α : Type u} :
-    monadLift (m := Cont l) (n := Cont k) (fun (_ : α -> l) => ⊥) = ⊥
+    monadLift (m := LoomCont l) (n := LoomCont k) (fun (_ : α -> l) => ⊥) = ⊥
 
 class LogicLift (l : outParam (Type u)) ( k : Type u) [CompleteLattice l] [CompleteLattice k] where
-  [lift : MonadLift (Cont l) (Cont k)]
+  [lift : MonadLift (LoomCont l) (LoomCont k)]
   lift_top {α : Type u} :
-    monadLift (m := Cont l) (n := Cont k) (fun (_ : α -> l) => ⊤) = ⊤
+    monadLift (m := LoomCont l) (n := LoomCont k) (fun (_ : α -> l) => ⊤) = ⊤
   lift_bot {α : Type u} :
-    monadLift (m := Cont l) (n := Cont k) (fun (_ : α -> l) => ⊥) = ⊥
+    monadLift (m := LoomCont l) (n := LoomCont k) (fun (_ : α -> l) => ⊥) = ⊥
 
 def LogicLift.refl [CompleteLattice l] : LogicLift l l where
   lift := by exact ⟨id⟩
@@ -151,16 +151,16 @@ def LogicLift.refl [CompleteLattice l] : LogicLift l l where
   lift_bot := rfl
 
 
-instance [CompleteLattice l] [CompleteLattice k] [LogicLiftT l k] : MonadLiftT (Cont l) (Cont k) where
+instance [CompleteLattice l] [CompleteLattice k] [LogicLiftT l k] : MonadLiftT (LoomCont l) (LoomCont k) where
   monadLift := LogicLiftT.lift.monadLift
 
-instance [CompleteLattice l] [CompleteLattice k] [LogicLift l k] : MonadLift (Cont l) (Cont k) where
+instance [CompleteLattice l] [CompleteLattice k] [LogicLift l k] : MonadLift (LoomCont l) (LoomCont k) where
   monadLift := LogicLift.lift.monadLift
 
 
 @[simp]
-lemma lift_cont_eq {l σ : Type u} [CompleteLattice l] [CompleteLattice σ] (c : Cont l α) :
-  liftM (m := Cont l) (n := Cont (σ -> l)) c = fun post s => c (post · s)  := by
+lemma lift_cont_eq {l σ : Type u} [CompleteLattice l] [CompleteLattice σ] (c : LoomCont l α) :
+  liftM (m := LoomCont l) (n := LoomCont (σ -> l)) c = fun post s => c (post · s)  := by
     rfl
 
 instance {l} [CompleteLattice l] : LogicLiftT l l where
@@ -170,14 +170,14 @@ instance {l} [CompleteLattice l] : LogicLiftT l l where
 instance [CompleteLattice l] [CompleteLattice k] [CompleteLattice p] [linst₁ : LogicLiftT l k] [linst₂ : LogicLift k p] : LogicLiftT l p where
   lift_top := by
     simp [instMonadLiftTOfMonadLift]; intro
-    have : (monadLift (m := Cont l) (n := Cont k) (fun (_ : _ -> l) => ⊤)) = ⊤ := by {
+    have : (monadLift (m := LoomCont l) (n := LoomCont k) (fun (_ : _ -> l) => ⊤)) = ⊤ := by {
       apply linst₁.lift_top
       assumption }
     rw [this]
     apply linst₂.lift_top
   lift_bot := by
     simp [instMonadLiftTOfMonadLift]; intro
-    have : (monadLift (m := Cont l) (n := Cont k) (fun (_ : _ -> l) => ⊥)) = ⊥ := by {
+    have : (monadLift (m := LoomCont l) (n := LoomCont k) (fun (_ : _ -> l) => ⊥)) = ⊥ := by {
       apply linst₁.lift_bot
       assumption }
     rw [this]
@@ -196,7 +196,7 @@ class MAlgLift
   [MonadLiftT m n]
   where
     [cl : LogicLift l k]
-    μ_lift (x : m α) : MAlg.lift (liftM (n := n) x) f = liftM (n := Cont k) (MAlg.lift x) f
+    μ_lift (x : m α) : MAlg.lift (liftM (n := n) x) f = liftM (n := LoomCont k) (MAlg.lift x) f
 
 def MAlgLift.mk_rep  (m : semiOutParam (Type u -> Type v)) (l : semiOutParam (Type u)) [Monad m] [CompleteLattice l] [MAlgOrdered m l]
   (n : (Type u -> Type w)) (σ : Type u) [LawfulMonad m] [Monad n] [LawfulMonad n] [CompleteLattice k] [MAlgOrdered n (σ -> l)]
@@ -225,7 +225,7 @@ class MAlgLiftT
   [MonadLiftT m n]
   where
     [cl : LogicLiftT l k]
-    μ_lift (x : m α) : MAlg.lift (liftM (n := n) x) f = liftM (n := Cont k) (MAlg.lift x) f
+    μ_lift (x : m α) : MAlg.lift (liftM (n := n) x) f = liftM (n := LoomCont k) (MAlg.lift x) f
 
 
 instance MAlgLiftTRefl [Monad m] [CompleteLattice l] [LawfulMonad m] [MAlgOrdered m l] :
@@ -243,5 +243,5 @@ instance MAlgLiftTTrans
       let cl' := inst'.cl
       refine instLogicLiftTOfLogicLift
     μ_lift := by
-      intros; simp [liftM, instMonadLiftTContOfLogicLiftT, instLogicLiftTOfLogicLift,instMonadLiftTOfMonadLift];
+      intros; simp [liftM, instMonadLiftTLoomContOfLogicLiftT, instLogicLiftTOfLogicLift,instMonadLiftTOfMonadLift];
       erw [inst.μ_lift]; congr! 2; ext; apply inst'.μ_lift

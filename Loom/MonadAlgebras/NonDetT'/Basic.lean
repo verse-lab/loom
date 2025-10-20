@@ -69,7 +69,7 @@ instance : MonadNonDet (NonDetT m) where
 -- namespace PartialCorrectness
 namespace DemonicChoice
 
-def NonDetT.wp {l : Type u} {α : Type u} [CompleteLattice l] [MAlgOrdered m l] : NonDetT m α -> Cont l α
+def NonDetT.wp {l : Type u} {α : Type u} [CompleteLattice l] [MAlgOrdered m l] : NonDetT m α -> LoomCont l α
   | .pure ret => pure ret
   | .vis x f => fun post => _root_.wp x fun a => wp (f a) post
   | .pickCont τ p f => fun post => let p : Set τ := p; ⨅ a ∈ (p : Set τ), wp (f a) post
@@ -185,7 +185,7 @@ end DemonicChoice
 namespace AngelicChoice
 
 noncomputable
-def   NonDetT.wp {l : Type u} {α : Type u} [CompleteLattice l] [MAlgOrdered m l] : NonDetT m α -> Cont l α
+def   NonDetT.wp {l : Type u} {α : Type u} [CompleteLattice l] [MAlgOrdered m l] : NonDetT m α -> LoomCont l α
   | .pure ret => pure ret
   | .vis x f => fun post => _root_.wp x fun a => wp (f a) post
   | .pickCont _ p f => fun post => ⨆ a, ⌜p a⌝ ⊓ wp (f a) post

@@ -27,13 +27,13 @@ private lemma compl_fun'' {α} (x : α -> l) :
 private lemma compl_fun_true {α} :
   (fun (_ : α) => ⊤)ᶜ = fun _ => (⊥ : l) := by simp [compl]
 
-abbrev iwp (c : m α) : Cont l α := Cont.inv (wp c)
+abbrev iwp (c : m α) : LoomCont l α := LoomCont.inv (wp c)
 
 omit [LawfulMonad m] in
 @[simp]
 lemma iwp_eq (c : m α) (post : α -> l) :
   iwp c post = (wp c postᶜ)ᶜ := by
-    simp [iwp, Cont.inv]
+    simp [iwp, LoomCont.inv]
 
 def wlp (c : m α) (post : α -> l) : l := iwp c post ⊔ wp c post
 
