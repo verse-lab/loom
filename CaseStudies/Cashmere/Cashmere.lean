@@ -139,6 +139,10 @@ bdef withdrawSessionNonDet returns (history : List Nat)
     tmp := tmp.tail
   return amounts
 
+@[aesop safe]
+lemma emp_sum (x: Bal) (h: 0 ≤ x) : ∃ h: List Nat, h.sum ≤ x := by
+  exists []
+
 open TotalCorrectness DemonicChoice in
 prove_correct withdrawSessionNonDet by
   loom_solve!

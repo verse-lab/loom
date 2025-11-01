@@ -20,6 +20,10 @@ inductive DivM (α : Type u) where
   | res (x : α)
   | div
 
+def DivM.run {α : Type u} [Inhabited α] : DivM α -> α
+  | DivM.res x => x
+  | DivM.div => default
+
 instance : Monad DivM where
   pure := DivM.res
   bind := fun x y => match x with

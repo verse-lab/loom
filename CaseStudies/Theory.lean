@@ -16,7 +16,10 @@ variable {m τ l} [Monad m] [LawfulMonad m] [Nonempty τ] [CompleteBooleanAlgebr
 section
 open PartialCorrectness DemonicChoice
 
+section
+variable {p} [Findable p]
 #derive_wp for (pickSuchThat τ p : NonDetT m τ)
+end
 
 attribute [aesop safe cases] Decidable
 attribute [-simp] if_true_left Bool.if_true_left ite_eq_left_iff
@@ -27,14 +30,19 @@ end
 section
 open TotalCorrectness DemonicChoice
 
+section
+variable {p} [Findable p]
 #derive_wp for (pickSuchThat τ p : NonDetT m τ)
-
+end
 end
 
 section
 open TotalCorrectness AngelicChoice
 
+section
+variable [Inhabited τ]
 #derive_wp for (pick τ : NonDetT m τ)
+end
 
 end
 

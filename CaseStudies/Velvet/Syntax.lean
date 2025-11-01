@@ -348,7 +348,7 @@ elab_rules : command
   let execName := name.appendAfter "Exec"
   let execDefCmd ← `(command|
     def $(mkIdent execName) $bindersIdents* :=
-      $(mkIdent ``NonDetT.extractWeak) ($nameRaw $ids*) (by extract_tactic))
+      $(mkIdent ``NonDetT.run) ($nameRaw $ids*))
   elabCommand execDefCmd
 
 def elabDefiningDecidableInstancesForVelvetSpec (nameRaw : Ident)

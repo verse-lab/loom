@@ -35,6 +35,8 @@ method pickGreater (inp: Nat) return (res: Nat)
 
 prove_correct pickGreater by
   loom_solve
+  exists (inp + 201)
+  omega
 
 method pickGreaterN (n: Nat) return (res: Nat)
   ensures res >= n * 10

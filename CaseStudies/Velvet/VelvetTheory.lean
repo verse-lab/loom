@@ -26,7 +26,7 @@ lemma wp_mono_part (x : NonDetT DivM α) (post₁ post₂ : α -> Prop) :
       match x_1 with
       | .div => trivial
       | .res a => simp; simp at wp1; exact f_ih a post₁ post₂ le wp1 }
-    { intro wp1 i hi
+    { intro _ _ wp1 i hi
       exact f_ih i post₁ post₂ le (wp1 i hi) }
     intro x x_1 h1 sp1
     exists x
@@ -56,7 +56,7 @@ lemma VelvetM.total_decompose {α : Type} (x : VelvetM α) (post₁ post₂ : α
   [totl| wp x post₁] ⊓ [part| wp x post₂] = [totl| wp x (post₁ ⊓ post₂)] := by
     unhygienic induction x <;> try simp [loomLogicSimp]
     { simp [DivM.total_decompose]
-      simp [[totl| DivM.wp_eq], [part| DivM.wp_eq]]
+      simp [[totl|DivM.wp_eq]]
       split
       { simp }
       rename_i arg
@@ -64,20 +64,22 @@ lemma VelvetM.total_decompose {α : Type} (x : VelvetM α) (post₁ post₂ : α
       simp at ind
       rw [ind]
       trivial }
-    { constructor <;> intro hyp
-      { intro i hi
-        have hl := hyp.left i hi
+    { constructor <;> rintro hyp
+      { constructor; aesop
+        intro i hi
+        have hl := hyp.left.right i hi
         have hr := hyp.right i hi
         have ind := f_ih i post₁ post₂
         simp [hl, hr] at ind
         exact ind }
-      constructor <;>
-      { intro i hi
-        have conj := hyp i hi
+      constructor; constructor; aesop
+      all_goals
+        intro i hi
+        have conj := hyp.right i hi
         have ind := f_ih i post₁ post₂
         simp [loomLogicSimp] at ind
         rw [←ind] at conj
-        simp [conj] } }
+        simp [conj] }
     constructor
     { intro conj
       rcases conj with ⟨h, inv_spec, hspec⟩
@@ -139,7 +141,7 @@ lemma VelvetM.total_decompose {α : Type} (x : VelvetM α) (post₁ post₂ : α
     { exists x }
     { simp [h_inv, LE.pure]
       exact le_trans h_inv.right (by
-        simp [←[totl| NonDetT.wp_eq_wp], ←[part| NonDetT.wp_eq_wp]]
+        simp [← [totl|NonDetT.wp_eq_wp]]
         simp [loomLogicSimp]
         intro x and_wp
         have cont_ind := cont_ih x post₁ post₂
@@ -188,3 +190,20 @@ lemma VelvetM.total_decompose_triple {α : Type} {pre : Prop} {post : α -> Prop
     have decomp := VelvetM.total_decompose z (fun x => True) post
     simp [loomLogicSimp, postcondition, termination] at decomp
     exact decomp
+
+def VelvetM.extract {α : Type} (x : VelvetM α)
+  [∀ α, Lean.Order.CCPO (DivM α)] [Lean.Order.MonoBind DivM] [Inhabited α] : α :=
+  x.run.run
+
+namespace TotalCorrectness.DemonicChoice
+
+lemma VelvetM.extract_spec {α : Type} (x : VelvetM α) [Inhabited α] (post : α -> Prop) :
+  triple pre x post ->
+  (pre -> post x.extract) := by
+  intro tr
+  have h := ExtractNonDet.extract_refines pre x tr
+  revert tr h
+  simp [triple, DivM.wp_eq, VelvetM.extract, DivM.run]
+  aesop
+
+end TotalCorrectness.DemonicChoice
