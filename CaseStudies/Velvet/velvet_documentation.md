@@ -158,12 +158,12 @@ The implementation of a method goes inside a `do` block.
         i := i + 1
     ```
 
-*   **Non-determenistic operations**: syntax `let <name> :| <cond>` is used to assign a value using non-determenism.
+*   **Non-deterministic operations**: syntax `let <name> :| <cond>` is used to assign a value using non-determinism.
     **Example:**
     ```lean
     let ans :| ans > inp + 200
     ```
-    You can choose the type of non-determenism by switching between `AngelicChoice` and `DemonicChoice`.
+    You can choose the type of non-determinism by switching between `AngelicChoice` and `DemonicChoice`.
 *   **Array Operations**: For `Array <Type>`:
     *   **Creation**: `Array.replicate <size> <default_value>`
     *   **Size**: `<array>.size`

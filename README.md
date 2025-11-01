@@ -6,7 +6,7 @@
 
 * Executable semantics
 
-* Non-Determenism semantics
+* Non-Determinism semantics
 
 * Ready-to-use sample verifiers for imperative code with automated and interactive proofs
 
@@ -45,7 +45,7 @@ This folder contains the theoretical foundation of the framework:
 
 - instances of Monad Transformer Algebras for key monads with effect (`ExceptT`, `StateT`, `ReaderT`) in `Loom/MonadAlgebras/Instances`
 
-- `NonDetT/NonDetT'` definitions and Weakest Precondition generators for Monad Transformers with Non-Determenisms in `Loom/MonadAlgebras`
+- `NonDetT/NonDetT'` definitions and Weakest Precondition generators for Monad Transformers with Non-Determinisms in `Loom/MonadAlgebras`
 
 - Weakest Precondition generation and theorems for it in `Loom/MonadAlgebras/WP`
 
@@ -91,7 +91,7 @@ Examples are organized in directories by their verifier:
 - `CaseStudies/Cashmere` - directory with examples from Section 2 of the paper
   - `Cashmere.lean` - definition of the computational monad for `Cashmere` examples as well as correctness proofs for all case studies up to Section 2.6
 
-  - `CashmereIncorrectnessLogic.lean` - example from 2.7: using Angelic Non-Determenism to prove that there exists a bug in a program
+  - `CashmereIncorrectnessLogic.lean` - example from 2.7: using Angelic Non-Determinism to prove that there exists a bug in a program
 - `CaseStudies/Velvet/VelvetExamples` - directory with examples from Section 8 of the paper
 
   - `Examples.lean` - basic Dafny-like examples (`insertionSort`, `squareRoot`) in `Velvet` with partial correctness semantics

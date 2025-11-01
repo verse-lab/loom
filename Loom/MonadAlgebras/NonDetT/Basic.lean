@@ -11,7 +11,7 @@ import Loom.MonadAlgebras.NonDetT.Findable
 
 universe u v w
 
-section NonDetermenisticTransformer
+section NonDeterministicTransformer
 
 /- NonDetT transformer definition -/
 inductive NonDetT (m : Type u -> Type v) : (α : Type u) -> Type _ where
@@ -60,7 +60,7 @@ def NonDetT.pickSuchThat (τ : Type u) (p : τ → Prop) [Findable p] : NonDetT 
 def NonDetT.repeat (init : α) (f : α -> NonDetT m (ForInStep α)) : NonDetT m α :=
   NonDetT.repeatCont init f pure
 
-/- Non Determenism Monad typeclass -/
+/- Non Determinism Monad typeclass -/
 class MonadNonDet (m : Type u → Type v) where
   pick : (τ : Type u) → [Inhabited τ] → m τ
   -- get a value with given property

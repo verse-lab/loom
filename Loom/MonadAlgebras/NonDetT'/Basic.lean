@@ -9,7 +9,7 @@ import Loom.MonadAlgebras.WP.Gen
 
 universe u v w
 
-section NonDetermenisticTransformer
+section NonDeterministicTransformer
 
 inductive NonDetT (m : Type u -> Type v) : (α : Type u) -> Type _ where
   | pure {α} (ret : α) : NonDetT m α
