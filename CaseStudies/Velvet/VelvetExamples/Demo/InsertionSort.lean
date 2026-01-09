@@ -2,9 +2,6 @@
 -- Example 1: Velvet basics
 ----------------------------------------------------
 
-import Mathlib.Algebra.BigOperators.Intervals
-import Mathlib.Algebra.Ring.Int.Defs
-
 import CaseStudies.Velvet.Std
 import CaseStudies.TestingUtil
 
@@ -33,6 +30,8 @@ method sqrt (x: ℕ) return (res: ℕ)
 prove_correct sqrt by
   loom_solve
   -- all_goals loom_smt [*]
+
+-- #eval sqrt 10 |>.extract
 
 end squareRoot
 
@@ -85,7 +84,7 @@ set_option loom.semantics.choice "demonic"
 method insertionSort
   (mut arr: Array Int) return (u: Unit)
   require 1 ≤ arr.size
-  ensures forall i j, 0 ≤ i ∧ i ≤ j ∧ j < arr.size → arr[i]! ≤ arr[j]!
+  ensures forall i j, 0 ≤ i ∧ i <= j ∧ j < arr.size → arr[i]! <= arr[j]!
   ensures arr.toMultiset = arr.toMultiset
   do
     let arr₀ := arr
@@ -96,7 +95,7 @@ method insertionSort
     invariant 1 ≤ n ∧ n ≤ arr.size
     invariant forall i j, 0 ≤ i ∧ i < j ∧ j <= n - 1 → arr[i]! ≤ arr[j]!
     invariant arr.toMultiset = arr₀.toMultiset
-    -- decreasing size arr - n
+    -- decreasing arr.size - n
     do
       let mut mind := n
       while mind ≠ 0
@@ -109,7 +108,7 @@ method insertionSort
         if arr[mind]! < arr[mind - 1]! then
           swap! arr[mind - 1]! arr[mind]!
         mind := mind - 1
-      -- n := n + 1 -- try commenting this out for termination
+      n := n + 1 -- try commenting this out for termination
     return
 
 -- Let's test this stuff
@@ -127,17 +126,17 @@ derive_tester_for insertionSort
 -- (2.1) Doing simple testing
 -- See here where the postcondition is violated
 
--- run_elab do
---   -- Generate random arrays
---   let g : Plausible.Gen (_ × Bool) := do
---     let arr ← Plausible.SampleableExt.interpSample (Array Int)
---     let res := insertionSortTester arr
---     pure (arr, res)
---   for _ in [1: 500] do
---     let res ← Plausible.Gen.run g 10
---     unless res.2 do
---       IO.println s!"postcondition violated for input {res.1}"
---       break
+run_elab do
+  -- Generate random arrays
+  let g : Plausible.Gen (_ × Bool) := do
+    let arr ← Plausible.SampleableExt.interpSample (Array Int)
+    let res := insertionSortTester arr
+    pure (arr, res)
+  for _ in [1: 500] do
+    let res ← Plausible.Gen.run g 10
+    unless res.2 do
+      IO.println s!"postcondition violated for input {res.1}"
+      break
 
 -- (2.2) This just works
 
