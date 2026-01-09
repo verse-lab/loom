@@ -41,15 +41,15 @@ method Set.toArray (mut s: α -> Bool) return (res: Array α)
   ensures forall x, sOld x <-> x ∈ res
   do
     let mut res := #[]
-    while_some x :| s x
+    while ∃ x, s x
     invariant forall x, sOld x = true <-> (x ∈ res ∨ s x)
-    done_with ∀ x, s x = false
     do
+      let x :| s x
       res := res.push x
       s := fun y => if y = x then false else s y
     return res
 
--- #eval Set.toArray (fun x => x ∈ #[1, 2, (3 : Fin 6)]) |>.extract |>.1
+#eval Set.toArray (fun x => x ∈ #[1, 2, (3 : Fin 6)]) |>.extract.1
 
 prove_correct Set.toArray by
   loom_solve!
