@@ -33,6 +33,24 @@ prove_correct sqrt by
 
 -- #eval sqrt 10 |>.extract
 
+set_option loom.solver "grind"
+
+variable [FinEnum α]
+
+method Set.toArray (mut s: α -> Bool) return (res: Array α)
+  ensures forall x, s x <-> x ∈ res
+  do
+    let mut res := #[]
+    while_some x :| s x
+    invariant forall x, sOld x <-> (x ∈ res ∨ s x)
+    done_with ∀ x, s x = false
+    do
+      res := res.push x
+    return res
+
+prove_correct Set.toArray by
+  loom_solve
+
 end squareRoot
 
 -- (2) Insertion sort
