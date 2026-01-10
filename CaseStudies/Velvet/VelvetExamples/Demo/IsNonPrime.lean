@@ -40,6 +40,7 @@ def countDivisors (n: Nat) : Nat :=
 -- A number is prime if and only if:
 -- 1. It is greater than 1
 -- 2. It has exactly 2 positive divisors (1 and itself)
+@[grind]
 def isPrime (n: Nat) : Prop :=
   n > 1 ∧ countDivisors n = 2
 
@@ -65,7 +66,7 @@ method IsNonPrime (n: Nat)
 -- Program verification
 ------------------------------------------------
 
-theorem goal2
+theorem goal
 (n : ℕ)
 (i : ℕ)
 (ret : Bool)
@@ -129,7 +130,9 @@ theorem goal2
 -- Putting it all together
 ----------------------------------------------------------------
 
+-- macro_rules
+--   | `(tactic|loom_solver) => `(tactic|skip)
+
 prove_correct IsNonPrime by
-  loom_solve <;> try simp_all
-  · { rw [isPrime]; aesop }
-  · apply (goal2 n i ret i_1 ret_1 if_neg invariant_1 invariant_2 invariant_3 done_1 i_2)
+  loom_solve; try simp_all
+  apply (goal n i ret i_1 ret_1 if_neg invariant_1 invariant_2 invariant_3 done_1 i_2)
