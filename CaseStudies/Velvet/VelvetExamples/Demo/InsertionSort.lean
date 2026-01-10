@@ -30,7 +30,6 @@ method sqrt (x: ℕ) return (res: ℕ)
       return i - 1
 prove_correct sqrt by
   loom_solve
-  -- all_goals loom_smt [*]
 
 -- #eval sqrt 10 |>.extract
 
@@ -163,7 +162,6 @@ run_elab do
 set_option maxHeartbeats 1000000
 
 prove_correct insertionSort by
-  -- loom_solve!
-  loom_solve_async!
+  loom_solve!
 
 end insertionSort
