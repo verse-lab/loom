@@ -10,6 +10,7 @@ section squareRoot
 set_option loom.semantics.termination "partial"
 set_option loom.semantics.choice "demonic"
 set_option loom.solver "cvc5"
+set_option loom.solver.smt.timeout 1
 
 -- (1) Proving things with SMT
 -- partial correctness version of square root
@@ -37,22 +38,22 @@ set_option loom.solver "grind"
 
 variable [FinEnum α]
 
-method Set.toArray (mut s: α -> Bool) return (res: Array α)
-  ensures forall x, sOld x <-> x ∈ res
+method Predicate.toArray (mut s: α -> Bool) return (res: Array α)
+  ensures ∀ x, sOld x <-> x ∈ res
   do
     let mut res := #[]
     while ∃ x, s x
-    invariant forall x, sOld x = true <-> (x ∈ res ∨ s x)
+    invariant ∀ x, sOld x = true <-> (x ∈ res ∨ s x)
     do
       let x :| s x
       res := res.push x
       s := fun y => if y = x then false else s y
     return res
 
-#eval Set.toArray (fun x => x ∈ #[1, 2, (3 : Fin 6)]) |>.extract.1
+#eval Predicate.toArray (fun x => x ∈ #[1, 2, (3 : Fin 6)]) |>.extract.1
 
-prove_correct Set.toArray by
-  loom_solve!
+prove_correct Predicate.toArray by
+  loom_solve
 
 end squareRoot
 
@@ -105,25 +106,23 @@ set_option loom.semantics.choice "demonic"
 method insertionSort
   (mut arr: Array Int) return (u: Unit)
   require 1 ≤ arr.size
-  ensures forall i j, 0 ≤ i ∧ i <= j ∧ j < arr.size → arr[i]! <= arr[j]!
-  ensures arr.toMultiset = arr.toMultiset
+  ensures ∀ i j, 0 ≤ i ∧ i ≤ j ∧ j < arr.size → arr[i]! ≤ arr[j]!
+  ensures arr.toMultiset = arrOld.toMultiset
   do
-    let arr₀ := arr
-    let arr_size := arr.size
     let mut n := 1
     while n ≠ arr.size
-    invariant arr.size = arr_size
+    invariant arr.size = arrOld.size
     invariant 1 ≤ n ∧ n ≤ arr.size
-    invariant forall i j, 0 ≤ i ∧ i < j ∧ j <= n - 1 → arr[i]! ≤ arr[j]!
-    invariant arr.toMultiset = arr₀.toMultiset
+    invariant ∀ i j, 0 ≤ i ∧ i < j ∧ j ≤ n - 1 → arr[i]! ≤ arr[j]!
+    invariant arr.toMultiset = arrOld.toMultiset
     -- decreasing arr.size - n
     do
       let mut mind := n
       while mind ≠ 0
-      invariant arr.size = arr_size
+      invariant arr.size = arrOld.size
       invariant mind ≤ n
-      invariant forall i j, 0 ≤ i ∧ i < j ∧ j ≤ n ∧ j ≠ mind → arr[i]! ≤ arr[j]!
-      invariant arr.toMultiset = arr₀.toMultiset
+      invariant ∀ i j, 0 ≤ i ∧ i < j ∧ j ≤ n ∧ j ≠ mind → arr[i]! ≤ arr[j]!
+      invariant arr.toMultiset = arrOld.toMultiset
       -- decreasing mind
       do
         if arr[mind]! < arr[mind - 1]! then
@@ -164,7 +163,7 @@ run_elab do
 set_option maxHeartbeats 1000000
 
 prove_correct insertionSort by
-  -- loom_solve
-  loom_solve_async
+  loom_solve!
+  -- loom_solve_async!
 
 end insertionSort

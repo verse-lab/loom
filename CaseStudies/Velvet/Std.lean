@@ -74,3 +74,12 @@ theorem Array.multiset_swap [Inhabited α]
     have : Array.count a arr > 0 := by
       apply Array.count_pos_iff.mpr; simp [<-h]
     omega
+
+@[app_unexpander WithName] def unexpandWithName : Lean.PrettyPrinter.Unexpander
+  | `($(_) $p:term) => `($p:term)
+  | `($(_) $p:term $_) => `($p:term)
+  | _ => throw ()
+@[app_unexpander WithName.mk'] def unexpandWithNameMk : Lean.PrettyPrinter.Unexpander
+  | `($(_) $p:term) => `($p:term)
+  | `($(_) $p:term $_) => `($p:term)
+  | _ => throw ()
