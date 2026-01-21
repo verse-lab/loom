@@ -62,6 +62,9 @@ method IsNonPrime (n: Nat)
       i := i + 1
     return ret
 
+#eval (IsNonPrime 42).extract
+
+#eval (IsNonPrime 239).extract
 ------------------------------------------------
 -- Program verification
 ------------------------------------------------
@@ -130,8 +133,8 @@ theorem goal
 -- Putting it all together
 ----------------------------------------------------------------
 
--- macro_rules
---   | `(tactic|loom_solver) => `(tactic|skip)
+-- TODO: uncomment to see all the goals after "loom_solve"
+-- set_option loom.solver "custom"
 
 prove_correct IsNonPrime by
   loom_solve; try simp_all

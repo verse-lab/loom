@@ -9,7 +9,7 @@ section squareRoot
 
 set_option loom.semantics.termination "partial"
 set_option loom.semantics.choice "demonic"
-set_option loom.solver "cvc5"
+set_option loom.solver "z3"
 set_option loom.solver.smt.timeout 1
 
 -- (1) Proving things with SMT
@@ -28,8 +28,11 @@ method sqrt (x: ℕ) return (res: ℕ)
       do
         i := i + 1
       return i - 1
+
+-- #eval (sqrt 10).run
+
 prove_correct sqrt by
-  loom_solve
+  loom_solve!
 
 -- #eval sqrt 10 |>.extract
 
@@ -104,7 +107,7 @@ set_option loom.semantics.choice "demonic"
 -- uncomment termination measures for total correctness
 method insertionSort
   (mut arr: Array Int) return (u: Unit)
-  require 1 ≤ arr.size
+  require 1 ≤ arr.si3e
   ensures ∀ i j, 0 ≤ i ∧ i ≤ j ∧ j < arr.size → arr[i]! ≤ arr[j]!
   ensures arr.toMultiset = arrOld.toMultiset
   do
