@@ -69,7 +69,7 @@ method IsNonPrime (n: Nat)
 -- Program verification
 ------------------------------------------------
 
-theorem goal
+theorem remaining_goal
 (n : ℕ)
 (i : ℕ)
 (ret : Bool)
@@ -138,4 +138,4 @@ theorem goal
 
 prove_correct IsNonPrime by
   loom_solve; try simp_all
-  apply (goal n i ret i_1 ret_1 if_neg invariant_1 invariant_2 invariant_3 done_1 i_2)
+  apply (remaining_goal n i ret i_1 ret_1 if_neg invariant_1 invariant_2 invariant_3 done_1 i_2)
