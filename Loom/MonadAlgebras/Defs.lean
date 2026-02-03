@@ -118,8 +118,8 @@ class MAlgDet (l : outParam (Type v)) [Monad m] [CompleteLattice l] [MAlgOrdered
 class MAlgPartial (m : Type u -> Type v) [Monad m] [∀ α, Lean.Order.CCPO (m α)]
   [CompleteLattice l] [MAlgOrdered m l] where
   csup_lift {α : Type u} (xc : Set (m α)) (post : α -> l) :
-    Lean.Order.chain xc ->
-    ⨅ x ∈ xc, MAlg.lift x post <= MAlg.lift (Lean.Order.CCPO.csup xc) post
+    ∀ (hc : Lean.Order.chain xc),
+    ⨅ x ∈ xc, MAlg.lift x post <= MAlg.lift (Lean.Order.CCPO.csup hc) post
 
 /-- Class for total correctness monadic algebras -/
 class MAlgTotal (m : Type u -> Type v) [Monad m] [∀ α, Lean.Order.CCPO (m α)]

@@ -33,8 +33,8 @@ instance : Monad DivM where
 class CCPOBot (m : Type u -> Type v)  where
   compBot {α} : m α
 
-class CCPOBotLawful (m : Type u -> Type v) [∀ α, Lean.Order.CCPO (m α)] [CCPOBot m] where
-  prop {α} : CCPOBot.compBot (m := m) (α := α) = Lean.Order.bot
+-- class CCPOBotLawful (m : Type u -> Type v) [∀ α, Lean.Order.CCPO (m α)] [CCPOBot m] where
+--   prop {α} [Lean.Order.PartialOrder (m α)] : ∀ (c : (m α) → Prop), Lean.Order.is_sup c <| CCPOBot.compBot (m := m) (α := α)
 
 instance : LawfulMonad DivM := by
   refine LawfulMonad.mk' _ ?_ ?_ ?_
@@ -46,8 +46,8 @@ noncomputable instance : Lean.Order.CCPO (DivM α) := inferInstanceAs (Lean.Orde
 instance : CCPOBot DivM where
   compBot := .div
 
-instance : CCPOBotLawful DivM where
-  prop := by simp [Lean.Order.bot, Lean.Order.CCPO.csup,Lean.Order.flat_csup, instCCPOBotDivM]
+-- instance : CCPOBotLawful DivM where
+--   prop := by sorry-- simp [Lean.Order.bot, Lean.Order.CCPO.csup, instCCPOBotDivM]
 
 instance : Lean.Order.MonoBind DivM where
   bind_mono_left := by
@@ -73,15 +73,15 @@ scoped instance : MAlgDet DivM Prop where
   angelic := by
     rintro _ _ (_|_) <;> simp [MAlg.lift, MAlgOrdered.μ, Functor.map]
 
-instance : MAlgPartial DivM where
-  csup_lift {α} chain := by
-    intro post hchain
-    simp [Lean.Order.CCPO.csup, Lean.Order.flat_csup]
-    split_ifs with ch
-    { intro h; apply h;
-      rcases Classical.choose_spec ch
-      solve_by_elim }
-    solve_by_elim
+-- instance : MAlgPartial DivM where
+--   csup_lift {α} chain := by
+--     intro post hchain
+--     simp [Lean.Order.CCPO.csup, Lean.Order.flat_csup]
+--     split_ifs with ch
+--     { intro h; apply h;
+--       rcases Classical.choose_spec ch
+--       solve_by_elim }
+--     solve_by_elim
 
 instance : NoFailure DivM where
   noFailure := by
@@ -106,9 +106,9 @@ scoped instance : MAlgDet DivM Prop where
   demonic := by
     rintro _ _ (_|_) <;> simp [MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure]
 
-instance : MAlgTotal DivM where
-  bot_lift := by
-    rintro _ _; simp [MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure]
-    rw [<-CCPOBotLawful.prop]; simp
+-- instance : MAlgTotal DivM where
+--   bot_lift := by
+--     rintro _ _; simp [MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure]
+--     rw [<-CCPOBotLawful.prop]; simp
 
 end TotalCorrectness

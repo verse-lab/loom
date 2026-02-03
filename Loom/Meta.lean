@@ -3,7 +3,6 @@ import Lean.Elab.Tactic
 
 import Loom.MonadAlgebras.WP.Attr
 import Loom.MonadAlgebras.WP.Basic
-import Loom.MonadAlgebras.NonDetT.Basic
 
 import Mathlib.Tactic.Common
 
@@ -472,19 +471,19 @@ attribute [loomWPGenRewrite]
   ReaderT.wp_read
   MAlgLift.wp_throw
 
-  TotalCorrectness.AngelicChoice.MonadNonDet.wp_pickSuchThat
-  TotalCorrectness.DemonicChoice.MonadNonDet.wp_pickSuchThat
-  PartialCorrectness.AngelicChoice.MonadNonDet.wp_pickSuchThat
-  PartialCorrectness.DemonicChoice.MonadNonDet.wp_pickSuchThat
+  -- TotalCorrectness.AngelicChoice.MonadNonDet.wp_pickSuchThat
+  -- TotalCorrectness.DemonicChoice.MonadNonDet.wp_pickSuchThat
+  -- PartialCorrectness.AngelicChoice.MonadNonDet.wp_pickSuchThat
+  -- PartialCorrectness.DemonicChoice.MonadNonDet.wp_pickSuchThat
 
-  TotalCorrectness.DemonicChoice.MonadNonDet.wp_assume
-  TotalCorrectness.AngelicChoice.MonadNonDet.wp_assume
-  TotalCorrectness.DemonicChoice.MonadNonDet.wp_pick
-  TotalCorrectness.AngelicChoice.MonadNonDet.wp_pick
-  PartialCorrectness.DemonicChoice.MonadNonDet.wp_assume
-  PartialCorrectness.AngelicChoice.MonadNonDet.wp_assume
-  PartialCorrectness.DemonicChoice.MonadNonDet.wp_pick
-  PartialCorrectness.AngelicChoice.MonadNonDet.wp_pick
+  -- TotalCorrectness.DemonicChoice.MonadNonDet.wp_assume
+  -- TotalCorrectness.AngelicChoice.MonadNonDet.wp_assume
+  -- TotalCorrectness.DemonicChoice.MonadNonDet.wp_pick
+  -- TotalCorrectness.AngelicChoice.MonadNonDet.wp_pick
+  -- PartialCorrectness.DemonicChoice.MonadNonDet.wp_assume
+  -- PartialCorrectness.AngelicChoice.MonadNonDet.wp_assume
+  -- PartialCorrectness.DemonicChoice.MonadNonDet.wp_pick
+  -- PartialCorrectness.AngelicChoice.MonadNonDet.wp_pick
 
 
 /- #derive_lifted_wp command, used to enable automatic VC generation in verifiers built on top of Loom.

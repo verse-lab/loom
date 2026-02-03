@@ -165,9 +165,9 @@ def Loop.forIn {β : Type u} [Monad m] [∀ α, CCPO (m α)] [MonoBind m]
   (_ : Lean.Loop) (init : β) (f : Unit → β → m (ForInStep β)) : m β :=
   Loop.forIn.loop f init
 
-@[instance high]
-instance [md : Monad m] [ccpo : ∀ α, CCPO (m α)] [mono : MonoBind m] : ForIn m Lean.Loop Unit where
-  forIn {β} _ := @Loop.forIn m β md ccpo mono
+-- @[instance high]
+-- instance [md : Monad m] [ccpo : ∀ α, CCPO (m α)] [mono : MonoBind m] : ForIn m Lean.Loop Unit where
+--   forIn {β} _ := @Loop.forIn m β md ccpo mono
 
 variable [inst: _root_.CompleteLattice l] [MAlgOrdered m l]
 
@@ -175,46 +175,46 @@ namespace PartialCorrectness
 
 variable [∀ α, CCPO (m α)] [MonoBind m] [MAlgPartial m]
 
-omit [MonoBind m] [LawfulMonad m] in
-lemma wp_csup (xc : Set (m α)) (post : α -> l) :
-  Lean.Order.chain xc ->
-  ⨅ c ∈ xc, wp c post ≤ wp (Lean.Order.CCPO.csup xc) post := by
-  apply MAlgPartial.csup_lift
+-- omit [MonoBind m] [LawfulMonad m] in
+-- lemma wp_csup (xc : Set (m α)) (post : α -> l) :
+--   Lean.Order.chain xc ->
+--   ⨅ c ∈ xc, wp c post ≤ wp (Lean.Order.CCPO.csup xc) post := by
+--   apply MAlgPartial.csup_lift
 
-omit [MonoBind m] [LawfulMonad m] in
-lemma wp_bot :
-  wp (bot : m α) = fun _ => (⊤ : l) := by
-  ext post; refine eq_top_iff.mpr ?_
-  apply le_trans'; apply wp_csup; simp [chain]
-  refine le_iInf₂ ?_
-  intro; erw [Set.mem_empty_iff_false]; simp
+-- omit [MonoBind m] [LawfulMonad m] in
+-- lemma wp_bot :
+--   wp (bot : m α) = fun _ => (⊤ : l) := by
+--   ext post; refine eq_top_iff.mpr ?_
+--   apply le_trans'; apply wp_csup; simp [chain]
+--   refine le_iInf₂ ?_
+--   intro; erw [Set.mem_empty_iff_false]; simp
 
-lemma repeat_inv (f : Unit -> β -> m (ForInStep β))
-  (inv : ForInStep β -> l)
-  init :
-   (∀ b, triple (inv (.yield b)) (f () b) (inv)) ->
-   triple (inv (.yield init)) (Loop.forIn.loop f init) (fun b => inv (.done b)) := by
-  intro hstep
-  revert init
-  apply Loop.forIn.loop.fixpoint_induct (f := f) (motive :=
-    fun loop => ∀ init, triple (inv (.yield init)) (loop init) (fun b =>inv (.done b)))
-  { apply Lean.Order.admissible_pi_apply
-      (P := fun init loop => triple (inv (.yield init)) (loop) (fun b =>inv (.done b)))
-    simp [admissible, triple]; intro init loops cl h
-    apply le_trans'; apply wp_csup; solve_by_elim
-    simp; solve_by_elim }
-  intro loop ih init; simp [triple, wp_bind]; apply le_trans; apply hstep
-  apply wp_cons; rintro (_|_); simp [wp_pure]
-  apply ih
+-- lemma repeat_inv (f : Unit -> β -> m (ForInStep β))
+--   (inv : ForInStep β -> l)
+--   init :
+--    (∀ b, triple (inv (.yield b)) (f () b) (inv)) ->
+--    triple (inv (.yield init)) (Loop.forIn.loop f init) (fun b => inv (.done b)) := by
+--   intro hstep
+--   revert init
+--   apply Loop.forIn.loop.fixpoint_induct (f := f) (motive :=
+--     fun loop => ∀ init, triple (inv (.yield init)) (loop init) (fun b =>inv (.done b)))
+--   { apply Lean.Order.admissible_pi_apply
+--       (P := fun init loop => triple (inv (.yield init)) (loop) (fun b =>inv (.done b)))
+--     simp [admissible, triple]; intro init loops cl h
+--     apply le_trans'; apply wp_csup; solve_by_elim
+--     simp; solve_by_elim }
+--   intro loop ih init; simp [triple, wp_bind]; apply le_trans; apply hstep
+--   apply wp_cons; rintro (_|_); simp [wp_pure]
+--   apply ih
 
-lemma repeat_inv_split (f : Unit -> β -> m (ForInStep β))
-  (inv : β -> l) (doneWith : β -> l)
-  init :
-   (∀ b, triple (inv b) (f () b) (fun | .yield b' => inv b' | .done b' => inv b' ⊓ doneWith b')) ->
-   triple (inv init) (Loop.forIn.loop f init) (fun b => inv b ⊓ doneWith b) := by
-  intro hstep
-  apply repeat_inv f (fun | .yield b => inv b | .done b => inv b ⊓ doneWith b) init
-  apply hstep
+-- lemma repeat_inv_split (f : Unit -> β -> m (ForInStep β))
+--   (inv : β -> l) (doneWith : β -> l)
+--   init :
+--    (∀ b, triple (inv b) (f () b) (fun | .yield b' => inv b' | .done b' => inv b' ⊓ doneWith b')) ->
+--    triple (inv init) (Loop.forIn.loop f init) (fun b => inv b ⊓ doneWith b) := by
+--   intro hstep
+--   apply repeat_inv f (fun | .yield b => inv b | .done b => inv b ⊓ doneWith b) init
+--   apply hstep
 
 end PartialCorrectness
 

@@ -158,8 +158,8 @@ instance [Monad m] [∀ α, CCPO (m α)] [MonoBind m] : MonoBind (ExceptT ε m) 
 instance [Monad m] [CCPOBot m] : CCPOBot (ExceptT ε m) where
   compBot := CCPOBot.compBot (m := m)
 
-instance [Monad m] [inst : ∀ α, Lean.Order.CCPO (m α)] [CCPOBot m] [CCPOBotLawful m] : CCPOBotLawful (ExceptT ε m) where
-  prop := CCPOBotLawful.prop (m := m)
+-- instance [Monad m] [inst : ∀ α, Lean.Order.CCPO (m α)] [CCPOBot m] [CCPOBotLawful m] : CCPOBotLawful (ExceptT ε m) where
+--   prop := CCPOBotLawful.prop (m := m)
 
 instance (hd : ε -> _) [IsHandler hd] [_root_.CompleteLattice l] [Monad m] [LawfulMonad m] [inst: MAlgOrdered m l]
   [∀ α, CCPO (m α)] [MonoBind m]
