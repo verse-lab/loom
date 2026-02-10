@@ -52,6 +52,18 @@ theorem pointwiseSup_alt {l : Type v} [CompleteBooleanAlgebra l] {α : Type u} (
   apply iSup_congr ; intro a
   by_cases h : a ∈ lis <;> simp [h]
 
+@[inline] def List.flatMapTRNoSpecialize (f : α → List β) (as : List α) : List β := go as #[] where
+  go : List α → Array β → List β
+  | [], acc => acc.toList
+  | x::xs, acc => go xs (acc ++ f x)
+
+theorem List.flatMapTRNoSpecialize_eq_flatMap : @List.flatMapTRNoSpecialize = @List.flatMap := by
+  funext α β f as
+  let rec go : ∀ as acc, flatMapTRNoSpecialize.go f as acc = acc.toList ++ as.flatMap f
+    | [], acc => by simp [flatMapTRNoSpecialize.go, flatMap]
+    | x::xs, acc => by simp [flatMapTRNoSpecialize.go, flatMap, go xs]
+  exact (go as #[])
+
 end BasicStuff
 
 /-!
@@ -599,13 +611,22 @@ instance [Functor m] : Functor (TsilT m) where
 
 @[always_inline]
 instance [TsilTCore m] : Bind (TsilT m) where
-  bind := fun xs f => xs.flatMap fun mx => TsilTCore.op mx f
+  bind := fun xs f =>
+    match xs with
+    | [] => []
+    | [x] => TsilTCore.op x f
+    | _ => xs.flatMapTRNoSpecialize fun mx => TsilTCore.op mx f
+
+theorem TsilTCore.bind_eq_flatMap [TsilTCore m] (xs : TsilT m α) (f : α → TsilT m β) :
+  bind xs f = xs.flatMap fun mx => TsilTCore.op mx f := by
+    rcases xs with _ | ⟨x, _ | ⟨y, xs⟩⟩ <;> (try solve | rfl | simp [bind])
+    simp [bind, List.flatMapTRNoSpecialize_eq_flatMap]
 
 @[always_inline]
 instance [Monad m] [TsilTCore m] : Monad (TsilT m) where
 
 instance [Monad m] [TsilTCore m] : MonadFlatMap'BindDistributive (TsilT m) where
-  bind_distrib := by introv ; simp [MonadFlatMap'.op, Bind.bind] ; induction l <;> grind
+  bind_distrib := by introv ; simp [MonadFlatMap'.op, TsilTCore.bind_eq_flatMap] ; induction l <;> grind
 
 section Lawfulness
 
@@ -625,11 +646,11 @@ class LawfulTsilTCore (m : Type u → Type v) [Monad m] [TsilTCore m] where
 theorem TsilTCore.bind_cons {α β : Type u} [Monad m] [TsilTCore m]
   (mx : m α) (mxs : TsilT m α) (f : α → TsilT m β) :
   letI tmp : TsilT m α := (mx :: mxs)
-  (tmp >>= f) = (TsilTCore.op mx f) ++ (mxs >>= f) := by simp [bind]
+  (tmp >>= f) = (TsilTCore.op mx f) ++ (mxs >>= f) := by simp [TsilTCore.bind_eq_flatMap]
 
 theorem TsilTCore.bind_append {α β : Type u} [Monad m] [TsilTCore m]
   (mx1 mx2 : TsilT m α) (f : α → TsilT m β) :
-  ((mx1 ++ mx2) >>= f) = (mx1 >>= f) ++ (mx2 >>= f) := by simp [bind]
+  ((mx1 ++ mx2) >>= f) = (mx1 >>= f) ++ (mx2 >>= f) := by simp [TsilTCore.bind_eq_flatMap]
 
 -- this is required in general
 instance [Monad m] [LawfulMonad m] [TsilTCore m] [LawfulTsilTCore m] : LawfulMonad (TsilT m) :=
@@ -640,12 +661,12 @@ instance [Monad m] [LawfulMonad m] [TsilTCore m] [LawfulTsilTCore m] : LawfulMon
     induction x with
     | nil => simp
     | cons y xs ih => simp [ih])
-  (pure_bind := by introv ; simp [bind, pure] ; apply LawfulTsilTCore.pure_op)
+  (pure_bind := by introv ; simp [bind] ; apply LawfulTsilTCore.pure_op)
   (bind_assoc := by
-    introv ; simp [bind] ; rw [List.flatMap_assoc]
+    introv ; simp [TsilTCore.bind_eq_flatMap] ; rw [List.flatMap_assoc]
     apply List.flatMap_congr ; intro x _ ; apply LawfulTsilTCore.op_assoc)
   (bind_pure_comp := by
-    introv ; simp [bind, pure, Functor.map]
+    introv ; simp [TsilTCore.bind_eq_flatMap, pure, Functor.map]
     induction x with
     | nil => simp
     | cons y xs ih => simp [ih] ; rw [LawfulTsilTCore.op_single] ; simp)
