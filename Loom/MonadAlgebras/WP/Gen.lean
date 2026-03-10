@@ -226,7 +226,7 @@ def WPGen.forWithInvariant {xs : Std.Range} {init : β} {f : ℕ → β → m (F
       apply triple_forIn_range_step1 (fun i b => (inv i b).foldr (·⊓·) ⊤)
       simp [invariantSeq, <-xs1] at h
       intro i b; apply (wpg i b).intro
-      all_goals solve_by_elim
+      all_goals (first | solve_by_elim | exact bot_le)
 
 -- noncomputable
 -- def WPGen.forWithInvariantDecreasing {β} {measure : β -> ℕ}

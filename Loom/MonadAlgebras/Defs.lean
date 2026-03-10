@@ -66,6 +66,7 @@ instance EffectObservationOfMAlg (l : Type u) {m : Type u -> Type v} [Monad m] [
     intro α x; simp [monadLift, pure]; unfold MAlg.lift; simp [map_pure, MAlg.pure]
   monadLift_bind := by
     intros α β x f; simp [monadLift, bind]; unfold MAlg.lift; ext g
+    simp only [ContT.run, id]
     rw (config := { occs := .pos [2] }) [map_eq_pure_bind]
     simp only [map_bind]; apply MAlg.bind
     ext; simp [MAlg.pure]
@@ -239,9 +240,9 @@ instance MAlgLiftTTrans
   [inst': MAlgLiftT m l n k] [inst: MAlgLift n k p q] :
   MAlgLiftT m l p q where
     cl := by
-      let cl := inst.cl
-      let cl' := inst'.cl
-      refine instLogicLiftTOfLogicLift
+      haveI := inst.cl
+      haveI := inst'.cl
+      infer_instance
     μ_lift := by
-      intros; simp [liftM, instMonadLiftTContOfLogicLiftT, instLogicLiftTOfLogicLift,instMonadLiftTOfMonadLift];
+      intros; simp only [liftM, monadLift, MonadLiftT.monadLift, instMonadLiftTOfMonadLift]
       erw [inst.μ_lift]; congr! 2; ext; apply inst'.μ_lift

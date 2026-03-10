@@ -419,7 +419,7 @@ lemma StateT.wp_eq (c : StateT σ m α) (post : α -> σ -> l) :
 lemma StateT.wp_lift (c : m α) (post : α -> σ -> l) :
   wp (liftM (n := StateT σ m) c) post = fun s => wp (m := m) c (post · s) := by
   simp [wp, liftM, monadLift, MAlg.lift_StateT, MonadLift.monadLift, StateT.lift];
-  have liftE : ∀ α, MAlg.lift (m := m) (α := α) = wp := by intros; ext; simp [wp, liftM, monadLift]
+  have liftE : ∀ α, MAlg.lift (m := m) (α := α) = wp := by intros; ext; simp [wp, liftM, monadLift, ContT.run, id]
   ext s; rw [map_eq_pure_bind, liftE, liftE, wp_bind]; simp [wp_pure]
 
 /- WP for ReaderT in underlying monad  -/
@@ -459,7 +459,7 @@ lemma MAlgLift.wp_throw
   [inst: MAlgLiftT (ExceptT ε m) l n k] :
     wp (liftM (n := n) (throw (m := ExceptT ε m) e)) post = ⌜hd e⌝ := by
     rw [MAlgLift.wp_lift, ExceptT.wp_throw]
-    simp only [LE.pure]; split <;> simp [inst.cl.lift_top, inst.cl.lift_bot]
+    simp only [LE.pure]; split <;> (simp [inst.cl.lift_top, inst.cl.lift_bot]; try rfl)
 
 end ExceptT
 
