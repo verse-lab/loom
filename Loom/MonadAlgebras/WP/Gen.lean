@@ -209,7 +209,7 @@ theorem triple_forIn_deacreasing {β} {measure : β -> ℕ}
   apply le_trans'; apply wp_cons; rotate_left 2; apply le_trans; rotate_left 1
   apply triple_forIn_range_step1 (inv := fun i b => ⌜ measure b + i <= measure init ⌝ ⊓ inv b) <;>
     try solve | aesop
-  { simp; intro i b
+  { simp; intro i b _hlt
     by_cases h : measure b + i ≤ measure init <;> simp [h, triple]
     apply le_trans; apply hstep; omega
     apply wp_cons; rintro (b'|b') <;> simp
@@ -228,7 +228,7 @@ noncomputable
 def WPGen.forWithInvariant {xs : Std.Range} {init : β} {f : ℕ → β → m (ForInStep β)}
   (inv : ℕ → β → List l) (wpg : ∀ i b, WPGen (f i b)) (xs1 : xs.step = 1) (xs_le : xs.start <= xs.stop := by omega) :
     WPGen (forIn xs init (fun i b => do invariantGadget (inv i b); (f i b))) where
-    get := ⌜∀ i b, invariantSeq (inv i b) <= (wpg i b).get fun
+    get := ⌜∀ i b, xs.start ≤ i → i < xs.stop → invariantSeq (inv i b) <= (wpg i b).get fun
       | .yield b' => invariantSeq <| inv (i + 1) b'
       | .done b'  => invariantSeq <| inv xs.stop b'⌝
       ⊓ spec
@@ -239,9 +239,10 @@ def WPGen.forWithInvariant {xs : Std.Range} {init : β} {f : ℕ → β → m (F
       apply (triple_spec ..).mpr
       simp [invariantGadget]
       apply triple_forIn_range_step1 (fun i b => (inv i b).foldr (·⊓·) ⊤)
-      simp [invariantSeq, <-xs1] at h
-      intro i b; apply (wpg i b).intro
-      all_goals solve_by_elim
+      · simp [invariantSeq, <-xs1] at h
+        intro i b hi hlt; apply (wpg i b).intro
+        exact h i b hi hlt
+      all_goals assumption
 
 -- noncomputable
 -- def WPGen.forWithInvariantDecreasing {β} {measure : β -> ℕ}

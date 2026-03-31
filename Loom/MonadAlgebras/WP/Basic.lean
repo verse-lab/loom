@@ -298,7 +298,8 @@ theorem triple_forIn_list {α β}
 theorem triple_forIn_range'_aux {β}
   {xstart : ℕ} {step : ℕ} (n : ℕ) (init : β) {f : ℕ → β → m (ForInStep β)}
   (inv : ℕ → β → l)
-  (hstep : ∀ i b,
+  (hstep_pos : step > 0)
+  (hstep : ∀ i b, xstart ≤ i → i < xstart + n * step →
     triple
       (inv i b)
       (f i b)
@@ -308,40 +309,47 @@ theorem triple_forIn_range'_aux {β}
   unhygienic induction i generalizing init
   { simp [triple_pure] }
   intro le
-  simp [List.range']; apply triple_bind; apply hstep
-  rintro (_|_) <;> simp [triple_pure]
-  simp [Nat.add_assoc, <-Nat.add_one_mul]
-  have : (n - (n_1 + 1) + 1) = n - n_1 := by omega
-  rw [this]; apply a; omega
+  simp [List.range']; apply triple_bind
+  · have hlo : xstart ≤ xstart + (n - (n_1 + 1)) * step := Nat.le_add_right _ _
+    have hhi : xstart + (n - (n_1 + 1)) * step < xstart + n * step := by
+      apply Nat.add_lt_add_left; apply Nat.mul_lt_mul_of_pos_right _ hstep_pos; omega
+    exact hstep _ _ hlo hhi
+  · rintro (_|_) <;> simp [triple_pure]
+    simp [Nat.add_assoc, <-Nat.add_one_mul]
+    have : (n - (n_1 + 1) + 1) = n - n_1 := by omega
+    rw [this]; apply a; omega
 
 
 theorem triple_forIn_range' {β}
   {xstart : ℕ} {step : ℕ} (n : ℕ) {init : β} {f : ℕ → β → m (ForInStep β)}
   (inv : ℕ → β → l)
-  (hstep : ∀ i b,
+  (hstep_pos : step > 0)
+  (hstep : ∀ i b, xstart ≤ i → i < xstart + n * step →
     triple
       (inv i b)
       (f i b)
       (fun | .yield b' => inv (i + step) b' | .done b' => inv (xstart + n * step) b')) :
   triple (inv xstart init) (forIn (List.range' xstart n step) init f) (inv (xstart + n * step)) := by
-    have := triple_forIn_range'_aux (i := n) (m := m) n init inv hstep (by omega)
+    have := triple_forIn_range'_aux (i := n) (m := m) n init inv hstep_pos hstep (by omega)
     simp_all only [Nat.sub_self, Nat.zero_mul, Nat.add_zero]
 
 theorem triple_forIn_range {β}
   (xs : Std.Range) (init : β) (f : ℕ → β → m (ForInStep β))
   (inv : ℕ → β → l)
-  (hstep : ∀ i b,
+  (hstep_pos : xs.step > 0)
+  (hstep : ∀ i b, xs.start ≤ i → i < xs.start + ((xs.stop - xs.start + xs.step - 1) / xs.step) * xs.step →
     triple
       (inv i b)
       (f i b)
       (fun | .yield b' => inv (i + xs.step) b' | .done b' => inv (xs.start + ((xs.stop - xs.start + xs.step - 1) / xs.step) * xs.step) b')) :
   triple (inv xs.start init) (forIn xs init f) (inv (xs.start + ((xs.stop - xs.start + xs.step - 1) / xs.step) * xs.step)) := by
-  simp; apply triple_forIn_range'; apply hstep
+  simp; apply triple_forIn_range' (hstep_pos := hstep_pos)
+  intro i b hi hlt; exact hstep i b hi hlt
 
 theorem triple_forIn_range_step1 {β}
   {xs : Std.Range} {init : β} {f : ℕ → β → m (ForInStep β)}
   (inv : ℕ → β → l)
-  (hstep : ∀ i b,
+  (hstep : ∀ i b, xs.start ≤ i → i < xs.stop →
     triple
       (inv i b)
       (f i b)
@@ -349,10 +357,10 @@ theorem triple_forIn_range_step1 {β}
   xs.step = 1 ->
   xs.start <= xs.stop ->
   triple (inv xs.start init) (forIn xs init f) (inv xs.stop) := by
-  have := triple_forIn_range (m := m)  xs init f inv
-  intro h eq;
+  intro h eq
+  have := triple_forIn_range (m := m) xs init f inv (by omega : xs.step > 0)
   simp [h] at *
-  rw [Nat.add_sub_of_le eq] at this;
+  rw [Nat.add_sub_of_le eq] at this
   solve_by_elim
 
 end Loops
