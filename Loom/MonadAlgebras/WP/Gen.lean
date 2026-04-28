@@ -208,9 +208,9 @@ theorem triple_forIn_deacreasing {β} {measure : β -> ℕ}
     omega }
   simp
 
-attribute [-simp] Std.Range.forIn_eq_forIn_range' in
+attribute [-simp] Std.Legacy.Range.forIn_eq_forIn_range' in
 noncomputable
-def WPGen.forWithInvariant {xs : Std.Range} {init : β} {f : ℕ → β → m (ForInStep β)}
+def WPGen.forWithInvariant {xs : Std.Legacy.Range} {init : β} {f : ℕ → β → m (ForInStep β)}
   (inv : ℕ → β → List l) (wpg : ∀ i b, WPGen (f i b)) (xs1 : xs.step = 1) (xs_le : xs.start <= xs.stop := by omega) :
     WPGen (forIn xs init (fun i b => do invariantGadget (inv i b); (f i b))) where
     get := ⌜∀ i b, invariantSeq (inv i b) <= (wpg i b).get fun

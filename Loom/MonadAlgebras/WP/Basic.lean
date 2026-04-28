@@ -328,7 +328,7 @@ theorem triple_forIn_range' {β}
     simp_all only [Nat.sub_self, Nat.zero_mul, Nat.add_zero]
 
 theorem triple_forIn_range {β}
-  (xs : Std.Range) (init : β) (f : ℕ → β → m (ForInStep β))
+  (xs : Std.Legacy.Range) (init : β) (f : ℕ → β → m (ForInStep β))
   (inv : ℕ → β → l)
   (hstep : ∀ i b,
     triple
@@ -339,7 +339,7 @@ theorem triple_forIn_range {β}
   simp; apply triple_forIn_range'; apply hstep
 
 theorem triple_forIn_range_step1 {β}
-  {xs : Std.Range} {init : β} {f : ℕ → β → m (ForInStep β)}
+  {xs : Std.Legacy.Range} {init : β} {f : ℕ → β → m (ForInStep β)}
   (inv : ℕ → β → l)
   (hstep : ∀ i b,
     triple

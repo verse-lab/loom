@@ -189,7 +189,7 @@ elab_rules : command
     /- Some times the non-deterministic choice semantics depends on the termination semantics.
       For example, in Velvet, in total correctness semantics, `x :| p x` has one more VC `∃ x, p x`.
       That means we need to determine the termination semantics first. -/
-    if let "unspecified" := opts.getString (defVal := "unspecified") `loom.semantics.termination then
+    if let "unspecified" := ( opts.get? `loom.semantics.termination ).getD "unspecified"  then
       throwError "First, you need to specify the termination semantics using `set_option loom.semantics.termination <partial/total>`"
     recordOption <| <- getRef
     match v with
