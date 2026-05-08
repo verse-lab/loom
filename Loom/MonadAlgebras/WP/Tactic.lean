@@ -1,11 +1,11 @@
 import Lean
 
 import Loom.MonadAlgebras.WP.Attr
-import Loom.MonadAlgebras.WP.DoNames'
-import Loom.MonadAlgebras.WP.Matcher
+-- import Loom.MonadAlgebras.WP.DoNames'
+-- import Loom.MonadAlgebras.WP.Matcher
 
 open Lean Parser Meta Elab Term Command Tactic
-
+/-
 def findSpec (prog : Expr) : TacticM (Array (Ident × Loom.SpecType)) := do
   let specs ← specAttr.find? prog
   let grts := specs.qsort (compare · · |>.isGT) |>.map
@@ -209,6 +209,7 @@ macro "mwp" : tactic => `(tactic| (
 attribute [loomSpec high, loomWpSimp] WPGen.if
 attribute [loomSpec, loomWpSimp] WPGen.bind WPGen.pure WPGen.assert WPGen.forWithInvariant WPGen.map
 attribute [loomWpSimp] spec WPGen.spec_triple
+-/
 
 @[loomLogicSimp]
 lemma leE (l : Type u) [PartialOrder l] (a b : α -> l) : a ≤ b ↔ ∀ x, a x ≤ b x := by

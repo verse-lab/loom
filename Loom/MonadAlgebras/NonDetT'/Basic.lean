@@ -4,9 +4,8 @@ import Mathlib.Order.Lattice
 import Mathlib.Order.Basic
 
 import Loom.MonadAlgebras.WP.Basic
--- import Loom.MonadAlgebras.WP.Tactic
+import Loom.MonadAlgebras.WP.Tactic
 import Loom.MonadAlgebras.WP.Gen
-import Loom.MonadAlgebras.WP.Attr
 
 universe u v w
 

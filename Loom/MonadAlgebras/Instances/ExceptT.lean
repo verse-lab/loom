@@ -12,6 +12,7 @@ lemma Except.bind'_bind {m : Type u -> Type v} {ε α β} [Monad m] [LawfulMonad
   (i >>= fun a => Except.bind' a f) = bind (m := ExceptT ε m) i f := by
   simp [Except.bind', bind, ExceptT.bind]; rfl
 
+@[implicit_reducible]
 /- Ordered Monad Algebra instance for ExceptT -/
 noncomputable
 def MAlgExcept (ε : Type u) (df : ε -> Prop) (l : Type u) (m : Type u -> Type v)
