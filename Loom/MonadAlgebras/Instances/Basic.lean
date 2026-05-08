@@ -1,4 +1,5 @@
 import Loom.MonadAlgebras.Defs
+import Mathlib.Tactic.Basic
 universe u v w
 
 instance : MAlgOrdered Id Prop where
@@ -69,9 +70,9 @@ scoped instance : MAlgOrdered DivM Prop where
 
 scoped instance : MAlgDet DivM Prop where
   demonic := by
-    rintro _ _ (_|_) <;> simp [MAlg.lift, MAlgOrdered.μ, Functor.map]
+    rintro _ _ (_|_) <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map]
   angelic := by
-    rintro _ _ (_|_) <;> simp [MAlg.lift, MAlgOrdered.μ, Functor.map]
+    rintro _ _ (_|_) <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map]
 
 -- instance : MAlgPartial DivM where
 --   csup_lift {α} chain := by
@@ -85,7 +86,7 @@ scoped instance : MAlgDet DivM Prop where
 
 instance : NoFailure DivM where
   noFailure := by
-    rintro _ (_|_) <;> simp [MAlg.lift, MAlgOrdered.μ, Functor.map]
+    rintro _ (_|_) <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map]
 
 end PartialCorrectness
 
@@ -102,9 +103,9 @@ scoped instance : MAlgOrdered DivM Prop where
 
 scoped instance : MAlgDet DivM Prop where
   angelic := by
-    rintro _ _ (_|_) <;> simp [MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure]
+    rintro _ _ (_|_) <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure]
   demonic := by
-    rintro _ _ (_|_) <;> simp [MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure]
+    rintro _ _ (_|_) <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure]
 
 -- instance : MAlgTotal DivM where
 --   bot_lift := by

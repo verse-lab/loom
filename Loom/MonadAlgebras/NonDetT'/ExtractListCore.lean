@@ -147,7 +147,7 @@ instance [Monoid κ] : LawfulMonad (PeDivM κ) :=
     introv ; simp [bind, PeDivM.prepend] ; rcases x with ⟨k1, x | _⟩ <;> simp
     rcases f x with ⟨k2, y | _⟩ <;> simp
     rcases g y with ⟨k3, z | _⟩ <;> simp
-    all_goals (congr! 1 ; ac_rfl))
+    all_goals (ac_rfl))
   (bind_pure_comp := by introv ; simp [bind, Functor.map, PeDivM.prepend] ; rcases x with ⟨k1, x | _⟩ <;> simp)
 
 theorem PeDivM.bind_snd {κ : Type w} {α β : Type u} [Monoid κ] (mx : PeDivM κ α) (f : α → PeDivM κ β) :
@@ -166,7 +166,7 @@ theorem PeDivM.wp_eq_DivM [Monoid κ] [CompleteLattice l] [inst : MAlgOrdered Di
   (x : PeDivM κ α) (post : α → l) :
   wp x post = wp x.2 post := by
   simp [wp, liftM, monadLift, MAlg.lift, Functor.map]
-  rcases x with ⟨k1, x⟩ ; simp [MAlgOrdered.μ]
+  rcases x with ⟨k1, x⟩ ; simp
   cases x <;> rfl
 
 /-!
@@ -237,7 +237,7 @@ instance [Monoid κ] [CompleteLattice l] [inst : MAlgOrdered DivM l]
    : LawfulMonadFlatMapGo DivM (PeDivM κ) l Eq where
   go_sound := by
     intro α a post
-    simp [wp, liftM, monadLift, MAlg.lift, Functor.map]
+    simp [Id, wp, liftM, monadLift, MAlg.lift, Functor.map]
     rcases a with a | _ <;> simp [MAlgOrdered.μ]
 
 variable [Monad m] [Monad n] [LawfulMonad m] [LawfulMonad n]
@@ -263,7 +263,7 @@ instance {hd : ε → Prop} [IsHandler hd]
     simp [wp, liftM, monadLift] at tmp ⊢
     simp [MAlg.lift, Functor.map, ExceptT.map, ExceptT.mk] at tmp ⊢
     repeat rw [map_eq_pure_bind] at tmp
-    simp only [OfHd, MAlgExcept, map_bind]
+    simp +instances only [OfMAlgPartialOrdered, OfHd, MAlgExcept, Id, map_bind]
     -- not easy to rewrite
     have tmp1 : ∀ (a : Except ε α),
       ((pure
@@ -275,6 +275,7 @@ instance {hd : ε → Prop} [IsHandler hd]
         | Except.ok a => pure (Except.ok (post a))
         | Except.error e => pure (Except.error e)) : m l) := by
       intro a ; cases a <;> simp [Except.getD]
+    unfold Id at *
     conv at tmp => lhs ; rhs ; rhs ; intro x ; rw [tmp1]
     clear tmp1
     have tmp2 : ∀ (a : Except ε α),
@@ -301,7 +302,7 @@ instance : LawfulMonadFlatMapGo (ReaderT ρ m) (ReaderT ρ n) (ρ → l) (relLif
     have tmp := instl.go_sound _ (a r) (fun a => post a r)
     simp [wp, liftM, monadLift] at tmp ⊢
     simp [MAlg.lift] at tmp ⊢
-    simp [MAlgOrdered.μ, Functor.map]
+    simp [Id, MAlgOrdered.μ, Functor.map]
     exact tmp
 
 @[always_inline]
@@ -314,7 +315,7 @@ instance : LawfulMonadFlatMapGo (StateT σ m) (StateT σ n) (σ → l) (relLift 
     have tmp := instl.go_sound _ (a s) (fun (a, s) => post a s)
     simp [wp, liftM, monadLift] at tmp ⊢
     simp [MAlg.lift] at tmp ⊢
-    simp [MAlgOrdered.μ, Functor.map, StateT.map]
+    simp [Id, MAlgOrdered.μ, Functor.map, StateT.map]
     exact tmp
 
 end Instances
@@ -379,12 +380,13 @@ instance : MAlgOrdered (WriterT ω M) l where
 
 theorem WriterT.wp_eq (x : WriterT ω M α) (post : α → l) :
   wp x post = wp (Prod.fst <$> x) post := by
-  simp [wp, liftM, monadLift, MAlg.lift, Functor.map, WriterT.mk, MAlgOrdered.μ]
+  simp [Id, wp, liftM, monadLift, MAlg.lift, Functor.map, WriterT.mk, MAlgOrdered.μ]
+  rfl
 
 instance : LawfulMonadFlatMapGo M (WriterT ω M) l Eq where
   go_sound := by
     intro α a post
-    simp [wp, liftM, monadLift, MAlg.lift, Functor.map, WriterT.mk, MAlgOrdered.μ, MonadFlatMapGo.go]
+    simp [Id, wp, liftM, monadLift, MAlg.lift, Functor.map, WriterT.mk, MAlgOrdered.μ, MonadFlatMapGo.go, WriterT.run]
 
 end WriterT
 
@@ -498,7 +500,7 @@ instance (p : l → l → Prop) [instl : LawfulMonadFlatMapSup m l p]
     have tmp := instl.sound (List.map (· r) xs) (fun a => post a r)
     rw [iSup_list_map] at tmp
     simp [wp, liftM, monadLift] at tmp ⊢
-    simp [MAlg.lift, Functor.map, MAlgOrdered.μ] at tmp ⊢
+    simp [Id, MAlg.lift, Functor.map, MAlgOrdered.μ] at tmp ⊢
     exact tmp
 
 instance [MonadFlatMap'BindDistributive m] : MonadFlatMap'BindDistributive (ReaderT ρ m) where
@@ -525,7 +527,7 @@ instance (p : l → l → Prop) [instl : LawfulMonadFlatMapSup m l p]
     have tmp := instl.sound (List.map (· st) xs) (fun (a, s) => post a s)
     rw [iSup_list_map] at tmp
     simp [wp, liftM, monadLift] at tmp ⊢
-    simp [MAlg.lift, Functor.map, MAlgOrdered.μ, StateT.map] at tmp ⊢
+    simp [Id, MAlg.lift, Functor.map, MAlgOrdered.μ, StateT.map] at tmp ⊢
     exact tmp
 
 instance [MonadFlatMap'BindDistributive m] : MonadFlatMap'BindDistributive (StateT σ m) where
@@ -541,6 +543,7 @@ instance [MonadFlatMap'BindDistributive m] : MonadFlatMap'BindDistributive (Stat
 instance : MonadFlatMap' (ExceptT ε m) where
   op := inst.op
 
+set_option backward.isDefEq.respectTransparency false in
 instance {hd : ε → Prop} [IsHandler hd]
   (p : l → l → Prop) [instl : LawfulMonadFlatMapSup m l p]
   [instd : MonadFlatMap'FMapDistributive m]   -- !!
@@ -707,19 +710,19 @@ scoped instance : MAlgOrdered (TsilT m) l where
 theorem TsilT.wp_eq [LawfulMonad m] : ∀ (a : TsilT m α) (post : α → l),
   wp a post = pointwiseSup (wp · post) a := by
   introv
-  simp [wp, liftM, monadLift, MAlg.lift, Functor.map, MAlgOrdered.μ]
+  simp [Id, wp, liftM, monadLift, MAlg.lift, Functor.map, MAlgOrdered.μ]
   unfold pointwiseSup ; rw [iSup_list_map]
 
 scoped instance : LawfulMonadFlatMapSup (TsilT m) l Eq where
   sound := by
-    introv ; simp [MonadFlatMap'.op, wp, liftM, monadLift, MAlg.lift, Functor.map, MAlgOrdered.μ]
+    introv ; simp [Id, MonadFlatMap'.op, wp, liftM, monadLift, MAlg.lift, Functor.map, MAlgOrdered.μ]
     simp only [pointwiseSup, iSup_list_map]
     rw [List.flatten_eq_flatMap] ; simp only [iSup_list_flatMap, iSup_list_map, id]
 
 scoped instance [LawfulMonad m] [LawfulTsilTCore m] : LawfulMonadFlatMapGo m (TsilT m) l Eq where
   go_sound := by
     introv
-    simp [wp, liftM, monadLift, MAlg.lift, Functor.map, MAlgOrdered.μ, MonadFlatMapGo.go, pointwiseSup]
+    simp [Id, wp, liftM, monadLift, MAlg.lift, Functor.map, MAlgOrdered.μ, MonadFlatMapGo.go, pointwiseSup]
 
 -- TODO the proper way to do this is to have a transitivity for `LawfulMonadFlatMapGo`
 scoped instance [Monad m'] [LawfulMonad m'] [TsilTCore m'] [inst' : MAlgOrdered m' l]
@@ -727,7 +730,7 @@ scoped instance [Monad m'] [LawfulMonad m'] [TsilTCore m'] [inst' : MAlgOrdered 
   {p : l → l → Prop} [LawfulMonadFlatMapGo m m' l p] : LawfulMonadFlatMapGo m (TsilT m') l p where
   go_sound := by
     introv
-    simp [wp, liftM, monadLift, MAlg.lift, Functor.map, MAlgOrdered.μ, MonadFlatMapGo.go, pointwiseSup]
+    simp [Id, wp, liftM, monadLift, MAlg.lift, Functor.map, MAlgOrdered.μ, MonadFlatMapGo.go, pointwiseSup]
     apply LawfulMonadFlatMapGo.go_sound
 
 end AngelicChoice
@@ -755,6 +758,7 @@ def ExceptT.TsilTCore.op {ε : Type u} {m : Type u → Type v}
 instance [Pure m] [inst : TsilTCore m] : TsilTCore (ExceptT ε m) where
   op := fun x f => inst.op x (ExceptT.TsilTCore.op f)
 
+set_option backward.isDefEq.respectTransparency false in
 instance [Monad m] [LawfulMonad m] [TsilTCore m] [inst : LawfulTsilTCore m] : LawfulTsilTCore (ExceptT ε m) where
   op_single := by
     introv
@@ -786,7 +790,7 @@ instance-- {m : Type u → Type v} {l ε : Type u}
   sup := by
     introv ; intro h x
     have tmp := @inst.sup (Except ε α)
-    simp [TsilTCore.op, OfHd, MAlgExcept, MAlgOrdered.μ] at h ⊢
+    simp [TsilTCore.op] at h ⊢
 
     -- TODO this is messy
     -- CHECK is this idea used anywhere else?

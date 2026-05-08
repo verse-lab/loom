@@ -4,8 +4,9 @@ import Mathlib.Order.Lattice
 import Mathlib.Order.Basic
 
 import Loom.MonadAlgebras.WP.Basic
-import Loom.MonadAlgebras.WP.Tactic
+-- import Loom.MonadAlgebras.WP.Tactic
 import Loom.MonadAlgebras.WP.Gen
+import Loom.MonadAlgebras.WP.Attr
 
 universe u v w
 
@@ -87,7 +88,7 @@ lemma NonDetT.wp_mono  {l : Type u} [CompleteLattice l] [MAlgOrdered m l] [Lawfu
   (∀ a, f a <= g a) ->
   NonDetT.wp x f <= NonDetT.wp x g := by
     intro h; induction x
-    <;> simp [NonDetT.wp, pure, h, -le_himp_iff, -iSup_le_iff]
+    <;> simp [NonDetT.wp, pure, -le_himp_iff, -iSup_le_iff]
     <;> try solve_by_elim [wp_cons, iInf_le_of_le, himp_le_himp_left]
     intro _ _; solve_by_elim [iInf₂_le_of_le]
 lemma NonDetT.wp_bind  {l : Type u} [CompleteLattice l] [MAlgOrdered m l] [LawfulMonad m] {α β : Type u} (x : NonDetT m α) (f : α -> NonDetT m β)
@@ -118,7 +119,7 @@ instance {l : Type u} [CompleteLattice l] [MAlgOrdered m l] [LawfulMonad m] : MA
 
 lemma NonDetT.wp_eq_wp {α : Type u} (x : NonDetT m α) (post : α -> l) :
   _root_.wp x post = NonDetT.wp x post := by
-    simp [_root_.wp, liftM, monadLift, MAlg.lift, MAlgOrdered.μ, NonDetT.μ]
+    simp +instances [_root_.wp, liftM, monadLift, MAlg.lift, MAlgOrdered.μ, NonDetT.μ, Id]
     erw [map_eq_pure_bind, NonDetT.wp_bind]
     rfl
 
@@ -135,7 +136,7 @@ lemma NonDetT.wp_lift (c : m α) post :
 @[simp]
 lemma NonDetT.wp_pickCont {τ : Type u} p (f : τ → NonDetT m α) post :
   _root_.wp (NonDetT.pickCont τ p f) post = ⨅ a, ⌜p a⌝ ⇨ _root_.wp (f a) post := by
-  simp [NonDetT.wp_eq_wp, NonDetT.wp]; congr; ext x
+  simp +instances [NonDetT.wp_eq_wp, NonDetT.wp, Id]; congr; ext x
   simp [Membership.mem, Set.Mem]
   by_cases h: p x <;> simp [h]
 
@@ -159,7 +160,7 @@ lemma NonDetT.wp_iInf {ι : Type u} {α : Type u} {l : Type u} [CompleteBooleanA
   (x : NonDetT m α) (post : ι -> α -> l) :
   _root_.wp x (fun a => iInf post a) = ⨅ i, _root_.wp x (post i) := by
   simp [NonDetT.wp_eq_wp]
-  unhygienic induction x <;> simp [NonDetT.wp, pure, *]
+  unhygienic induction x <;> simp [NonDetT.wp, pure, Id, *]
   { erw [_root_.wp_iInf] }
   rw [iInf_psigma', iInf_comm]; congr!; simp [iInf_psigma']
 
@@ -168,7 +169,7 @@ instance [NoFailure m] : NoFailure (NonDetT m) where
     intro α c
     have : MAlg.lift c = wp c := by rfl
     rw [this, NonDetT.wp_eq_wp]; clear this
-    induction c <;> simp [NonDetT.wp, pure, *]
+    induction c <;> simp [NonDetT.wp, pure, Id, *] at *
 
 noncomputable
 scoped
@@ -177,8 +178,8 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
   MAlgLift m l (NonDetT m) l where
     cl := by exact LogicLift.refl
     μ_lift := by
-      intros; simp [liftM, monadLift, MonadLift.monadLift, MAlgOrdered.μ, NonDetT.μ, NonDetT.wp,
-        pure, wp, MAlg.lift, Functor.map, NonDetT.wp, NonDetT.bind,LogicLift.refl]
+      intros; simp +instances [Id, liftM, monadLift, MonadLift.monadLift, MAlgOrdered.μ, NonDetT.μ, NonDetT.wp,
+        pure, wp, MAlg.lift, Functor.map, NonDetT.wp, NonDetT.bind] at *
 
 end DemonicChoice
 
@@ -202,7 +203,7 @@ lemma NonDetT.wp_mono [LawfulMonad m] {α : Type u} {l : Type u} [CompleteLattic
   (∀ a, f a <= g a) ->
   NonDetT.wp x f <= NonDetT.wp x g := by
     intro h; induction x
-    <;> simp [NonDetT.wp, pure, h, -le_himp_iff, -iSup_le_iff]
+    <;> simp [NonDetT.wp, pure, -le_himp_iff, -iSup_le_iff]
     <;> try solve_by_elim [wp_cons, le_iSup_of_le, inf_le_inf_left, iSup_mono]
 
 lemma NonDetT.wp_bind [LawfulMonad m] {α β : Type u} {l : Type u} [CompleteLattice l] [MAlgOrdered m l] (x : NonDetT m α) (f : α -> NonDetT m β)
@@ -233,7 +234,7 @@ instance {l : outParam (Type u)} [CompleteLattice l] [MAlgOrdered m l] [LawfulMo
 
 lemma NonDetT.wp_eq_wp {α : Type u} (x : NonDetT m α) (post : α -> l) :
   _root_.wp x post = NonDetT.wp x post := by
-    simp [_root_.wp, liftM, monadLift, MAlg.lift, MAlgOrdered.μ, NonDetT.μ]
+    simp [Id, _root_.wp, liftM, monadLift, MAlg.lift, MAlgOrdered.μ, NonDetT.μ]
     erw [map_eq_pure_bind, NonDetT.wp_bind]
     rfl
 
@@ -274,7 +275,7 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
   MAlgLift m l (NonDetT m) l where
     cl := by exact LogicLift.refl
     μ_lift := by
-      intros; simp [liftM, monadLift, MonadLift.monadLift, MAlgOrdered.μ, NonDetT.μ, NonDetT.wp,
-        pure, wp, MAlg.lift, Functor.map, NonDetT.wp, NonDetT.bind, LogicLift.refl]
+      intros; simp +instances [Id, liftM, monadLift, MonadLift.monadLift, MAlgOrdered.μ, NonDetT.μ, NonDetT.wp,
+        pure, wp, MAlg.lift, Functor.map, NonDetT.wp, NonDetT.bind]
 
 end AngelicChoice

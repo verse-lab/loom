@@ -23,12 +23,12 @@ def MAlgExcept (ε : Type u) (df : ε -> Prop) (l : Type u) (m : Type u -> Type 
     solve_by_elim [MAlgOrdered.μ_ord_pure]
   μ_ord_bind := by
     intros α f g
-    simp [Function.comp, Pi.hasLe]; intros le x
+    simp +instances [Function.comp, Pi.hasLe]; intros le x
     have leM := @inst.μ_ord_bind (Except ε α)
       (fun x => Except.getD (⌜df ·⌝) <$> Except.bind' x f)
       (fun x => Except.getD (⌜df ·⌝) <$> Except.bind' x g)
-    simp only [Function.comp, Pi.hasLe, <-map_bind, Except.bind'_bind] at leM
-    apply leM; rintro (e | p) <;> simp [Except.bind', ExceptT.instMonad, ExceptT.bind, ExceptT.bindCont]
+    simp +instances only [Function.comp, Pi.hasLe, <-map_bind, Except.bind'_bind] at leM
+    apply leM; rintro (e | p) <;> simp +instances [Except.bind', ExceptT.instMonad, ExceptT.bind, ExceptT.bindCont]
     apply le
 
 section ExeceptHandler
@@ -46,7 +46,7 @@ instance OfHd {hd : ε -> Prop} [hdInst : IsHandler hd]
 lemma MAlg.lift_ExceptT ε (hd : ε -> Prop) [IsHandler hd] [CompleteLattice l] [inst: MAlgOrdered m l]
    (c : ExceptT ε m α) post :
   MAlg.lift c post = MAlg.lift (m := m) c (fun | .ok x => post x | .error e => ⌜hd e⌝) := by
-    simp [MAlg.lift, OfHd, MAlgExcept, Functor.map, ExceptT.map, ExceptT.mk]
+    simp +instances [MAlg.lift, OfHd, MAlgExcept, Functor.map, ExceptT.map, ExceptT.mk, Id]
     rw [map_eq_pure_bind]; apply MAlgOrdered.bind; ext a; cases a <;> simp [Except.getD]
 
 
@@ -55,8 +55,8 @@ instance MAlgExceptHdDet (hd : ε -> Prop)
   [inst': MAlgDet m l] : MAlgDet (ExceptT ε m) l where
   angelic := by
     intros α ι c p _
-    simp [MAlg.lift, MAlg.μ, Functor.map, ExceptT.map, ExceptT.mk]
-    simp [OfHd, MAlgExcept]
+    simp +instances [MAlg.lift, MAlg.μ, Functor.map, ExceptT.map, ExceptT.mk, Id]
+    simp +instances [OfHd, MAlgExcept]
     have h := inst'.angelic (α := Except ε α) (c := c)
       (p := fun i e =>
         match e with
@@ -79,12 +79,12 @@ instance MAlgExceptHdDet (hd : ε -> Prop)
             | Except.error e => ⌜hd e⌝) c) := by
       intro p; congr; ext i; rw [map_eq_pure_bind]; apply MAlg.bind (m := m); ext a; cases a <;> simp
     (repeat erw [h₁]); clear h₁; apply le_trans'; apply h
-    apply le_of_eq;rw [map_eq_pure_bind]; apply MAlg.bind (m := m); ext a; cases a <;> simp
+    apply le_of_eq;rw [map_eq_pure_bind]; apply MAlg.bind (m := m); ext a; cases a <;> simp [Id]
     simp [Except.getD, iSup_const]
   demonic := by
     intros α ι c p _
-    simp [MAlg.lift, MAlg.μ, Functor.map, ExceptT.map, ExceptT.mk]
-    simp [OfHd, MAlgExcept]
+    simp +instances [MAlg.lift, MAlg.μ, Functor.map, ExceptT.map, ExceptT.mk, Id]
+    simp +instances [OfHd, MAlgExcept]
     have h := inst'.demonic (α := Except ε α) (c := c)
       (p := fun i e =>
         match e with
@@ -107,7 +107,7 @@ instance MAlgExceptHdDet (hd : ε -> Prop)
             | Except.error e => ⌜hd e⌝) c) := by
       intro p; congr; ext i; rw [map_eq_pure_bind]; apply MAlg.bind (m := m); ext a; cases a <;> simp
     (repeat erw [h₁]); clear h₁; apply le_trans; apply h
-    apply le_of_eq;rw [map_eq_pure_bind]; apply MAlg.bind (m := m); ext a; cases a <;> simp
+    apply le_of_eq;rw [map_eq_pure_bind]; apply MAlg.bind (m := m); ext a; cases a <;> simp [Id]
     simp [Except.getD, iInf_const]
 
 instance
@@ -116,7 +116,7 @@ instance
   noFailure := by
     rintro _ c
     rw (occs := [2]) [<-inst'.noFailure (c := c)]
-    simp [MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure, ExceptT.map, ExceptT.mk, OfHd, MAlgExcept]
+    simp +instances [MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure, ExceptT.map, ExceptT.mk, OfHd, MAlgExcept, Id]
     rw [map_eq_pure_bind]; apply MAlgOrdered.bind; ext (_|_) <;> simp
 
 /- Monad Transformer Algebra instance for ExceptT -/
@@ -128,8 +128,9 @@ instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
     cl := by exact LogicLift.refl
     μ_lift := by
       intros; simp [MAlg.lift_ExceptT];
-      simp [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]
+      simp +instances [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]
       simp [ExceptT.lift, ExceptT.mk, MAlg.lift]
+      rfl
 
 end ExeceptHandler
 

@@ -11,9 +11,9 @@ instance (σ : Type u) (l : Type u) (m : Type u -> Type v)
     solve_by_elim [MAlgOrdered.μ_ord_pure]
   μ_ord_bind := by
     intros α f g
-    simp [Function.comp, Pi.hasLe]; intros le x r
+    simp +instances [Function.comp, Pi.hasLe]; intros le x r
     have leM := @inst.μ_ord_bind (α) (fun a => (· r) <$> f a r) (fun a => (· r) <$> g a r)
-    simp only [Function.comp, Pi.hasLe, <-map_bind] at leM
+    simp +instances only [Function.comp, Pi.hasLe, <-map_bind] at leM
     apply leM; intro; apply le
 
 
@@ -23,13 +23,13 @@ instance (σ : Type u) (l : Type u) (m : Type u -> Type v)
    : MAlgDet (ReaderT σ m) (σ -> l) where
     angelic := by
       intros α ι c p _ s;
-      simp [MAlg.lift, MAlg.μ, MAlgOrdered.μ, Functor.map]
+      simp [MAlg.lift, MAlg.μ, MAlgOrdered.μ, Functor.map, Id]
       have h := inst'.angelic (α := α) (c := c s) (p := fun i x => p i x s)
       simp [MAlg.lift, MAlg.μ] at h
       apply h
     demonic := by
       intros α ι c p _ s;
-      simp [MAlg.lift, MAlg.μ, MAlgOrdered.μ, Functor.map]
+      simp [MAlg.lift, MAlg.μ, MAlgOrdered.μ, Functor.map, Id]
       have h := inst'.demonic (α := α) (c := c s) (p := fun i x => p i x s)
       simp [MAlg.lift, MAlg.μ] at h
       apply h
@@ -59,7 +59,7 @@ instance [Monad m] [CCPOBot m] : CCPOBot (ReaderT σ m) where
 
 lemma MAlg.lift_ReaderT [Monad m] [LawfulMonad m] [CompleteLattice l] [inst: MAlgOrdered m l] (x : ReaderT σ m α) :
   MAlg.lift x post = fun s => MAlg.lift (x s) (fun xs => post xs s) := by
-    simp [MAlg.lift, Functor.map, MAlgOrdered.μ]
+    simp [MAlg.lift, Functor.map, MAlgOrdered.μ, Id]
 
 -- open Lean.Order
 -- instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MAlgOrdered m l]
@@ -90,11 +90,10 @@ lemma MAlg.lift_ReaderT [Monad m] [LawfulMonad m] [CompleteLattice l] [inst: MAl
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MAlgOrdered m l]
   [inst': NoFailure m] : NoFailure (ReaderT σ m) where
   noFailure := by
-    intro _ _; simp [MAlg.lift_ReaderT, inst'.noFailure]; rfl
+    intro _ _; simp [MAlg.lift_ReaderT]; ext ; simp [Id.run, Id] ; apply inst'.noFailure
 
 /- Monad Transformer Algebra instance for ReaderT -/
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MAlgOrdered m l] :
   MAlgLift m l (ReaderT σ m) (σ -> l) where
     μ_lift := by
-      intros; simp [MAlg.lift_ReaderT]; ext;
-      simp [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]; rfl
+      intros; simp [MAlg.lift_ReaderT]; ext; rfl

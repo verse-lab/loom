@@ -33,7 +33,7 @@ omit [LawfulMonad m] in
 @[simp]
 lemma iwp_eq (c : m α) (post : α -> l) :
   iwp c post = (wp c postᶜ)ᶜ := by
-    simp [iwp, Cont.inv]
+    simp [Id, iwp, Cont.inv]
 
 def wlp (c : m α) (post : α -> l) : l := iwp c post ⊔ wp c post
 

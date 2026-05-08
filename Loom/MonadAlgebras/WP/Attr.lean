@@ -23,8 +23,8 @@ def mkDiscrTreeExtension [Inhabited α] [BEq α] (name : Name := by exact decl_n
   IO (DiscrTreeExtension α) :=
   registerSimplePersistentEnvExtension {
     name          := name,
-    addImportedFn := fun a => a.foldl (fun s a => a.foldl (fun s (k, v) => s.insertCore k v) s) DiscrTree.empty,
-    addEntryFn    := fun s n => s.insertCore n.1 n.2 ,
+    addImportedFn := fun a => a.foldl (fun s a => a.foldl (fun s (k, v) => s.insertKeyValue k v) s) DiscrTree.empty,
+    addEntryFn    := fun s n => s.insertKeyValue n.1 n.2 ,
   }
 
 inductive Loom.SpecType where
@@ -79,7 +79,7 @@ register_simp_attr loomAbstractionSimp
 register_simp_attr loomLogicLiftSimp
 register_simp_attr loomWPGenRewrite
 
-
+/-
 def getSpecKey (ty : Expr) : MetaM (Expr × Loom.SpecType) := do
   let (_xs, _bis, body) ← forallMetaTelescope ty
   let x <- match_expr body with
@@ -153,3 +153,4 @@ initialize registerBuiltinAttribute {
   descr := "This is the solver hint"
   add := fun declName _ _ => solverHints.modify (·.push declName)
 }
+-/

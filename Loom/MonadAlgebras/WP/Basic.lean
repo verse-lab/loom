@@ -72,7 +72,7 @@ omit [LawfulMonad m] in
 @[simp]
 lemma wp_top (c : m α) [NoFailure m] :
   wp c (fun _ => ⊤) = ⊤ := by
-    simp [wp, liftM, monadLift, NoFailure.noFailure]
+    simp [wp, liftM, monadLift] ; apply NoFailure.noFailure
 
 end
 
@@ -117,7 +117,7 @@ lemma wp_and [MAlgDet m l] (c : m α) (post₁ post₂ : α -> l) :
   have h := MAlgDet.demonic (l := l) (ι := ULift Bool) (c := c) (p := fun | .up true => post₁ | .up false => post₂)
   simp at h
   apply le_trans; apply le_trans'; apply h
-  { simp [wp]; constructor; exact inf_le_right
+  { simp [wp, Id]; constructor; exact inf_le_right
     exact inf_le_left }
   apply wp_cons (m := m); simp; intros; constructor
   { refine iInf_le_of_le true ?_; simp }
@@ -140,7 +140,7 @@ lemma wp_or [MAlgDet m l] (c : m α) (post₁ post₂ : α -> l) :
     { apply wp_cons (m := m); simp; intros; constructor
       { refine le_iSup_of_le true ?_; simp }
       refine le_iSup_of_le false ?_; simp }
-    simp [wp]; constructor; exact le_sup_right
+    simp [wp, Id]; constructor; exact le_sup_right
     exact le_sup_left }
   simp; constructor <;> apply wp_cons <;> simp
 
@@ -398,8 +398,8 @@ lemma TotalCorrectness.DivM.wp_eq (α : Type) (x : DivM α) (post : α -> Prop) 
     match x with
     | .div => False
     | .res r => post r := by
-  simp [wp, liftM, monadLift, MAlg.lift, Functor.map, TotalCorrectness.instMAlgOrderedDivMProp]
-  cases x <;> simp [LE.pure]
+  simp +instances [wp, liftM, monadLift, MAlg.lift, Functor.map, TotalCorrectness.instMAlgOrderedDivMProp, Id]
+  cases x <;> simp +instances [LE.pure]
 
 /- WP for DivM in PartialCorrectness -/
 lemma PartialCorrectness.DivM.wp_eq (α : Type) (x : DivM α) (post : α -> Prop) :
@@ -407,7 +407,7 @@ lemma PartialCorrectness.DivM.wp_eq (α : Type) (x : DivM α) (post : α -> Prop
     match x with
     | .div => True
     | .res r => post r := by
-  simp [wp, liftM, monadLift, MAlg.lift, Functor.map, PartialCorrectness.instMAlgOrderedDivMProp]
+  simp +instances [wp, liftM, monadLift, MAlg.lift, Functor.map, PartialCorrectness.instMAlgOrderedDivMProp, Id]
   cases x <;> simp
 
 /- WP for StateT in underlying monad -/
@@ -419,7 +419,7 @@ lemma StateT.wp_eq (c : StateT σ m α) (post : α -> σ -> l) :
 lemma StateT.wp_lift (c : m α) (post : α -> σ -> l) :
   wp (liftM (n := StateT σ m) c) post = fun s => wp (m := m) c (post · s) := by
   simp [wp, liftM, monadLift, MAlg.lift_StateT, MonadLift.monadLift, StateT.lift];
-  have liftE : ∀ α, MAlg.lift (m := m) (α := α) = wp := by intros; ext; simp [wp, liftM, monadLift, ContT.run, id]
+  have liftE : ∀ α, MAlg.lift (m := m) (α := α) = wp := by intros; ext; simp +instances [wp, liftM, monadLift, ContT.run, id, Id]
   ext s; rw [map_eq_pure_bind, liftE, liftE, wp_bind]; simp [wp_pure]
 
 /- WP for ReaderT in underlying monad  -/
@@ -457,9 +457,11 @@ lemma MAlgLift.wp_throw
   [Monad n] [CompleteLattice k] [MAlgOrdered n k] [MonadLiftT m n]
   [MonadLiftT (ExceptT ε m) n]
   [inst: MAlgLiftT (ExceptT ε m) l n k] :
-    wp (liftM (n := n) (throw (m := ExceptT ε m) e)) post = ⌜hd e⌝ := by
+    wp (α := α) (liftM (n := n) (throw (m := ExceptT ε m) e)) post = ⌜hd e⌝ := by
     rw [MAlgLift.wp_lift, ExceptT.wp_throw]
-    simp only [LE.pure]; split <;> (simp [inst.cl.lift_top, inst.cl.lift_bot]; try rfl)
+    simp only [LE.pure]; split
+    · have tmp := inst.cl.lift_top (α := α) ; simp [Top.top] at tmp ; exact congrFun tmp _
+    · have tmp := inst.cl.lift_bot (α := α) ; simp [Bot.bot] at tmp ; exact congrFun tmp _
 
 end ExceptT
 

@@ -1,3 +1,4 @@
+/-
 import Lean
 import Auto
 import Loom.MonadAlgebras.WP.Options
@@ -251,3 +252,4 @@ def specifiedSmtSolver (loomSolver : LoomSolver) : Option SmtSolver :=
       mv.assign proof
 
 end Loom.SMT
+-/

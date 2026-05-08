@@ -8,14 +8,14 @@ universe u v w
 -- and through the `def ContT` wrapper.
 section ContInstances
 variable {t : Type v}
-instance instLEIdOfLE [inst : LE t] : LE (id t) := inst
-instance instPreorderIdOfPreorder [inst : Preorder t] : Preorder (id t) := inst
-instance instPartialOrderIdOfPartialOrder [inst : PartialOrder t] : PartialOrder (id t) := inst
-instance instComplIdOfCompl [inst : Compl t] : Compl (id t) := inst
-instance instBooleanAlgebraIdOfBooleanAlgebra [inst : BooleanAlgebra t] : BooleanAlgebra (id t) := inst
-instance instCompleteLatticeIdOfCompleteLattice [inst : CompleteLattice t] : CompleteLattice (id t) := inst
-instance instTopIdOfTop [inst : Top t] : Top (id t) := inst
-instance instBotIdOfBot [inst : Bot t] : Bot (id t) := inst
+instance instLEIdOfLE [inst : LE t] : LE (Id t) := inst
+instance instPreorderIdOfPreorder [inst : Preorder t] : Preorder (Id t) := inst
+instance instPartialOrderIdOfPartialOrder [inst : PartialOrder t] : PartialOrder (Id t) := inst
+instance instComplIdOfCompl [inst : Compl t] : Compl (Id t) := inst
+instance instBooleanAlgebraIdOfBooleanAlgebra [inst : BooleanAlgebra t] : BooleanAlgebra (Id t) := inst
+instance instCompleteLatticeIdOfCompleteLattice [inst : CompleteLattice t] : CompleteLattice (Id t) := inst
+instance instTopIdOfTop [inst : Top t] : Top (Id t) := inst
+instance instBotIdOfBot [inst : Bot t] : Bot (Id t) := inst
 end ContInstances
 
 -- Bridge instances for ContT so instance search can find order/lattice instances

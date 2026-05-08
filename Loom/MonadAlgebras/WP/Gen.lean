@@ -5,7 +5,7 @@ import Mathlib.Order.Basic
 
 import Loom.MonadAlgebras.WP.Basic
 import Loom.MonadAlgebras.WP.Liberal
-import Loom.MonadAlgebras.WP.DoNames'
+-- import Loom.MonadAlgebras.WP.DoNames'
 
 open Lean Meta Elab Command Term
 
@@ -29,6 +29,7 @@ private def _root_.Lean.SimplePersistentEnvExtension.modify
   [Monad m] [MonadEnv m] : m Unit := do
   Lean.modifyEnv (ext.modifyState · s)
 
+/-
 structure LoomAssertionsMap where
   maxId : Int
   syntaxStore : Std.HashMap Int Term
@@ -281,3 +282,4 @@ def WPGen.let  {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [Co
   prop := by
      intro post; simp; refine iInf_le_of_le y ?_
      simp; apply (wpgx y).prop
+-/
