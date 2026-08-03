@@ -105,7 +105,7 @@ private partial def hasLiftMethod : Syntax → Bool
     if liftMethodDelimiter k then false
     -- NOTE: We don't check for lifts in quotations here, which doesn't break anything but merely makes this rare case a
     -- bit slower
-    else if k == ``Parser.Term.liftMethod then true
+    else if k == ``Parser.Term.nestedAction then true
     -- For `pure` if-then-else, we only lift `(<- ...)` occurring in the condition.
     else if k == ``termDepIfThenElse || k == ``termIfThenElse then args.size >= 2 && hasLiftMethod args[1]!
     else args.any hasLiftMethod
@@ -787,11 +787,11 @@ private def expandDoIf? (stx : Syntax) : MacroM (Option Syntax) := match stx wit
 /--
   If the given syntax is a `doLetExpr` or `doLetMetaExpr`, return an equivalent `doIf` that has an `else` but no `else if`s or `if let`s.  -/
 private def expandDoLetExpr? (stx : Syntax) (doElems : List Syntax) : MacroM (Option Syntax) := match stx with
-  | `(doElem| let_expr $pat:matchExprPat := $discr:term | $elseBranch:doSeq) =>
+  | `(doElem| let_expr $pat:matchExprPat := $discr:term | $elseBranch) =>
     return some (← `(doElem| match_expr (meta := false) $discr:term with
                              | $pat:matchExprPat => $(mkDoSeq doElems.toArray)
                              | _ => $elseBranch))
-  | `(doElem| let_expr $pat:matchExprPat ← $discr:term | $elseBranch:doSeq) =>
+  | `(doElem| let_expr $pat:matchExprPat ← $discr:term | $elseBranch) =>
     return some (← `(doElem| match_expr $discr:term with
                              | $pat:matchExprPat => $(mkDoSeq doElems.toArray)
                              | _ => $elseBranch))
@@ -1369,7 +1369,7 @@ private partial def expandLiftMethodAux (inQuot : Bool) (inBinder : Bool) : Synt
       let arg1 ← expandLiftMethodAux (inQuot && !inAntiquot || stx.isQuot) inBinder args[1]
       let args := args.set! 1 arg1
       return Syntax.node i k args
-    else if k == ``Parser.Term.liftMethod && !inQuot then withFreshMacroScope do
+    else if k == ``Parser.Term.nestedAction && !inQuot then withFreshMacroScope do
       if inBinder then
         throwErrorAt stx "cannot lift `(<- ...)` over a binder, this error usually happens when you are trying to lift a method nested in a `fun`, `let`, or `match`-alternative, and it can often be fixed by adding a missing `do`"
       let term := args[1]!

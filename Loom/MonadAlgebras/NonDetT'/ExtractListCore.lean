@@ -142,13 +142,13 @@ instance [Monoid κ] : Monad (PeDivM κ) where
 instance [Monoid κ] : LawfulMonad (PeDivM κ) :=
   LawfulMonad.mk' (PeDivM κ)
   (id_map := by introv ; simp [Functor.map] ; rcases x with ⟨k1, x | _⟩ <;> simp)
-  (pure_bind := by introv ; simp [bind, PeDivM.prepend] ; rfl)
+  (pure_bind := by introv ; simp [pure, bind, PeDivM.prepend] ; rfl)
   (bind_assoc := by
     introv ; simp [bind, PeDivM.prepend] ; rcases x with ⟨k1, x | _⟩ <;> simp
     rcases f x with ⟨k2, y | _⟩ <;> simp
     rcases g y with ⟨k3, z | _⟩ <;> simp
     all_goals (ac_rfl))
-  (bind_pure_comp := by introv ; simp [bind, Functor.map, PeDivM.prepend] ; rcases x with ⟨k1, x | _⟩ <;> simp)
+  (bind_pure_comp := by introv ; simp [pure, bind, Functor.map, PeDivM.prepend] ; rcases x with ⟨k1, x | _⟩ <;> simp)
 
 theorem PeDivM.bind_snd {κ : Type w} {α β : Type u} [Monoid κ] (mx : PeDivM κ α) (f : α → PeDivM κ β) :
   (mx >>= f).2 = mx.2 >>= (Prod.snd ∘ f) := by
@@ -237,7 +237,7 @@ instance [Monoid κ] [CompleteLattice l] [inst : MAlgOrdered DivM l]
    : LawfulMonadFlatMapGo DivM (PeDivM κ) l Eq where
   go_sound := by
     intro α a post
-    simp [Id, wp, liftM, monadLift, MAlg.lift, Functor.map]
+    simp [Id, wp, liftM, monadLift, MAlg.lift, Functor.map, MonadFlatMapGo.go]
     rcases a with a | _ <;> simp [MAlgOrdered.μ]
 
 variable [Monad m] [Monad n] [LawfulMonad m] [LawfulMonad n]
@@ -830,7 +830,7 @@ instance [Monoid κ] : TsilTCore (PeDivM κ) where
 
 instance [Monoid κ] : LawfulTsilTCore (PeDivM κ) where
   op_single := by
-    introv ; simp [TsilTCore.op, Functor.map, PeDivM.prepend]
+    introv ; simp [pure, TsilTCore.op, Functor.map, PeDivM.prepend]
     rcases x with ⟨k1, x | _⟩ <;> rfl
   pure_op := by
     introv ; simp [TsilTCore.op]

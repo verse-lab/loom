@@ -33,7 +33,7 @@ instance [LawfulMonad m] : LawfulMonad (NonDetT m) := by
   { introv; induction x
     <;> simp [Functor.map, NonDetT.bind]
     <;> solve_by_elim [funext] }
-  { introv; simp [bind, NonDetT.bind] }
+  { introv; simp [pure, bind, NonDetT.bind] }
   introv; induction x
   <;> simp [bind, NonDetT.bind]
   <;> solve_by_elim [funext]

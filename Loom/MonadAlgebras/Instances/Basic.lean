@@ -63,10 +63,9 @@ scoped instance : MAlgOrdered DivM Prop where
   μ := fun x => match x with
     | .res x => x
     | .div => ⊤
-  μ_ord_pure := by simp
+  μ_ord_pure := by solve_by_elim
   μ_ord_bind {α} f g := by
-    rintro h (_|_) <;> simp
-    solve_by_elim
+    rintro h (_|_) <;> solve_by_elim
 
 scoped instance : MAlgDet DivM Prop where
   demonic := by
@@ -96,10 +95,9 @@ scoped instance : MAlgOrdered DivM Prop where
   μ := fun x => match x with
     | .res x => ⌜x⌝
     | .div => ⊥
-  μ_ord_pure := by simp [LE.pure]
+  μ_ord_pure := by simp [LE.pure, pure]
   μ_ord_bind {α} f g := by
-    rintro h (_|_) <;> simp
-    solve_by_elim
+    rintro h (_|_) <;> solve_by_elim
 
 scoped instance : MAlgDet DivM Prop where
   angelic := by

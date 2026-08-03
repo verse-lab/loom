@@ -162,7 +162,7 @@ register_option loom.semantics.choice : LoomSemanticsChoice := {
 }
 
 private def recordOption (stx : Syntax) : CommandElabM Unit := do
-  let options ← Elab.elabSetOption stx[1] stx[3]
+  let (options, _) ← Elab.elabSetOption stx[1] stx[3]
   modify fun s => { s with maxRecDepth := maxRecDepth.get options }
   modifyScope fun scope => { scope with opts := options }
 
