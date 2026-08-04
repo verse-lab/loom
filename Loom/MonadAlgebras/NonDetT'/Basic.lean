@@ -108,10 +108,10 @@ variable [LawfulMonad m]
 
 noncomputable
 scoped
-instance {l : Type u} [CompleteLattice l] [MAlgOrdered m l] [LawfulMonad m] : MAlgOrdered (NonDetT m) l where
+instance {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : MAlgOrdered (NonDetT m) l where
   μ := NonDetT.μ
   μ_ord_pure := by
-    intro l; simp [NonDetT.μ, NonDetT.wp]; rfl
+    intro l; simp [NonDetT.μ]; rfl
   μ_ord_bind := by
     simp [NonDetT.μ, bind, NonDetT.wp_bind]; intros
     solve_by_elim [NonDetT.wp_mono]
@@ -170,6 +170,7 @@ instance [NoFailure m] : NoFailure (NonDetT m) where
     rw [this, NonDetT.wp_eq_wp]; clear this
     induction c <;> simp [NonDetT.wp, pure, Id, *] at *
 
+set_option linter.overlappingInstances false in
 noncomputable
 scoped
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
@@ -223,10 +224,10 @@ variable [LawfulMonad m]
 
 noncomputable
 scoped
-instance {l : outParam (Type u)} [CompleteLattice l] [MAlgOrdered m l] [LawfulMonad m] : MAlgOrdered (NonDetT m) l where
+instance {l : outParam (Type u)} [CompleteLattice l] [MAlgOrdered m l] : MAlgOrdered (NonDetT m) l where
   μ := NonDetT.μ
   μ_ord_pure := by
-    intro l; simp [NonDetT.μ, NonDetT.wp]; rfl
+    intro l; simp [NonDetT.μ]; rfl
   μ_ord_bind := by
     simp [NonDetT.μ, bind, NonDetT.wp_bind]; intros
     solve_by_elim [NonDetT.wp_mono]
@@ -267,6 +268,7 @@ lemma MonadNonDet.wp_pickSuchThat {τ : Type u} (p : τ → Prop) post :
   _root_.wp (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) post = ⨆ a, ⌜p a⌝ ⊓ post a := by
   simp [MonadNonDet.pickSuchThat, NonDetT.pickSuchThat]
 
+set_option linter.overlappingInstances false in
 noncomputable
 scoped
 instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]

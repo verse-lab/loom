@@ -122,7 +122,7 @@ instance
 
 /- Monad Transformer Algebra instance for ExceptT -/
 noncomputable
-instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
+instance [_root_.CompleteLattice l]
   [IsHandler (ε := ε) hd]
   [inst: MAlgOrdered m l] :
   MAlgLift m l (ExceptT ε m) l where

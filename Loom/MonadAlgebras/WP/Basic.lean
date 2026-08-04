@@ -161,7 +161,7 @@ def Loop.forIn.loop {m : Type u -> Type v} [Monad m] [∀ α, CCPO (m α)] [Mono
   partial_fixpoint
 
 @[inline]
-def Loop.forIn {β : Type u} [Monad m] [∀ α, CCPO (m α)] [MonoBind m]
+def Loop.forIn {β : Type u} [∀ α, CCPO (m α)] [MonoBind m]
   (_ : Lean.Loop) (init : β) (f : Unit → β → m (ForInStep β)) : m β :=
   Loop.forIn.loop f init
 
@@ -419,7 +419,7 @@ lemma StateT.wp_eq (c : StateT σ m α) (post : α -> σ -> l) :
 lemma StateT.wp_lift (c : m α) (post : α -> σ -> l) :
   wp (liftM (n := StateT σ m) c) post = fun s => wp (m := m) c (post · s) := by
   simp [wp, liftM, monadLift, MAlg.lift_StateT, MonadLift.monadLift, StateT.lift];
-  have liftE : ∀ α, MAlg.lift (m := m) (α := α) = wp := by intros; ext; simp +instances [wp, liftM, monadLift, ContT.run, id, Id]
+  have liftE : ∀ α, MAlg.lift (m := m) (α := α) = wp := by intros; ext; simp +instances [wp, liftM, monadLift, ContT.run, Id]
   ext s; rw [map_eq_pure_bind, liftE, liftE, wp_bind]; simp [wp_pure]
 
 /- WP for ReaderT in underlying monad  -/

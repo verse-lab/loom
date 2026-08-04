@@ -18,6 +18,7 @@ private lemma compl_fun {α} (x y : α -> l) :
 private lemma compl_fun' {α} (x y : α -> l) :
   (fun a => x a ⊓ y a)ᶜ = (fun a => (x a)ᶜ ⊔ (y a)ᶜ) := by simp [compl]
 
+set_option warning.simp.otherHead false in
 @[local simp]
 private lemma compl_fun'' {α} (x : α -> l) :
   (fun a => (x a)ᶜ) = xᶜ := by simp [compl]

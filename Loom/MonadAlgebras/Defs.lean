@@ -66,7 +66,7 @@ instance EffectObservationOfMAlg (l : Type u) {m : Type u -> Type v} [Monad m] [
     intro α x; simp [monadLift, pure]; unfold MAlg.lift; simp [map_pure, MAlg.pure]
   monadLift_bind := by
     intros α β x f; simp [monadLift, bind]; unfold MAlg.lift; ext g
-    simp only [ContT.run, id]
+    simp only [ContT.run]
     rw (config := { occs := .pos [2] }) [map_eq_pure_bind]
     simp only [map_bind]; apply MAlg.bind
     ext; unfold Id at *; simp [MAlg.pure]

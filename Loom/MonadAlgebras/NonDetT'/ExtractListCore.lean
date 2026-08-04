@@ -358,7 +358,8 @@ class LawfulMonadPersistentLog (κ : Type w) (m : Type u → Type v)
 
 section WriterT
 
-variable [Monad M] [LawfulMonad M] [Monoid ω] [CompleteLattice l] [inst : MAlgOrdered M l]
+variable {M : Type u → Type v} {ω l : Type u}
+  [Monad M] [LawfulMonad M] [Monoid ω] [CompleteLattice l] [inst : MAlgOrdered M l]
 
 @[always_inline]
 instance : MonadPersistentLog ω (WriterT ω M) where
