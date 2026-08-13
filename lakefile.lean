@@ -115,9 +115,20 @@ def CaseStudiesRoot : Array Glob :=
 
 @[default_target]
 lean_lib Loom {
-  globs := #[Glob.submodules `Loom]
+  -- `andSubmodules`: cover the root `Loom` module as well, so consumers
+  -- importing `Loom` resolve it to this library.
+  globs := #[Glob.andSubmodules `Loom]
   extraDepTargets := #[``downloadDependencies]
 }
+
+/- The case-study libraries are disabled on this branch: it upgrades only
+the Loom core needed by Veil (see 37fe563), and the case studies were not
+ported — `CaseStudies/*` still imports `Loom.MonadAlgebras.NonDetT.Extract`,
+which no longer exists here, so these libraries cannot build. Worse, the
+`CaseStudies` lib's globs overlap the core (`Glob.submodules `Loom`), so a
+consumer that precompiles (e.g. Veil with `precompileModules`) gets
+`CaseStudies:shared` pulled into its build and fails on the missing module.
+The case studies live on `master`.
 
 lean_lib CaseStudiesBase {
   globs := CaseStudiesRoot
@@ -134,3 +145,4 @@ lean_lib Velvet {
 lean_lib CaseStudies {
   globs := #[Glob.submodules `Loom, Glob.submodules `CaseStudies]
 }
+-/
