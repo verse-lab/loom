@@ -616,36 +616,19 @@ private def mkJoinPointSharingRule (goalType varTy val bodyE : Expr) : MetaM Exp
     (params.map some ++ #[some goalType.appArg!, some target, some proof])
   mkLambdaFVars #[hjp, hbody] result
 
-open Tactic in
-/-- Apply the generated rule, leaving the continuation and body extraction
-premises as the two subgoals for the extraction loop. -/
-private def shareJoinPoint (goalType varTy val bodyE : Expr) : TacticM Unit := do
-  let rule ← mkJoinPointSharingRule goalType varTy val bodyE
-  replaceMainGoal (← (← getMainGoal).apply rule)
+/-- Configuration for the `let`-handling extraction step. -/
+structure ExtractLetConfig where
+  /-- If true (default), an ordinary value `let` is kept shared in the extracted
+  term by reassociating the goal as `let x := v; CER body`. If false, the binding
+  is zeta-reduced instead. Sharing keeps the extracted term smaller, but the
+  compiler's own `pullInstances` and `cse` passes run before its first `simp`
+  and recover the sharing anyway, so measure before paying for it. Join points
+  are shared either way: inlining those duplicates the continuation per branch
+  and is exponential, which no later pass can undo. -/
+  shareValueLets : Bool := true
+  deriving Inhabited
 
-/-- Arity of a `let` binding that is a computation in the monad being extracted,
-or `none` for an ordinary value binding. `subjectType` is the type of the goal's
-subject, so this recognises join points by type rather than by the `__do_jp`
-name the `do` elaborator happens to use. -/
-private def monadicLetArity (letType subjectType : Expr) : MetaM (Option Nat) :=
-  forallTelescopeReducing letType fun binders resultType => do
-    if ← withNewMCtxDepth (isDefEq resultType subjectType) then
-      return some binders.size
-    else
-      return none
-
-open Tactic in
-/-- Reassociate `CER (let x := v; body)` as `let x := v; CER body`.
-The extraction loop's next `intros` introduces `x := v`, so its value remains
-available to type checking and instance synthesis. Unlike a lambda over an
-arbitrary x, this also handles bodies whose typing relies on x's definition. -/
-private def shareValueLet (goalType : Expr) (varName : Name) (varTy val bodyE : Expr) : TacticM Unit := do
-  let args := goalType.getAppArgs
-  -- bodyE's loose bound variable 0 is bound by the new outer let. The other
-  -- goal arguments are already closed relative to the current local context.
-  let bodyGoal := mkAppN goalType.getAppFn (args.set! 10 bodyE)
-  let goalType' := Expr.letE varName varTy val bodyGoal false
-  replaceMainGoal [← (← getMainGoal).change goalType']
+declare_config_elab elabExtractLetConfig ExtractLetConfig
 
 open Tactic in
 /-- Handle an extraction goal whose subject is a `let` or a jump to a join point
@@ -654,7 +637,12 @@ that an earlier `let` step abstracted.
 The two cases live in one tactic because they are decided by the same match on
 the subject and are mutually exclusive: a `let`-headed subject is never an
 application of a local join point, and vice versa. -/
-scoped elab "extract_let_step" : tactic => withMainContext do
+scoped syntax (name := extractLetStep) "extract_let_step" optConfig : tactic
+
+open Tactic in
+@[tactic extractLetStep]
+def evalExtractLetStep : Tactic := fun stx => withMainContext do
+  let cfg ← elabExtractLetConfig stx[1]
   let goalType ← getMainTarget''
   let_expr MultiExtractor.ConstrainedExtractResult eκ em em' e1 e2 e3 e4 efindable efindOf eα es :=
       goalType
@@ -669,8 +657,12 @@ scoped elab "extract_let_step" : tactic => withMainContext do
       trace[veil.extraction] "[{decl_name%}]: sharing join point {varName} of arity {n}"
       shareJoinPoint goalType varTy val bodyE
     | none =>
-      trace[veil.extraction] "[{decl_name%}]: sharing value {varName}"
-      shareValueLet goalType varName varTy val bodyE
+      if cfg.shareValueLets then
+        trace[veil.extraction] "[{decl_name%}]: sharing value {varName}"
+        shareValueLet goalType varName varTy val bodyE
+      else
+        trace[veil.extraction] "[{decl_name%}]: inlining value {varName}"
+        inlineValueLet goalType val bodyE
   | _ =>
     let subjectFn := subject.getAppFn
     unless subjectFn.isFVar do
@@ -690,6 +682,40 @@ scoped elab "extract_let_step" : tactic => withMainContext do
         Tactic.closeMainGoal `extract_let_step e
       if result?.isSome then return
     throwError "no join-point extraction hypothesis applies to this jump"
+where
+  /-- Arity of a `let` binding that is a computation in the monad being extracted,
+  or `none` for an ordinary value binding. `subjectType` is the type of the goal's
+  subject, so this recognises join points by type rather than by the `__do_jp`
+  name the `do` elaborator happens to use. -/
+  monadicLetArity (letType subjectType : Expr) : MetaM (Option Nat) :=
+    forallTelescopeReducing letType fun binders resultType => do
+      if ← withNewMCtxDepth (isDefEq resultType subjectType) then
+        return some binders.size
+      else
+        return none
+  /-- Apply the generated rule, leaving the continuation and body extraction
+  premises as the two subgoals for the extraction loop. -/
+  shareJoinPoint (goalType varTy val bodyE : Expr) : TacticM Unit := do
+    let rule ← mkJoinPointSharingRule goalType varTy val bodyE
+    replaceMainGoal (← (← getMainGoal).apply rule)
+  /-- Reassociate `CER (let x := v; body)` as `let x := v; CER body`.
+  The extraction loop's next `intros` introduces `x := v`, so its value remains
+  available to type checking and instance synthesis. Unlike a lambda over an
+  arbitrary x, this also handles bodies whose typing relies on x's definition. -/
+  shareValueLet (goalType : Expr) (varName : Name) (varTy val bodyE : Expr) : TacticM Unit := do
+    -- bodyE's loose bound variable 0 is bound by the new outer let. The other
+    -- goal arguments are already closed relative to the current local context.
+    let bodyGoal := goalType.setArg 10 bodyE
+    let goalType' := Expr.letE varName varTy val bodyGoal false
+    replaceMainGoal [← (← getMainGoal).change goalType']
+  /-- Zeta-reduce `CER (let x := v; body)` to `CER body[v]`, one binding at a time.
+  This is the counterpart of `shareValueLet` for `-shareValueLets`. Reducing the
+  binding here rather than letting the fallback rules' `eapply` whnf the goal
+  matters: whnf would reduce the whole chain of `let`s at once and take any join
+  point further down with it, which is what makes extraction exponential. -/
+  inlineValueLet (goalType val bodyE : Expr) : TacticM Unit := do
+    let goalType' := goalType.setArg 10 (bodyE.instantiate1 val)
+    replaceMainGoal [← (← getMainGoal).change goalType']
 
 end ExtractionForLet
 
@@ -731,16 +757,23 @@ macro "extract_list_step_fallback" : tactic =>
 -- NOTE: The order of tactics in `extract_list_step` matters;
 -- `extract_let_step` should be tried before `extract_list_use_extracted`
 -- to ensure that let-bindings are handled first.
-macro "extract_list_step" : tactic =>
-  `(tactic|
-    first
-      | extract_let_step
-      | extract_list_use_extracted
-      | extract_list_step_fallback
-    )
+syntax "extract_list_step" optConfig : tactic
 
-macro "extract_list_tactic" : tactic =>
-  `(tactic| repeat' (intros; extract_list_step <;> try (dsimp -$(mkIdent `zeta))))
+macro_rules
+  | `(tactic| extract_list_step $cfg:optConfig) =>
+    `(tactic|
+      first
+        | extract_let_step $cfg:optConfig
+        | extract_list_use_extracted
+        | extract_list_step_fallback
+      )
+
+syntax "extract_list_tactic" optConfig : tactic
+
+macro_rules
+  | `(tactic| extract_list_tactic $cfg:optConfig) =>
+    `(tactic| repeat' (intros; extract_list_step $cfg:optConfig <;>
+        try (dsimp -$(mkIdent `zeta))))
 
 end ExtractionTactic
 
