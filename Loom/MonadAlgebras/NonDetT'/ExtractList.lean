@@ -188,6 +188,191 @@ def ConstrainedExtractResult.filterAuxM
       · apply (h x).proof
       · rintro ⟨_ | _⟩ <;> dsimp <;> apply ih
 
+/-! ## Sharing `let`s during extraction
+
+Loom's extraction rules are indexed by the shape of the source program, and
+none of them matches a `let`. Without the rules below, `eapply` whnfs the goal
+and every `let` in the chain is zeta-reduced away, so the continuation shared by
+a branching statement (Lean's `do` elaborator binds it to a `__do_jp` join
+point) is extracted once per branch and the extracted term grows exponentially
+in the number of sequential branches.
+
+Two constructions restore the sharing. Join points need separate source and
+target bindings, while ordinary values can keep the same binding on both sides.
+
+* `shareJoinPoint` is for a `let` whose bound value returns a computation in the
+  monad being extracted, with any number of arguments. Its `hbody` premise is
+  stated for an arbitrary source join point `jpS` paired with an arbitrary
+  extracted counterpart `jp'` and a proof relating the two, so the recursive
+  extraction of the body can discharge every jump with `⟨jp' xs, hrel xs⟩`
+  instead of re-extracting the continuation.
+* `shareValueLet` moves an ordinary value `let` outside the extraction goal.
+  Introducing it keeps its definition available to instance synthesis and
+  normalisation. The extracted result retains the binding; `simpExtractedValueLet`
+  then moves its `.val` projection inside the `let` without substituting the value.
+
+### Viewing `ExtractConstraint` From the Perspective of Logical Relations
+
+`ExtractConstraint κ m m' findOf : NonDetT m α → m' α → Prop` can be seen as
+a *logical relation* between the source monad and the target monad, and
+`ConstrainedExtractResult κ m m' findOf s` is its computational packaging: a
+target term together with a proof that it is related to `s`.
+
+`shareJoinPoint` below constructs the `let`/λ case of such a relation's
+abstraction theorem. Its premises say: given a related pair of join points, and
+a body construction that is *uniform* in the related pair, the whole `let` is related. Readers who
+know parametricity will recognise the shape — the relation lifted along an
+arrow, `f R→ g  iff  ∀ x, R (f x) (g x)`, is exactly the `hrel` premise.
+
+The analogy stops in one important place. Lean's type theory has no internal
+parametricity, so uniformity is not something we can *derive* as a free theorem.
+It is written down as a hypothesis and then discharged constructively: the
+extraction tactic runs on the body with the join point held opaque, which is
+precisely what it means to build the term uniformly. Parametricity here is a
+proof obligation we happen to be able to meet, not a metatheorem we appeal to.
+
+NOTE: The following definitions are mostly for *demonstration*. They are not
+actually used in the extraction.
+
+-/
+
+section SharedLets
+
+open MultiExtractor
+
+universe q u v w s
+
+variable (κ : Type q) (m : Type u → Type v) (m' : Type u → Type w)
+  [inst1 : Monad m'] [inst2 : MonadFlatMapGo m m'] [inst3 : MonadFlatMap' m']
+  [inst4 : MonadPersistentLog κ m']
+  {findable : {τ : Type u} → (τ → Prop) → Type u}
+  (findOf : ∀ {τ : Type u} (p : τ → Prop), ExtCandidates findable κ p → Unit → List τ)
+
+/- NOTE: Why the rule quantifies over a target-side name `jp'`.
+
+Sharing is a property of the term this rule produces, so it has to be visible in
+`val`. What we want is
+
+```
+let jp' := <extracted continuation>
+<extracted body, with `jp'` written at each jump site>
+```
+
+For the second line to mention the *variable* `jp'` rather than a copy of the
+first line, the extraction of the body must be a function of `jp'`. That is what
+`hbody` is: the tactic builds `fun jpS jp' hrel => <extraction>`, in which `jp'`
+occurs once per jump, and the `let` in `val` binds it once. After zeta/beta the
+large term appears only in the `let`'s value.
+
+Concretely, for
+```
+have jp : Unit → NonDetT m .. := fun r => (if flag then c := c + 2)
+if flag then (c := c + 1; jp r) else jp ()
+```
+this rule yields
+```
+have jp' : Unit → m' .. := fun r => (if flag then .. c + 2 ..)
+if flag then (.. c + 1 ..; jp' r) else jp' ()
+```
+whereas a rule that handed `hbody` a fixed target term would inline the `c + 2`
+branch into both arms — one copy per branch, hence 2^n over n sequential `if`s.
+-/
+
+/- NOTE: Why the rule also quantifies over the *source* join point `jpS`.
+
+Logically this is not needed: fixing the concrete `jp` in `hbody`,
+
+```
+hbody : ∀ (jp' : β → m' α),
+    (∀ x, ExtractConstraint .. (jp x) (jp' x)) → CER .. (body jp)
+```
+
+states an equally true proposition. It fails on the tactic side. `jp` is a
+concrete lambda, so `body jp` beta-reduces and every jump site turns into a
+genuine copy of the source continuation. The recursive extraction reaching such
+a site sees ordinary code, not a jump, and dutifully extracts it again; nothing
+in the goal marks the site as one where `hrel` should be used, so sharing is
+merely hoped for.
+
+Quantifying over `jpS` makes it forced instead. After `intro`, `jpS` is an
+opaque local, each jump site has the syntactic shape `jpS x`, and no extraction
+rule matches an application of an opaque variable — so the only way to close
+`CER .. (jpS x)` is `⟨jp' x, hrel x⟩`. This is also what makes the cheap
+`subject.getAppFn.isFVar` test in `extract_let_step` a sound way to
+recognise a jump.
+
+Incidentally, `hrel` is the local counterpart of the `@[multiextracted]`
+mechanism: the global attribute records "this source procedure has already been
+extracted, and here is its target", to be found via a discrimination tree;
+`hrel` records the same fact for a join point, scoped to the body being
+extracted and found by scanning the local context.
+
+-/
+
+/-- Extract a join point of arity one without duplicating its body. -/
+def ConstrainedExtractResult.joinPoint {α δ β : Type u}
+    {jp : β → NonDetT m α} {body : (β → NonDetT m α) → NonDetT m δ}
+    (hjp : ∀ x, ConstrainedExtractResult κ m m' findOf (jp x))
+    (hbody : ∀ (jpS : β → NonDetT m α) (jp' : β → m' α),
+        (∀ x, ExtractConstraint κ m m' findOf (jpS x) (jp' x)) →
+        ConstrainedExtractResult κ m m' findOf (body jpS)) :
+    ConstrainedExtractResult κ m m' findOf (let j := jp; body j) where
+  val :=
+    let jp' := fun x => (hjp x).val
+    (hbody jp jp' (fun x => (hjp x).proof)).val
+  proof := (hbody jp (fun x => (hjp x).val) (fun x => (hjp x).proof)).proof
+
+/-- Extract a join point of arity zero without duplicating its body. -/
+def ConstrainedExtractResult.joinPoint₀ {α δ : Type u}
+    {jp : NonDetT m α} {body : NonDetT m α → NonDetT m δ}
+    (hjp : ConstrainedExtractResult κ m m' findOf jp)
+    (hbody : ∀ (jpS : NonDetT m α) (jp' : m' α),
+        ExtractConstraint κ m m' findOf jpS jp' →
+        ConstrainedExtractResult κ m m' findOf (body jpS)) :
+    ConstrainedExtractResult κ m m' findOf (let j := jp; body j) where
+  val :=
+    let jp' := hjp.val
+    (hbody jp jp' hjp.proof).val
+  proof := (hbody jp hjp.val hjp.proof).proof
+
+/-
+NOTE: An earlier attempt handled `let` with a single rule:
+
+```
+(hs : ∀ y, CER .. (f y)) : CER .. (let x := s; f x)
+val := let x := s; (hs x).val
+```
+
+One variable `y` serves both sides. That works for data, because extraction is
+the identity on it: the source value and the target value are literally the same
+object, so the `let` in `val` may bind the source `s`. Put differently, for data
+the relation degenerates to equality, and equality needs only one name.
+
+A join point is not data. Its source lives in `NonDetT m α` and its extracted
+counterpart in `m' α` — different types. A single variable cannot play both
+roles: it has to be a source in order to be extracted, and a target in order to
+appear in `val`. So equality must become the extraction relation, and one
+variable must become a pair of variables plus `hrel`. Applying the rule above to
+a join point gets stuck immediately on `CER .. (y ())`, with `y` opaque as a
+source and no target-side name in scope to close the goal with.
+
+The rule was dropped for a second reason too: generalising the bound value
+hides it from instance synthesis and from the `dsimp` normalisation extraction
+relies on, which made the extracted term several times larger. `letValue` below
+instead keeps the definition in its premise; `shareValueLet` introduces that
+local definition, preserving access to the bound value.
+-/
+
+/-- Move an ordinary value `let` outside the extraction goal, retaining its
+definition in the premise. `shareValueLet` constructs this rearrangement directly
+so it also works when the body cannot be abstracted over an arbitrary value. -/
+def ConstrainedExtractResult.letValue {γ : Type s} {δ : Type u} (v : γ)
+    {body : γ → NonDetT m δ}
+    (h : let x := v; ConstrainedExtractResult κ m m' findOf (body x)) :
+    ConstrainedExtractResult κ m m' findOf (let x := v; body x) := h
+
+end SharedLets
+
 variable
   [Monad m]
   [CompleteBooleanAlgebra l]
@@ -342,6 +527,172 @@ initialize extractAttr : ExtractAttr ← do
 def ExtractAttr.find? (s : ExtractAttr) (e : Expr) : MetaM (Array ExtractAttr.Entry) := do
   (s.ext.getState (← getEnv)).getMatch e
 
+section ExtractionForLet
+
+/-- Move `(let x := v; result).val` to `let x := v; result.val`.
+Keeping the binder avoids substituting v at every use; reducing the projection
+inside it then removes the extraction certificate from the executable term. -/
+dsimproc_decl simpExtractedValueLet (_) := fun e => do
+  -- Unfolding `.val` can expose the kernel projection before this post-step.
+  let result? := match e with
+    | .proj ``MultiExtractor.ConstrainedExtractResult 0 result => some result
+    | _ => if e.isAppOfArity ``MultiExtractor.ConstrainedExtractResult.val 12 then
+        some e.appArg! else none
+  let some result := result? | return .continue
+  let .letE nm ty val body nondep := result.consumeMData | return .continue
+  -- The kernel projection needs no source index or instance arguments. Moving
+  -- it under the binder leaves body's bound variables unchanged; revisiting
+  -- handles nested lets and reduces the projection once it reaches a constructor.
+  return .visit <| .letE nm ty val (.proj ``MultiExtractor.ConstrainedExtractResult 0 body) nondep
+
+/-- Construct a sharing rule for the join point's actual telescope, including
+the empty telescope. This is the term-level generalisation of `joinPoint` and
+`joinPoint₀` above. The returned term abstracts over two extraction premises:
+
+```
+hjp   : ∀ xs, CER (jp xs)
+hbody : ∀ jpS jp', (∀ xs, R (jpS xs) (jp' xs)) → CER (body jpS)
+val   := let jp' := fun xs => (hjp xs).val
+         (hbody jp jp' (fun xs => (hjp xs).proof)).val
+proof := (hbody jp (fun xs => (hjp xs).val) (fun xs => (hjp xs).proof)).proof
+```
+
+Here `xs` denotes the whole telescope, preserving dependent parameter types.
+The caller has checked that `varTy` ends in the same monadic result type as the
+goal's subject. `val` is the source join point; `bodyE` is the source let-body,
+with the join point represented by loose bound variable 0. -/
+private def mkJoinPointSharingRule (goalType varTy val bodyE : Expr) : MetaM Expr := do
+  -- Common parameters through the result type α. Keep the goal's instance
+  -- arguments rather than synthesising them again. These two helpers build
+  -- CER s and R s t with exactly those parameters.
+  let params := goalType.getAppArgs.take 10
+  let mkResultType (s : Expr) := mkAppN goalType.getAppFn (params.push s)
+  let mkRelation (s t : Expr) :=
+    mkAppOptM ``MultiExtractor.ExtractConstraint (params.map some ++ #[some s, some t])
+
+  -- 1. Open the source telescope and replace only its result type:
+  --    hjpType    = ∀ xs, CER (val xs)
+  --    targetType = ∀ xs, m' α
+  -- Rebinding the same xs preserves dependencies between their types. For
+  -- arity zero, applying and rebinding the empty telescope do nothing.
+  let (hjpType, targetType) ← forallTelescopeReducing varTy fun xs _ => do
+    return (← mkForallFVars xs (mkResultType (mkAppN val xs)),
+      ← mkForallFVars xs (mkApp params[2]! params[9]!))
+
+  -- 2. State the body's premise for an opaque source/target pair, related at
+  -- every argument list. Replacing bound variable 0 by jpS keeps jumps opaque
+  -- during recursive extraction, so hrel must discharge them.
+  let hbodyType ← withLocalDeclD `jpS varTy fun jpS =>
+    withLocalDeclD `jp' targetType fun jp' => do
+      let hrelType ← forallTelescopeReducing varTy fun xs _ => do
+        mkForallFVars xs (← mkRelation (mkAppN jpS xs) (mkAppN jp' xs))
+      withLocalDeclD `hrel hrelType fun hrel =>
+        mkForallFVars #[jpS, jp', hrel] (mkResultType (bodyE.instantiate1 jpS))
+
+  -- 3. Assume both premises and project the extracted continuation and its
+  -- pointwise certificate from hjp. These are the concrete pair used below
+  -- to instantiate hbody; no extraction is performed by this constructor.
+  withLocalDeclD `hjp hjpType fun hjp =>
+    withLocalDeclD `hbody hbodyType fun hbody => do
+  let (jp', hrel) ← forallTelescopeReducing varTy fun xs _ => do
+    let extracted := mkAppN hjp xs
+    return (← mkLambdaFVars xs (mkProj ``MultiExtractor.ConstrainedExtractResult 0 extracted),
+      ← mkLambdaFVars xs (mkProj ``MultiExtractor.ConstrainedExtractResult 1 extracted))
+
+  -- 4. Build the executable value with one explicit target let. hbody's value
+  -- refers to j at each jump, so later reduction retains the shared binding.
+  -- hrel relates the source to j's defining value, not to an arbitrary j:
+  -- this let must stay dependent so proof abstraction retains that equality.
+  let target ← withLetDecl `jp' targetType jp' fun j => do
+    let body := mkProj ``MultiExtractor.ConstrainedExtractResult 0 (mkAppN hbody #[val, j, hrel])
+    mkLetFVars #[j] body (generalizeNondepLet := false)
+
+  -- 5. The certificate uses the same hbody with the concrete target inlined.
+  -- Its source is definitionally the original source let, and its target is
+  -- definitionally the executable value above. Package both fields, then
+  -- abstract the premises to return `fun hjp hbody => ⟨target, proof⟩`.
+  let proof := mkProj ``MultiExtractor.ConstrainedExtractResult 1 (mkAppN hbody #[val, jp', hrel])
+  let result ← mkAppOptM ``MultiExtractor.ConstrainedExtractResult.mk
+    (params.map some ++ #[some goalType.appArg!, some target, some proof])
+  mkLambdaFVars #[hjp, hbody] result
+
+open Tactic in
+/-- Apply the generated rule, leaving the continuation and body extraction
+premises as the two subgoals for the extraction loop. -/
+private def shareJoinPoint (goalType varTy val bodyE : Expr) : TacticM Unit := do
+  let rule ← mkJoinPointSharingRule goalType varTy val bodyE
+  replaceMainGoal (← (← getMainGoal).apply rule)
+
+/-- Arity of a `let` binding that is a computation in the monad being extracted,
+or `none` for an ordinary value binding. `subjectType` is the type of the goal's
+subject, so this recognises join points by type rather than by the `__do_jp`
+name the `do` elaborator happens to use. -/
+private def monadicLetArity (letType subjectType : Expr) : MetaM (Option Nat) :=
+  forallTelescopeReducing letType fun binders resultType => do
+    if ← withNewMCtxDepth (isDefEq resultType subjectType) then
+      return some binders.size
+    else
+      return none
+
+open Tactic in
+/-- Reassociate `CER (let x := v; body)` as `let x := v; CER body`.
+The extraction loop's next `intros` introduces `x := v`, so its value remains
+available to type checking and instance synthesis. Unlike a lambda over an
+arbitrary x, this also handles bodies whose typing relies on x's definition. -/
+private def shareValueLet (goalType : Expr) (varName : Name) (varTy val bodyE : Expr) : TacticM Unit := do
+  let args := goalType.getAppArgs
+  -- bodyE's loose bound variable 0 is bound by the new outer let. The other
+  -- goal arguments are already closed relative to the current local context.
+  let bodyGoal := mkAppN goalType.getAppFn (args.set! 10 bodyE)
+  let goalType' := Expr.letE varName varTy val bodyGoal false
+  replaceMainGoal [← (← getMainGoal).change goalType']
+
+open Tactic in
+/-- Handle an extraction goal whose subject is a `let` or a jump to a join point
+that an earlier `let` step abstracted.
+
+The two cases live in one tactic because they are decided by the same match on
+the subject and are mutually exclusive: a `let`-headed subject is never an
+application of a local join point, and vice versa. -/
+scoped elab "extract_let_step" : tactic => withMainContext do
+  let goalType ← getMainTarget''
+  let_expr MultiExtractor.ConstrainedExtractResult eκ em em' e1 e2 e3 e4 efindable efindOf eα es :=
+      goalType
+    | throwError "goal is not a `ConstrainedExtractResult` application"
+  -- A nested join point arrives as a beta-redex `(fun x => let j := ..; ..) x`.
+  let subject := es.consumeMData.headBeta
+  let subjectType ← inferType es
+  match subject with
+  | .letE varName varTy val bodyE _ =>
+    match ← monadicLetArity varTy subjectType with
+    | some n =>
+      trace[veil.extraction] "[{decl_name%}]: sharing join point {varName} of arity {n}"
+      shareJoinPoint goalType varTy val bodyE
+    | none =>
+      trace[veil.extraction] "[{decl_name%}]: sharing value {varName}"
+      shareValueLet goalType varName varTy val bodyE
+  | _ =>
+    let subjectFn := subject.getAppFn
+    unless subjectFn.isFVar do
+      throwError "the subject is neither a `let` nor a jump to a local join point"
+    let args := subject.getAppArgs
+    for ldecl in ← getLCtx do
+      if ldecl.isImplementationDetail then continue
+      unless ldecl.type.getForallArity == args.size do continue
+      let result? ← observing? do
+        let h ← mkAppOptM' ldecl.toExpr (args.map some)
+        let hType ← instantiateMVars (← inferType h)
+        let_expr MultiExtractor.ExtractConstraint _ _ _ _ _ _ _ _ _ _ _ tgt := hType
+          | throwError "hypothesis is not an extraction certificate"
+        let e ← mkAppOptM ``MultiExtractor.ConstrainedExtractResult.mk
+          #[some eκ, some em, some em', some e1, some e2, some e3, some e4,
+            some efindable, some efindOf, some eα, some subject, some tgt, some h]
+        Tactic.closeMainGoal `extract_let_step e
+      if result?.isSome then return
+    throwError "no join-point extraction hypothesis applies to this jump"
+
+end ExtractionForLet
+
 open Tactic in
 elab "extract_list_use_extracted" : tactic => withMainContext do
   let goal ← getMainTarget''
@@ -381,6 +732,7 @@ macro "extract_list_step" : tactic =>
   `(tactic|
     first
       | extract_list_use_extracted
+      | extract_let_step
       | extract_list_step_fallback
     )
 
