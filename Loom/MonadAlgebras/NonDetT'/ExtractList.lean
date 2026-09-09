@@ -728,16 +728,19 @@ macro "extract_list_step_fallback" : tactic =>
       | eapply $(Lean.mkIdent ``ConstrainedExtractResult.ite)
     )
 
+-- NOTE: The order of tactics in `extract_list_step` matters;
+-- `extract_let_step` should be tried before `extract_list_use_extracted`
+-- to ensure that let-bindings are handled first.
 macro "extract_list_step" : tactic =>
   `(tactic|
     first
-      | extract_list_use_extracted
       | extract_let_step
+      | extract_list_use_extracted
       | extract_list_step_fallback
     )
 
 macro "extract_list_tactic" : tactic =>
-  `(tactic| repeat' (intros; extract_list_step <;> try dsimp))
+  `(tactic| repeat' (intros; extract_list_step <;> try (dsimp -$(mkIdent `zeta))))
 
 end ExtractionTactic
 
