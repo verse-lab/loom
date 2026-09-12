@@ -1,8 +1,6 @@
 import Lake
 open Lake DSL
 
-require "leanprover-community" / "mathlib" @ git "v4.32.0"
-
 package Loom where
   leanOptions := #[⟨`pp.unicode.fun, true⟩] -- pretty-prints `fun a ↦ b`
 

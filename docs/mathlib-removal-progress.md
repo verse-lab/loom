@@ -98,7 +98,8 @@ The fourth increment ports `MonadAlgebras/Defs`, every effect algebra,
 WP/WLP and loop proofs, nondeterministic choice, and extraction correctness to
 `Loom.Order`. The temporary `LegacyControl` file is deleted. `import Loom` now
 compiles without importing mathlib; the root Lake requirement is retained only
-until the next package-removal milestone.
+in the fourth milestone. The fifth milestone removes that requirement and
+regenerates both root and native-consumer manifests with no external packages.
 
 Generic interfaces retain their assumption levels: plain `MAlg` is order-free,
 ordered and deterministic algebras need a complete lattice, and Boolean laws
@@ -118,8 +119,7 @@ longer exports its former global `Monoid (List κ)` instance or algebra instance
 for mathlib's `WriterT`; mathlib writer clients can convert to `Loom.WriterT`.
 Veil's full build has not yet been validated against these changes.
 
-Next are removing the root package requirement, fresh standalone builds,
-native precompilation, adapter distribution, and the Veil companion migration.
+Next are adapter distribution and the Veil companion migration.
 Performance comparison and full downstream validation remain outstanding.
 
 Validation commands:
@@ -146,8 +146,19 @@ lake env lean --run scripts/AuditDependencies.lean /tmp/loom-audit
 directory. Thus the control and metaprogramming tests cannot obtain imports
 from cached external packages. This includes the order models, monad utilities,
 specification interfaces, and persistent-log computations.
-The native fixture builds an executable and
-executes an extracted computation. A separate attempt with
-`precompileModules := true` was stopped because Lake started building mathlib's
-entire shared library. That configuration remains to be validated after the
-standalone semantics port; it is not enabled in this increment's CI.
+The native fixture builds an executable, precompiles its consumer module, and
+executes extracted computations. Earlier precompilation was blocked by the
+size of mathlib's shared build; it now succeeds after package removal.
+
+The fifth milestone validates package removal:
+
+- A fresh directory with no `.lake/packages` or inherited build outputs built
+  `Loom`, `Loom:static`, and all `LoomTest` modules successfully (68 jobs).
+  One local run took 49.95 seconds; the warm no-op run took 1.04 seconds.
+  These are machine-specific observations, not a controlled speedup claim.
+- The native consumer passes with `precompileModules := true`, including its
+  extracted value, ordered logs, and preserved logs on divergence.
+- The optional mathlib integration suite still passes alongside the standalone
+  root. It alone retains an explicit mathlib dependency.
+- CI rejects external root packages and audits compiled imports. The audit
+  also rejects Loom axioms and unfinished proofs using `sorryAx`.

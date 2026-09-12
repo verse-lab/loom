@@ -24,7 +24,7 @@ import Loom.MonadAlgebras.NonDetT'.ExtractList
 
 `import Loom` exports the same core. The `Loom` library covers the root module
 and all its submodules. CI checks the static library and a native consumer
-executable; the migration's module-precompilation check remains outstanding.
+executable with module precompilation enabled.
 
 Extraction accepts `MultiExtractor.Candidates` and `PartialCandidates` supplied
 by the caller. Veil already supplies these through its `Enumeration` interface.
@@ -48,20 +48,20 @@ lake test
 python3 scripts/check_foundations.py
 ```
 
-The toolchain is pinned in `lean-toolchain`; Mathlib and its dependencies are
-pinned in `lake-manifest.json`. Loom does not download or require external SMT
-solvers.
+The toolchain is pinned in `lean-toolchain`. The root package has no external
+Lake dependencies and does not download or require external SMT solvers.
 
-Mathlib removal is in progress. The semantics still depend on mathlib's order
-hierarchy. The new `Loom.Control.Cont`, `Loom.Control.Log`, and
-`Loom.Control.Writer`, `Loom.Control.Div`, and `Loom.Control.Persistent` modules,
-`Loom.Util.Meta`, `Loom.MonadUtil`, `Loom.SpecMonad`, and `Loom.Order.*` compile
-without external packages. Extraction uses the new writer and logging types.
-The order hierarchy supports generic complete
-lattices and Boolean algebras, with proposition, dependent-function, and
-continuation instances. The algebra and WP/WLP assertion proofs still use
-mathlib, with their old continuation helpers isolated in `LegacyControl.lean`
-until that port is complete.
+All Loom library modules, including generic algebras, WP/WLP, and extraction,
+use Loom's own control and assertion interfaces. Generic complete lattices and
+Boolean algebras remain supported, including proposition, dependent-function,
+and continuation instances. Computational fixed points still use `Lean.Order`.
+
+Open `Loom.Order` to use its classes and scoped assertion notation: `⊑ₗ`, `⊒ₗ`,
+`⊤ₗ`, `⊥ₗ`, `⊓ₗ`, `⊔ₗ`, `⨅ₗ`, `⨆ₗ`, `⇨ₗ`, and `ᶜₗ`. In files also using
+mathlib, prefer `open scoped Loom.Order` and qualified class/operation names.
+`⌜p⌝` uses `Loom.Order.embed`; continuations use `Loom.Cont`/`Loom.ContT`.
+Existing consumers that import mathlib themselves must require it directly;
+Veil's companion migration and full downstream validation are in progress.
 
 To inspect the compiled dependency graph after a build:
 

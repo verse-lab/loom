@@ -27,9 +27,13 @@ unsafe def main (args : List String) : IO Unit := do
   for (name, info) in env.constants.toList do
     let own := origin name
     if `Loom |>.isPrefixOf own then
+      if info matches .axiomInfo _ then
+        throw <| IO.userError s!"unexpected Loom axiom: {name}"
       declarations := declarations + 1
       let typeRefs := info.type.getUsedConstantsAsSet
       for dep in info.getUsedConstantsAsSet do
+        if dep == `sorryAx then
+          throw <| IO.userError s!"unfinished Loom proof: {name}"
         let depModule := origin dep
         if !(`Loom |>.isPrefixOf depModule) then
           let location := if typeRefs.contains dep then "type" else "value"

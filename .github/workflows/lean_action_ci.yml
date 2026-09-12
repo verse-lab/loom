@@ -14,12 +14,16 @@ jobs:
       - uses: leanprover/lean-action@v1
         with:
           use-github-cache: false
+      - name: Check standalone package graph
+        run: python3 -c 'import json; assert not json.load(open("lake-manifest.json"))["packages"]'
       - name: Build Loom native library
         run: lake build Loom:static
       - name: Test standalone foundations
         run: |
           lake test
           python3 scripts/check_foundations.py
+          lake env lean --run scripts/AuditDependencies.lean /tmp/loom-audit
+          ! grep -q '^Mathlib\.' /tmp/loom-audit/modules.txt
       - name: Test native consumer
         run: lake -d tests/native exe smoke
 
