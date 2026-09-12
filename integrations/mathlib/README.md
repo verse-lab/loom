@@ -8,9 +8,18 @@ require LoomMathlib from "../loom/integrations/mathlib"
 ```
 
 This package requires the root Loom checkout and the pinned mathlib revision.
-The root package does not require this integration package. Publication of the
-adapter as a Git dependency is a later migration step; the current supported
-setup is a local path dependency.
+The root package does not require this integration package. The nested package also supports a Git dependency:
+
+```lean
+require LoomMathlib from git "https://github.com/verse-lab/loom.git" @
+  "<published-revision-containing-this-package>" / "integrations/mathlib"
+```
+
+Use a revision containing the standalone migration after it is published.
+The relative Loom dependency resolves to the root of the same Git checkout.
+`python3 scripts/check_git_adapter.py` exercises this arrangement using the
+local Git repository at HEAD, before publication; external dependencies use
+the integration package's cache when available.
 
 Clients that previously relied on Loom to supply `Candidates` from `FinEnum`
 should import:
@@ -59,6 +68,6 @@ lake -d integrations/mathlib build
 lake -d integrations/mathlib test
 ```
 
-The algebra and WP/WLP assertion proofs still require mathlib during these
-migration increments. The monad utilities and specification interfaces use the
-standalone foundations, and extraction uses the new writer/logging types.
+All root Loom modules, including generic algebras, WP/WLP, and extraction, are
+independent of mathlib. This separate adapter package retains its explicit
+mathlib requirement.

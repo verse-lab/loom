@@ -1,6 +1,6 @@
 # Loom for Veil
 
-This branch (`v4.32.0-for-veil`) contains the Loom core used by
+This checkout contains the standalone Loom core for
 [Veil](https://github.com/verse-lab/veil), on Lean 4.32.0. It provides monad
 algebras, weakest-precondition semantics, nondeterministic computations, and
 extraction to executable computations.
@@ -10,11 +10,16 @@ on the [`master` branch](https://github.com/verse-lab/loom/tree/master).
 
 ## Using Loom
 
-Add this dependency to your `lakefile.lean`:
+For local development, add this dependency to your `lakefile.lean`, adjusting
+the path to this checkout:
 
 ```lean
-require Loom from git "https://github.com/verse-lab/loom.git" @ "v4.32.0-for-veil"
+require Loom from "../loom"
 ```
+
+For Git consumption after publication, require a revision containing the
+standalone migration. The older `v4.32.0-for-veil` revision may still depend
+on mathlib.
 
 Veil uses this entry point:
 
@@ -30,7 +35,7 @@ Extraction accepts `MultiExtractor.Candidates` and `PartialCandidates` supplied
 by the caller. Veil already supplies these through its `Enumeration` interface.
 The former automatic `FinEnum` fallback now lives in the separate
 `integrations/mathlib` package; clients relying on it must add that package and
-`import LoomMathlib.Candidates`. See its README for the local dependency setup.
+`import LoomMathlib.Candidates`. See its README for local and Git dependency setup.
 
 Persistent logs now require `Loom.LogMonoid κ`; lists have a built-in instance.
 Generic clients with a mathlib `Monoid κ` can explicitly use

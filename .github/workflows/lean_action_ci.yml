@@ -36,3 +36,5 @@ jobs:
           use-github-cache: false
       - name: Test mathlib integration
         run: lake -d integrations/mathlib test
+      - name: Test Git adapter consumer
+        run: python3 scripts/check_git_adapter.py

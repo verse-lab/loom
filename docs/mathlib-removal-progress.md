@@ -162,3 +162,14 @@ The fifth milestone validates package removal:
   root. It alone retains an explicit mathlib dependency.
 - CI rejects external root packages and audits compiled imports. The audit
   also rejects Loom axioms and unfinished proofs using `sorryAx`.
+
+The integration-distribution milestone verifies an external consumer of the
+nested package using a real Git clone at `09b9d5d`, with `subDir` set to
+`integrations/mathlib`. Lake resolves Loom to the root of that same clone.
+The mixed consumer builds and checks FinEnum-derived candidates, coexistence
+of the assertion relations, and WP. `scripts/check_git_adapter.py` repeats this
+check at HEAD and runs in the integration CI job. The local Git transport tests
+packaging before publication; no revision was pushed.
+
+See `docs/mathlib-migration.md` for the public-signature migration. Full Veil
+compatibility remains the next milestone.
