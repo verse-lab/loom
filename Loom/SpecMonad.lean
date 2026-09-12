@@ -1,18 +1,21 @@
-import Mathlib.Order.Basic
+import Loom.Order.Defs
+import Init.Control.Lawful
+
+open scoped Loom.Order
 
 universe u v w
 
 variable (m : Type u -> Type w) (w : Type u -> Type v)
 
-class PreOrderFunctor where preord : (α : Type u) -> Preorder (w α)
-instance [inst: (α : Type u) -> Preorder (w α)] : PreOrderFunctor w := ⟨inst⟩
-instance (α : Type u) [inst: PreOrderFunctor w] : Preorder (w α) := inst.preord α
+class PreOrderFunctor where preord : (α : Type u) -> Loom.Order.Preorder (w α)
+instance [inst: (α : Type u) -> Loom.Order.Preorder (w α)] : PreOrderFunctor w := ⟨inst⟩
+instance (α : Type u) [inst: PreOrderFunctor w] : Loom.Order.Preorder (w α) := inst.preord α
 
 class MonadOrder extends Monad w, PreOrderFunctor w where
   bind_le {α : Type u} {β : Type u} (x y : w α) (f g : α -> w β) :
-    x ≤ y → (∀ a, f a ≤ g a) → bind x f ≤ bind y g
+    x ⊑ₗ y → (∀ a, f a ⊑ₗ g a) → bind x f ⊑ₗ bind y g
 
-lemma lift_map {α : Type u} {β : Type u} (f : α -> β) (x : m α)
+theorem lift_map {α : Type u} {β : Type u} (f : α -> β) (x : m α)
   [Monad m] [Monad n] [LawfulMonad m] [LawfulMonad n] [MonadLiftT m n] [LawfulMonadLiftT m n] :
   liftM (f <$> x) = f <$> liftM (n := n) x := by
     simp
@@ -40,18 +43,5 @@ instance [Monad m] [LawfulMonad m]
     monadLift_pure := by simp
     monadLift_bind := by simp
 
-alias EffectObservation := LawfulMonadLift
-
-
--- class abbrev SpecMonad (m : Type u -> Type w) (w : Type u -> Type v) [Monad m] :=
---   MonadOrder w, MonadLiftT m w, EffectObservation m w
-
-/-
-  Spec for myM :
-    - (A + E -> State -> Prop) -> State -> Prop
-    - (A -> State -> Prop) -> State -> Prop + θ_tot
-    - (A -> State -> Prop) -> State -> Prop + θ_part
-
-    (A -> L) -> L
-
--/
+/-- A lawful observation of computations into another monad. -/
+abbrev EffectObservation := LawfulMonadLift

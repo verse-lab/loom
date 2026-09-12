@@ -13,9 +13,12 @@ upgrades and unrelated refactors would make failures harder to attribute.
 
 Implementation includes the dependency trim, regression infrastructure,
 standalone controls, and the assertion-order hierarchy with generic models
-and explicit mathlib conversions. Progress and remaining work are recorded in
-`docs/mathlib-removal-progress.md`. The root semantics still require mathlib;
-their migration to the new foundations has not been implemented.
+and explicit mathlib conversions. The monad utilities and specification
+interfaces now use the standalone foundations, and extraction uses the new
+writer and persistent-log types. Progress and remaining work are recorded in
+`docs/mathlib-removal-progress.md`. The algebra and WP/WLP assertion proofs
+still require mathlib; their continuation helpers are temporarily isolated
+until those consumers are ported.
 
 **The acceptance criteria apply to the complete library.**
 

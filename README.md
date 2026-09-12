@@ -32,6 +32,11 @@ The former automatic `FinEnum` fallback now lives in the separate
 `integrations/mathlib` package; clients relying on it must add that package and
 `import LoomMathlib.Candidates`. See its README for the local dependency setup.
 
+Persistent logs now require `Loom.LogMonoid κ`; lists have a built-in instance.
+Generic clients with a mathlib `Monoid κ` can explicitly use
+`LoomMathlib.logMonoidOfMonoid κ`. Writer extraction now targets `Loom.WriterT`;
+the integration package supplies conversions for mathlib writer computations.
+
 ## Build
 
 Install [Lean via elan](https://github.com/leanprover/elan), then run:
@@ -49,11 +54,14 @@ solvers.
 
 Mathlib removal is in progress. The semantics still depend on mathlib's order
 hierarchy. The new `Loom.Control.Cont`, `Loom.Control.Log`, and
-`Loom.Control.Writer` modules, `Loom.Util.Meta`, and `Loom.Order.*` compile
-without external packages. The order hierarchy supports generic complete
+`Loom.Control.Writer`, `Loom.Control.Div`, and `Loom.Control.Persistent` modules,
+`Loom.Util.Meta`, `Loom.MonadUtil`, `Loom.SpecMonad`, and `Loom.Order.*` compile
+without external packages. Extraction uses the new writer and logging types.
+The order hierarchy supports generic complete
 lattices and Boolean algebras, with proposition, dependent-function, and
-continuation instances. These foundations coexist with mathlib and are not
-yet substituted into the existing semantics.
+continuation instances. The algebra and WP/WLP assertion proofs still use
+mathlib, with their old continuation helpers isolated in `LegacyControl.lean`
+until that port is complete.
 
 To inspect the compiled dependency graph after a build:
 

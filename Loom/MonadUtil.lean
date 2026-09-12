@@ -1,65 +1,60 @@
-import Mathlib.Order.Basic
-import Mathlib.Order.CompleteLattice.Basic
-import Mathlib.Control.Monad.Cont
+import Loom.Order.Control
 
-universe u v w
+/-! Standalone continuation semantics. The assertion relation is Loom's own
+preorder; Lean's computation-domain order remains separate. -/
 
--- Bridge instances so that type class resolution sees through `id` in `Cont`
--- and through the `def ContT` wrapper.
-section ContInstances
-variable {t : Type v}
-instance instLEIdOfLE [inst : LE t] : LE (Id t) := inst
-instance instPreorderIdOfPreorder [inst : Preorder t] : Preorder (Id t) := inst
-instance instPartialOrderIdOfPartialOrder [inst : PartialOrder t] : PartialOrder (Id t) := inst
-instance instComplIdOfCompl [inst : Compl t] : Compl (Id t) := inst
-instance instBooleanAlgebraIdOfBooleanAlgebra [inst : BooleanAlgebra t] : BooleanAlgebra (Id t) := inst
-instance instCompleteLatticeIdOfCompleteLattice [inst : CompleteLattice t] : CompleteLattice (Id t) := inst
-instance instTopIdOfTop [inst : Top t] : Top (Id t) := inst
-instance instBotIdOfBot [inst : Bot t] : Bot (Id t) := inst
-end ContInstances
+open scoped Loom.Order
 
--- Bridge instances for ContT so instance search can find order/lattice instances
--- on `ContT r m α` (and hence on `Cont r α = ContT r id α`).
-section ContTInstances
-variable {r : Type u} {m : Type u → Type v} {α : Type w}
-instance instLEContT [LE (m r)] : LE (ContT r m α) :=
-  show LE ((α → m r) → m r) from inferInstance
-instance instTopContT [Top (m r)] : Top (ContT r m α) :=
-  show Top ((α → m r) → m r) from inferInstance
-instance instBotContT [Bot (m r)] : Bot (ContT r m α) :=
-  show Bot ((α → m r) → m r) from inferInstance
-instance instPreorderContT [Preorder (m r)] : Preorder (ContT r m α) :=
-  show Preorder ((α → m r) → m r) from inferInstance
-instance instPartialOrderContT [PartialOrder (m r)] : PartialOrder (ContT r m α) :=
-  show PartialOrder ((α → m r) → m r) from inferInstance
-instance instCompleteLatticeContT [CompleteLattice (m r)] : CompleteLattice (ContT r m α) :=
-  show CompleteLattice ((α → m r) → m r) from inferInstance
-end ContTInstances
+universe u v
 
-def Cont.inv {t : Type v} {α : Type u} [BooleanAlgebra t] (wp : Cont t α) : Cont t α :=
-  fun f => (wp fun x => (f x)ᶜ)ᶜ
+namespace Loom.Cont
 
-@[simp]
-def Cont.monotone {t : Type v} {α : Type u} [Preorder t] (wp : Cont t α) :=
-  ∀ (f f' : α -> t), (∀ a, f a ≤ f' a) → wp f ≤ wp f'
+/-- Dualize a continuation using Boolean complement. Completeness is not needed. -/
+def inv {t : Type v} {α : Type u} [Order.BooleanAlgebra t] (wp : Cont t α) : Cont t α :=
+  fun f => Order.compl (wp fun x => Order.compl (f x))
 
-structure W (t : Type v) [Preorder t] (α : Type u) where
-  wp : Cont t α
-  wp_montone : wp.monotone
+@[simp] def monotone {t : Type v} {α : Type u} [Order.Preorder t] (wp : Cont t α) :=
+  ∀ (f f' : α → t), (∀ a, f a ⊑ₗ f' a) → wp f ⊑ₗ wp f'
 
-@[ext]
-lemma W_ext (t : Type v) (α : Type u) [Preorder t] (w w' : W t α) :
-  w.wp = w'.wp → w = w' := by intros; cases w; cases w'; simp_all
+@[simp] theorem inv_inv {t : Type v} {α : Type u} [Order.BooleanAlgebra t]
+    (wp : Cont t α) : inv (inv wp) = wp := by
+  funext f
+  simp only [inv, Order.compl_compl]
 
-instance (t : Type v) [Preorder t] : Monad (W t) where
-  pure x := ⟨fun f => f x, by solve_by_elim⟩
-  bind x f := ⟨fun g => x.wp (fun a => (f a).wp g), by simp; intros; solve_by_elim [W.wp_montone]⟩
+theorem monotone_inv {t : Type v} {α : Type u} [Order.BooleanAlgebra t]
+    {wp : Cont t α} (h : wp.monotone) : (inv wp).monotone := by
+  intro f g hfg
+  exact Order.compl_antitone (h _ _ fun a => Order.compl_antitone (hfg a))
 
-instance {l σ : Type u} : MonadLift (Cont l) (Cont (σ -> l)) where
+/-- Evaluate a predicate at the current environment before observing it. -/
+instance readerLift {l : Type v} {σ : Type u} : MonadLift (Cont l) (Cont (σ → l)) where
   monadLift x := fun f s => x (f · s)
 
+instance {l : Type v} {σ : Type u} : LawfulMonadLift (Cont l) (Cont (σ → l)) where
+  monadLift_pure := by intros; rfl
+  monadLift_bind := by intros; rfl
 
+end Loom.Cont
 
--- class Logic (t : Type u) extends SemilatticeInf t where
---   sat : t -> Prop
---   sat_monotone : ∀ {p₁ p₂ : t}, p₁ ≤ p₂ -> sat p₁ -> sat p₂
+/-- Monotone predicate transformers over a generic assertion preorder. -/
+structure W (t : Type v) [Loom.Order.Preorder t] (α : Type u) where
+  wp : Loom.Cont t α
+  wp_montone : wp.monotone
+
+@[ext] theorem W_ext (t : Type v) (α : Type u) [Loom.Order.Preorder t] (w w' : W t α) :
+    w.wp = w'.wp → w = w' := by
+  intro h
+  cases w
+  cases w'
+  cases h
+  rfl
+
+instance (t : Type v) [Loom.Order.Preorder t] : Monad (W t) where
+  pure x := ⟨fun f => f x, fun _ _ h => h x⟩
+  bind x f := ⟨fun g => x.wp (fun a => (f a).wp g),
+    fun _ _ h => x.wp_montone _ _ fun a => (f a).wp_montone _ _ h⟩
+
+instance (t : Type v) [Loom.Order.Preorder t] : LawfulMonad (W t) := LawfulMonad.mk'
+  (id_map := by intros; apply W_ext; rfl)
+  (pure_bind := by intros; apply W_ext; rfl)
+  (bind_assoc := by intros; apply W_ext; rfl)

@@ -46,6 +46,10 @@ instance [LawfulMonad m] : LawfulMonad (WriterT ω m) := LawfulMonad.mk'
 instance : MonadLift m (WriterT ω m) where
   monadLift x := mk ((fun a => (a, LogMonoid.empty)) <$> x)
 
+instance [LawfulMonad m] : LawfulMonadLift m (WriterT ω m) where
+  monadLift_pure := by intros; apply ext; simp [MonadLift.monadLift]
+  monadLift_bind := by intros; apply ext; simp [MonadLift.monadLift]
+
 @[inline] def tell (w : ω) : WriterT ω m PUnit := mk (pure (⟨⟩, w))
 
 omit [LogMonoid ω] in

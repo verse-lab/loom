@@ -1,4 +1,5 @@
 import Loom.MonadAlgebras.Defs
+import Loom.Control.Div
 universe u v w
 
 instance : MAlgOrdered Id Prop where
@@ -16,31 +17,11 @@ instance : MAlgDet Id Prop where
     simp [MAlg.lift, MAlg.μ, MAlgOrdered.μ]
     solve_by_elim
 
-inductive DivM (α : Type u) where
-  | res (x : α)
-  | div
-
-def DivM.run {α : Type u} [Inhabited α] : DivM α -> α
-  | DivM.res x => x
-  | DivM.div => default
-
-instance : Monad DivM where
-  pure := DivM.res
-  bind := fun x y => match x with
-    | DivM.res x => y x
-    | DivM.div => DivM.div
-
 class CCPOBot (m : Type u -> Type v)  where
   compBot {α} : m α
 
 -- class CCPOBotLawful (m : Type u -> Type v) [∀ α, Lean.Order.CCPO (m α)] [CCPOBot m] where
 --   prop {α} [Lean.Order.PartialOrder (m α)] : ∀ (c : (m α) → Prop), Lean.Order.is_sup c <| CCPOBot.compBot (m := m) (α := α)
-
-instance : LawfulMonad DivM := by
-  refine LawfulMonad.mk' _ ?_ ?_ ?_
-  { intro α x; cases x <;> rfl }
-  { intros; rfl }
-  intro α β γ x f g; cases x <;> rfl
 
 noncomputable instance : Lean.Order.CCPO (DivM α) := inferInstanceAs (Lean.Order.CCPO (Lean.Order.FlatOrder .div))
 instance : CCPOBot DivM where

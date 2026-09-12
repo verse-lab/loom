@@ -28,6 +28,20 @@ Loom's continuation and writer types, and `LoomMathlib.logMonoidOfMonoid` for
 constructing a Loom logging algebra. These do not install global conversion
 instances.
 
+Extraction's persistent-log monad now requires `Loom.LogMonoid` instead of
+mathlib's `Monoid`. For generic mathlib log types, opt in explicitly:
+
+```lean
+-- Inside a declaration with [Monoid κ]:
+letI := LoomMathlib.logMonoidOfMonoid κ
+-- PeDivM κ and Loom.WriterT κ m are now available.
+```
+
+Lists already have a direct `Loom.LogMonoid` instance. Loom no longer exports
+its former global `Monoid (List κ)` instance. Existing mathlib writer clients
+can use `writerToLoom` and apply the migrated `Loom.WriterT.wp_eq` theorem.
+The root package does not provide algebra instances for mathlib's `WriterT`.
+
 `import LoomMathlib.Order` exposes explicit conversions from mathlib preorders,
 lattices, complete lattices, Boolean algebras, and complete Boolean algebras.
 For example, use `letI := LoomMathlib.completeLatticeOfMathlib α` to apply a
@@ -45,6 +59,6 @@ lake -d integrations/mathlib build
 lake -d integrations/mathlib test
 ```
 
-The root Loom semantics still require mathlib during these migration
-increments. The new namespaced control types and order hierarchy are standalone
-and are not yet substituted into those semantics.
+The algebra and WP/WLP assertion proofs still require mathlib during these
+migration increments. The monad utilities and specification interfaces use the
+standalone foundations, and extraction uses the new writer/logging types.

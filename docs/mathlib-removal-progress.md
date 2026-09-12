@@ -1,6 +1,8 @@
 The first implementation increment reduces imports and prepares standalone
 control foundations. It is committed as `0dc0ce1`. The second increment adds
-the standalone assertion-order hierarchy. Full mathlib removal remains in progress.
+the standalone assertion-order hierarchy and is committed as `ef4245c`.
+The third increment migrates the control utilities and extraction's logging
+types. Full mathlib removal remains in progress.
 
 Implemented changes:
 
@@ -20,7 +22,7 @@ Implemented changes:
   preserving target lets and providing an explicit out-of-bounds contract.
 - Added namespaced `Loom.ContT`, `Loom.WriterT`, and `Loom.LogMonoid`, their laws,
   and explicit mathlib conversions. These compile without external packages
-  and coexist with mathlib. They are not yet wired into the WP semantics.
+  and coexist with mathlib. Their adoption is described under the third increment below.
 - Added a native-consumer fixture and CI checks for the standalone
   foundations and optional adapter.
 
@@ -64,14 +66,55 @@ The second increment adds:
   Mixed files use `open scoped Loom.Order` and qualified operation names;
   importing the adapter installs no global conversion instances.
 
-The existing semantics still use mathlib. The new foundation is imported through
-`Loom.Order.Instances` or `Loom.Order.Control`; it is not yet re-exported by
-`import Loom`. Consequently this increment does not further reduce that root
-module's mathlib import count. The full source library and static target include
-the new modules through the existing Lake globs.
+The third increment adds:
 
-Next come the `MonadUtil`/`SpecMonad` migration, use of the standalone controls
-in semantics, the algebra and WP/WLP proof ports, and the Veil migration.
+- `Loom.MonadUtil` now imports only standalone modules. `W` retains its public
+  name and `wp_montone` field, but uses `Loom.Cont` and `Loom.Order.Preorder`.
+  Its monad laws are proved. `Loom.Cont.monotone` remains preorder-only;
+  `Loom.Cont.inv`, involution, and preservation of monotonicity require only
+  a Boolean algebra. The continuation-to-reader lift is lawful and supports
+  independent environment/answer universes.
+- `Loom.SpecMonad` now uses Loom's relation in `PreOrderFunctor` and
+  `MonadOrder`. `EffectObservation` uses a core Lean abbreviation rather than
+  Batteries' `alias`. The lawful lift interfaces remain available, including
+  composition through reader, state, and exception transformers.
+- `DivM` and `PeDivM` computational definitions and monad laws moved to
+  `Loom.Control.Div` and `Loom.Control.Persistent`, retaining their public
+  names. `PeDivM` now needs `Loom.LogMonoid` instead of mathlib's `Monoid`.
+  All extraction instances over persistent logs were migrated to that interface.
+- Extraction's writer algebra, WP theorem, and mapping/logging instances now
+  target `Loom.WriterT`. The standalone writer lift now has its lawful instance.
+  Its WP theorem is named `Loom.WriterT.wp_eq`.
+- Standalone tests exercise generic assumption levels, continuation duality,
+  monad order, composed lawful lifts, ordered logs, and preservation of logs
+  through divergence. Ordinary writer divergence is checked separately.
+- The extraction suite checks Veil's generic reader/exception/state/log stack
+  and its logging/WP simplification pattern. The native executable now checks
+  sequencing and divergence logs as well as an extracted result. Adapter tests
+  cover generic mathlib log types and Boolean continuation conversions.
+
+The old mathlib continuation helpers used by unported algebra/WP proofs moved
+to `Loom.MonadAlgebras.LegacyControl`. This is a temporary internal port boundary,
+not a new optional adapter or a completed assertion-proof migration. `Defs`
+imports it explicitly; delete it once its consumers use `Loom.Cont` and Loom's
+assertion hierarchy. The old `Cont.inv`/`Cont.monotone` names remain available
+through that path until then. `Loom.MonadUtil` itself has no mathlib imports.
+
+Standalone clients can import `Loom.MonadUtil` and `Loom.SpecMonad` directly.
+`import Loom` now transitively includes the new order foundation through the
+migrated utilities, alongside the remaining mathlib semantics.
+The updated audit still reports 222 imported mathlib modules, but direct
+references to mathlib declarations decreased from 224 to 205. The remaining
+legacy imports continue to determine the transitive mathlib module count.
+
+Generic log clients must replace `[Monoid κ]` with `[Loom.LogMonoid κ]`, or use
+the explicit mathlib log bridge locally. List logs require no adapter. Loom no
+longer exports its former global `Monoid (List κ)` instance or algebra instances
+for mathlib's `WriterT`; mathlib writer clients can convert to `Loom.WriterT`.
+Veil's full build has not yet been validated against these changes.
+
+Next are `MonadAlgebras/Defs`, the effect algebras, the WP/WLP assertion proof
+ports, removal of `LegacyControl`, and the Veil migration.
 The foundation's lemma surface can grow as those proof ports expose additional
 requirements. Full Veil validation, Git distribution of the adapter, fresh
 mathlib-free builds of the entire library, and performance comparison remain
@@ -80,10 +123,9 @@ they do not constitute completion of every baseline task in the full plan.
 
 Validation commands:
 
-For the second increment, `lake test`, `check_foundations.py`,
-`lake build Loom:static`, and the integration test suite passed. The native
-executable check passed in the first increment; it does not yet exercise the
-new order foundation through migrated semantics.
+For the third increment, `lake test`, `check_foundations.py`,
+`lake build Loom:static`, the integration suite, and the native executable
+passed. These checks do not constitute a full downstream Veil build.
 
 ```bash
 lake build
@@ -97,7 +139,8 @@ lake env lean --run scripts/AuditDependencies.lean /tmp/loom-audit
 
 `check_foundations.py` replaces `LEAN_PATH` with only this checkout's build
 directory. Thus the control and metaprogramming tests cannot obtain imports
-from cached external packages. This now includes the order models and laws.
+from cached external packages. This includes the order models, monad utilities,
+specification interfaces, and persistent-log computations.
 The native fixture builds an executable and
 executes an extracted computation. A separate attempt with
 `precompileModules := true` was stopped because Lake started building mathlib's

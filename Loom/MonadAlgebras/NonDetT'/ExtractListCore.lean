@@ -1,6 +1,9 @@
 import Loom.MonadAlgebras.NonDetT'.ExtractListBasic
 import Loom.Util.List
-import Mathlib.Control.Monad.Writer
+import Loom.Control.Writer
+import Loom.Control.Persistent
+
+open Loom (LogMonoid)
 
 open MultiExtractor
 
@@ -105,64 +108,15 @@ need to "operate" inside the monad, so we need `mr` to be a monad.
 -- And there is no way to remedy in a modular way.
 -- So one possible way to go is to augment them with "persistent" results.
 
--- TODO why this is not present?
-@[inline]
-instance : Monoid (List κ) where
-  one := []
-  mul := List.append
-  mul_assoc := by intros ; apply List.append_assoc
-  one_mul := by intros ; rfl
-  mul_one := by intros ; apply List.append_nil
-
-def PeDivM (κ : Type w) (α : Type u) := κ × DivM α
-
-@[inline, specialize inst]
-def PeDivM.prepend {κ : Type w} [inst : Monoid κ] {α : Type u} (k : κ) : PeDivM κ α → PeDivM κ α
-  | (k', a) => (k * k', a)
-
-theorem PeDivM.prepend_snd_same {κ : Type w} [Monoid κ] {α : Type u} (k : κ) (x : PeDivM κ α) :
-  (x.prepend k).2 = x.2 := by cases x ; simp [PeDivM.prepend]
-
--- more suitable to be inserted
-@[inline]
-def PeDivM.log {κ : Type w} (k : κ) : PeDivM κ PUnit :=
-  (k, DivM.res PUnit.unit)
-
-@[always_inline]
-instance [Monoid κ] : Monad (PeDivM κ) where
-  pure := fun x => (1, DivM.res x)
-  bind := fun (k1, mx) f =>
-    match mx with
-    | DivM.res x => f x |>.prepend k1   -- TODO it's very bad that this is not tail-recursive ...
-    | DivM.div => (k1, DivM.div)
-  map  := fun f (k, mx) => (k, match mx with
-    | DivM.res a => DivM.res (f a)
-    | DivM.div   => DivM.div)
-
-instance [Monoid κ] : LawfulMonad (PeDivM κ) :=
-  LawfulMonad.mk' (PeDivM κ)
-  (id_map := by intro α x ; simp [Functor.map] ; rcases x with ⟨k1, x | _⟩ <;> simp)
-  (pure_bind := by intro α β x f ; simp [pure, bind, PeDivM.prepend] ; rfl)
-  (bind_assoc := by
-    intro α β γ x f g ; simp [bind, PeDivM.prepend] ; rcases x with ⟨k1, x | _⟩ <;> simp
-    rcases f x with ⟨k2, y | _⟩ <;> simp
-    rcases g y with ⟨k3, z | _⟩ <;> simp
-    all_goals (simp only [mul_assoc]))
-  (bind_pure_comp := by intro α β f x ; simp [pure, bind, Functor.map, PeDivM.prepend] ; rcases x with ⟨k1, x | _⟩ <;> simp)
-
-theorem PeDivM.bind_snd {κ : Type w} {α β : Type u} [Monoid κ] (mx : PeDivM κ α) (f : α → PeDivM κ β) :
-  (mx >>= f).2 = mx.2 >>= (Prod.snd ∘ f) := by
-  rcases mx with ⟨k1, x | _⟩ <;> rfl
-
 -- only depends on the second component
-instance [Monoid κ] [CompleteLattice l] [inst : MAlgOrdered DivM l] : MAlgOrdered (PeDivM κ) l where
+instance [LogMonoid κ] [CompleteLattice l] [inst : MAlgOrdered DivM l] : MAlgOrdered (PeDivM κ) l where
   μ := inst.μ ∘ Prod.snd
   μ_ord_pure := by intro ll ; apply MAlgOrdered.μ_ord_pure
   μ_ord_bind {α} f g := by
     intro h x ; simp [Function.comp] ; repeat rw [PeDivM.bind_snd]
     apply MAlgOrdered.μ_ord_bind ; exact h
 
-theorem PeDivM.wp_eq_DivM [Monoid κ] [CompleteLattice l] [inst : MAlgOrdered DivM l]
+theorem PeDivM.wp_eq_DivM [LogMonoid κ] [CompleteLattice l] [inst : MAlgOrdered DivM l]
   (x : PeDivM κ α) (post : α → l) :
   wp x post = wp x.2 post := by
   simp [wp, liftM, monadLift, MAlg.lift, Functor.map]
@@ -230,10 +184,10 @@ instance
 section Instances
 
 @[always_inline]
-instance [Monoid κ] : MonadFlatMapGo DivM (PeDivM κ) where
-  go := fun x => (1, x)
+instance [LogMonoid κ] : MonadFlatMapGo DivM (PeDivM κ) where
+  go := fun x => (LogMonoid.empty, x)
 
-instance [Monoid κ] [CompleteLattice l] [inst : MAlgOrdered DivM l]
+instance [LogMonoid κ] [CompleteLattice l] [inst : MAlgOrdered DivM l]
    : LawfulMonadFlatMapGo DivM (PeDivM κ) l Eq where
   go_sound := by
     intro α a post
@@ -359,35 +313,35 @@ class LawfulMonadPersistentLog (κ : Type w) (m : Type u → Type v)
 section WriterT
 
 variable {M : Type u → Type v} {ω l : Type u}
-  [Monad M] [LawfulMonad M] [Monoid ω] [CompleteLattice l] [inst : MAlgOrdered M l]
+  [Monad M] [LawfulMonad M] [LogMonoid ω] [CompleteLattice l] [inst : MAlgOrdered M l]
 
 @[always_inline]
-instance : MonadPersistentLog ω (WriterT ω M) where
-  log := fun w => WriterT.mk <| pure (⟨⟩, w)
+instance : MonadPersistentLog ω (Loom.WriterT ω M) where
+  log := fun w => Loom.WriterT.mk <| pure (⟨⟩, w)
 
 @[always_inline]
-instance : MonadFlatMapGo M (WriterT ω M) where
-  go x := Functor.map (f := M) (fun a => (a, 1)) x
+instance : MonadFlatMapGo M (Loom.WriterT ω M) where
+  go x := Functor.map (f := M) (fun a => (a, LogMonoid.empty)) x
 
 -- only depends on the return value component
-instance : MAlgOrdered (WriterT ω M) l where
+instance : MAlgOrdered (Loom.WriterT ω M) l where
   μ x := inst.μ <| Prod.fst <$> x
-  μ_ord_pure := by intro ll ; simp only [map_eq_pure_bind, pure, pure_bind] ; apply inst.μ_ord_pure
+  μ_ord_pure := by intro ll ; simp only [map_eq_pure_bind, pure, Loom.WriterT.mk, pure_bind] ; apply inst.μ_ord_pure
   μ_ord_bind {α} f g := by
     intro h x ; simp +unfoldPartialApp [Function.comp] at h
-    simp [bind, WriterT.mk]
+    simp [bind, Loom.WriterT.mk]
     apply inst.μ_ord_bind ; simp +unfoldPartialApp [Function.comp]
     intro k ; simp ; specialize h k.1 ; exact h
 
-theorem WriterT.wp_eq (x : WriterT ω M α) (post : α → l) :
+theorem Loom.WriterT.wp_eq (x : Loom.WriterT ω M α) (post : α → l) :
   wp x post = wp (Prod.fst <$> x) post := by
-  simp [Id, wp, liftM, monadLift, MAlg.lift, Functor.map, WriterT.mk, MAlgOrdered.μ]
+  simp [Id, wp, liftM, monadLift, MAlg.lift, Functor.map, Loom.WriterT.mk, MAlgOrdered.μ]
   rfl
 
-instance : LawfulMonadFlatMapGo M (WriterT ω M) l Eq where
+instance : LawfulMonadFlatMapGo M (Loom.WriterT ω M) l Eq where
   go_sound := by
     intro α a post
-    simp [Id, wp, liftM, monadLift, MAlg.lift, Functor.map, WriterT.mk, MAlgOrdered.μ, MonadFlatMapGo.go, WriterT.run]
+    simp [Id, wp, liftM, monadLift, MAlg.lift, Functor.map, Loom.WriterT.mk, MAlgOrdered.μ, MonadFlatMapGo.go, Loom.WriterT.run]
 
 end WriterT
 
@@ -794,10 +748,10 @@ instance-- {m : Type u → Type v} {l ε : Type u}
     · simp [ExceptT.TsilTCore.op]
     · dsimp only [ExceptT.TsilTCore.op] ; apply h
 
--- TODO is generalization to `WriterT` possible?
+-- TODO is generalization to `Loom.WriterT` possible?
 
 @[always_inline]
-instance [Monoid κ] : TsilTCore (PeDivM κ) where
+instance [LogMonoid κ] : TsilTCore (PeDivM κ) where
   op := fun (k1, mx) f =>
     match mx with
     | DivM.div => [(k1, DivM.div)]
@@ -805,7 +759,7 @@ instance [Monoid κ] : TsilTCore (PeDivM κ) where
     -- TODO an optimization: if `k1 = 1`, then no need to prepend
     | DivM.res x => f x |>.map (PeDivM.prepend k1)
 
-instance [Monoid κ] : LawfulTsilTCore (PeDivM κ) where
+instance [LogMonoid κ] : LawfulTsilTCore (PeDivM κ) where
   op_single := by
     intro α β x f ; simp [pure, TsilTCore.op, Functor.map, PeDivM.prepend]
     rcases x with ⟨k1, x | _⟩ <;> rfl
@@ -818,15 +772,15 @@ instance [Monoid κ] : LawfulTsilTCore (PeDivM κ) where
     dsimp
     rw [List.map_flatMap, List.flatMap_map]
     apply Loom.List.flatMap_congr ; rintro ⟨k2, y | _⟩ _ <;> simp [PeDivM.prepend]
-    rintro ⟨k3, z⟩ _; simp only [mul_assoc]
+    rintro ⟨k3, z⟩ _; simp only [LogMonoid.append_assoc]
 
-instance [Monoid κ] : LawfulTsilTCore' (PeDivM κ) where
+instance [LogMonoid κ] : LawfulTsilTCore' (PeDivM κ) where
   op_fmap_commute := by
     intro α β γ x f h ; simp [TsilTCore.op]
     rcases x with ⟨k1, x | _⟩ <;> simp [Functor.map]
     rintro ⟨k2, y | _⟩ _ <;> simp [PeDivM.prepend]
 
-instance [Monoid κ] [CompleteLattice l] [inst : MAlgOrdered DivM l]  -- only rely on the second component
+instance [LogMonoid κ] [CompleteLattice l] [inst : MAlgOrdered DivM l]  -- only rely on the second component
   : LawfulTsilTCoreMAlgSup (PeDivM κ) l where
   sup := by
     intro α f g h x

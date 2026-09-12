@@ -85,4 +85,22 @@ def divergingExtracted : ConstrainedExtractResult Bool DivM Target
 #guard observe divergingExtracted.val ==
   [([true], none), ([false], none), ([true], none)]
 
+-- Veil's executable stack, including its proof that logging preserves WP.
+-- This checks the downstream simplification pattern affected by LogMonoid.
+abbrev VeilTarget (κ ε ρ σ : Type) :=
+  ReaderT ρ (ExceptT ε (StateT σ (TsilT (PeDivM (List κ)))))
+
+open AngelicChoice TotalCorrectness in
+example {κ ε ρ σ : Type} {hd : ε → Prop} [IsHandler hd] :
+    LawfulMonadPersistentLog κ (VeilTarget κ ε ρ σ) (ρ → σ → Prop) where
+  log_sound := by
+    intro k post
+    funext r st
+    simp +instances +unfoldPartialApp [VeilTarget, Id, wp, liftM, monadLift,
+      MAlg.lift, Functor.map, MAlgOrdered.μ, OfHd, MAlgExcept, pointwiseSup,
+      ExceptT.map, ExceptT.mk, Except.getD, TsilTCore.op,
+      StateT.map, StateT.pure, StateT.bind,
+      MonadPersistentLog.log, MonadLift.monadLift, StateT.lift, ExceptT.lift,
+      PeDivM.log, PeDivM.prepend, pure, bind, LE.pure]
+
 end LoomTest.Extraction
