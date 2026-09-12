@@ -1,5 +1,4 @@
 import Loom.MonadAlgebras.Defs
-import Mathlib.Tactic.Basic
 universe u v w
 
 instance : MAlgOrdered Id Prop where
@@ -39,9 +38,9 @@ class CCPOBot (m : Type u -> Type v)  where
 
 instance : LawfulMonad DivM := by
   refine LawfulMonad.mk' _ ?_ ?_ ?_
-  { introv; cases x <;> rfl }
-  { introv; rfl }
-  introv; cases x <;> rfl
+  { intro α x; cases x <;> rfl }
+  { intros; rfl }
+  intro α β γ x f g; cases x <;> rfl
 
 noncomputable instance : Lean.Order.CCPO (DivM α) := inferInstanceAs (Lean.Order.CCPO (Lean.Order.FlatOrder .div))
 instance : CCPOBot DivM where

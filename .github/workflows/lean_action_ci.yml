@@ -16,3 +16,19 @@ jobs:
           use-github-cache: false
       - name: Build Loom native library
         run: lake build Loom:static
+      - name: Test standalone foundations
+        run: |
+          lake test
+          python3 scripts/check_foundations.py
+      - name: Test native consumer
+        run: lake -d tests/native exe smoke
+
+  mathlib-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1
+        with:
+          use-github-cache: false
+      - name: Test mathlib integration
+        run: lake -d integrations/mathlib test

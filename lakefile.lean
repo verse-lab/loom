@@ -9,3 +9,7 @@ package Loom where
 @[default_target]
 lean_lib Loom where
   globs := #[Glob.andSubmodules `Loom]
+
+@[test_driver]
+lean_lib LoomTest where
+  globs := #[Glob.submodules `LoomTest]

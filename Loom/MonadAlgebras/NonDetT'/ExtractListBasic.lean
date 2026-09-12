@@ -1,8 +1,6 @@
-import Mathlib.Logic.Function.Basic
 import Mathlib.Order.CompleteBooleanAlgebra
 import Mathlib.Order.Lattice
 import Mathlib.Order.Basic
-import Mathlib.Data.FinEnum
 
 import Loom.MonadAlgebras.NonDetT'.Basic
 
@@ -39,9 +37,6 @@ instance PartialCandidates.of_Candidates {α : Type u} (p : α → Prop) [Candid
   find := Candidates.find p
   find_then := by intro x hx ; rw [Candidates.find_iff] at hx ; exact hx
 
-instance {α : Type u} {p : α → Prop} [FinEnum α] [DecidablePred p] : Candidates p where
-  find := fun _ => FinEnum.toList α |>.filter p
-  find_iff := by simp
 
 -- FIXME: `PartialCandidates` can be sampled. maybe add one such construction?
 

@@ -1,5 +1,5 @@
 import Loom.MonadAlgebras.NonDetT'.ExtractListCore
-import Mathlib.Lean.Elab.Tactic.Basic
+import Loom.Util.Meta
 
 namespace MultiExtractor
 
@@ -458,9 +458,9 @@ theorem extract_list_eq_wp
   wp s post = wp s' post := by
   apply le_antisymm
   · apply wp_refines_extract_list κ <;> try assumption
-    introv ; rw [Candidates.find_iff (self := ec.core)] ; exact id
+    intro τ p ec x; rw [Candidates.find_iff (self := ec.core)] ; exact id
   · apply extract_list_refines_wp κ <;> try assumption
-    introv ; rw [Candidates.find_iff (self := ec.core)] ; exact id
+    intro τ p ec x; rw [Candidates.find_iff (self := ec.core)] ; exact id
 
 end AngelicChoice
 
@@ -643,7 +643,7 @@ open Tactic in
 @[tactic extractLetStep]
 def evalExtractLetStep : Tactic := fun stx => withMainContext do
   let cfg ← elabExtractLetConfig stx[1]
-  let goalType ← getMainTarget''
+  let goalType ← Loom.Meta.getMainTarget
   let_expr MultiExtractor.ConstrainedExtractResult eκ em em' e1 e2 e3 e4 efindable efindOf eα es :=
       goalType
     | throwError "goal is not a `ConstrainedExtractResult` application"
@@ -705,7 +705,7 @@ where
   shareValueLet (goalType : Expr) (varName : Name) (varTy val bodyE : Expr) : TacticM Unit := do
     -- bodyE's loose bound variable 0 is bound by the new outer let. The other
     -- goal arguments are already closed relative to the current local context.
-    let bodyGoal := goalType.setArg 10 bodyE
+    let bodyGoal := Loom.Meta.setAppArg goalType 10 bodyE
     let goalType' := Expr.letE varName varTy val bodyGoal false
     replaceMainGoal [← (← getMainGoal).change goalType']
   /-- Zeta-reduce `CER (let x := v; body)` to `CER body[v]`, one binding at a time.
@@ -714,14 +714,14 @@ where
   matters: whnf would reduce the whole chain of `let`s at once and take any join
   point further down with it, which is what makes extraction exponential. -/
   inlineValueLet (goalType val bodyE : Expr) : TacticM Unit := do
-    let goalType' := goalType.setArg 10 (bodyE.instantiate1 val)
+    let goalType' := Loom.Meta.setAppArg goalType 10 (bodyE.instantiate1 val)
     replaceMainGoal [← (← getMainGoal).change goalType']
 
 end ExtractionForLet
 
 open Tactic in
 elab "extract_list_use_extracted" : tactic => withMainContext do
-  let goal ← getMainTarget''
+  let goal ← Loom.Meta.getMainTarget
   let some (ty, _) ← recognizeExtractEntry goal
     | throwError "Could not recognize the goal as an extraction goal"
   let entries ← extractAttr.find? ty

@@ -1,4 +1,3 @@
-import Mathlib.Logic.Function.Basic
 import Mathlib.Order.CompleteBooleanAlgebra
 import Mathlib.Order.Lattice
 import Mathlib.Order.Basic
@@ -29,11 +28,11 @@ instance : Monad (NonDetT m) where
 
 instance [LawfulMonad m] : LawfulMonad (NonDetT m) := by
   refine LawfulMonad.mk' _ ?_ ?_ ?_
-  { introv; induction x
+  { intro α x; induction x
     <;> simp [Functor.map, NonDetT.bind]
     <;> solve_by_elim [funext] }
-  { introv; simp [pure, bind, NonDetT.bind] }
-  introv; induction x
+  { intros; simp [pure, bind, NonDetT.bind] }
+  intro α β γ x f g; induction x
   <;> simp [bind, NonDetT.bind]
   <;> solve_by_elim [funext]
 
