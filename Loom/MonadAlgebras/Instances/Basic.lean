@@ -1,5 +1,7 @@
 import Loom.MonadAlgebras.Defs
 import Loom.Control.Div
+
+open Loom Loom.Order
 universe u v w
 
 instance : MAlgOrdered Id Prop where
@@ -42,16 +44,16 @@ namespace PartialCorrectness
 scoped instance : MAlgOrdered DivM Prop where
   μ := fun x => match x with
     | .res x => x
-    | .div => ⊤
+    | .div => ⊤ₗ
   μ_ord_pure := by solve_by_elim
   μ_ord_bind {α} f g := by
     rintro h (_|_) <;> solve_by_elim
 
 scoped instance : MAlgDet DivM Prop where
   demonic := by
-    rintro _ _ (_|_) <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map]
+    rintro _ _ (_|_) _ _ <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map]
   angelic := by
-    rintro _ _ (_|_) <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map]
+    rintro _ _ (_|_) _ _ <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map]
 
 -- instance : MAlgPartial DivM where
 --   csup_lift {α} chain := by
@@ -74,20 +76,20 @@ namespace TotalCorrectness
 scoped instance : MAlgOrdered DivM Prop where
   μ := fun x => match x with
     | .res x => ⌜x⌝
-    | .div => ⊥
-  μ_ord_pure := by simp [LE.pure, pure]
+    | .div => ⊥ₗ
+  μ_ord_pure := by simp [Loom.Order.embed, pure]
   μ_ord_bind {α} f g := by
     rintro h (_|_) <;> solve_by_elim
 
 scoped instance : MAlgDet DivM Prop where
   angelic := by
-    rintro _ _ (_|_) <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure]
+    rintro _ _ (_|_) _ _ <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map, Loom.Order.embed]
   demonic := by
-    rintro _ _ (_|_) <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure]
+    rintro _ _ (_|_) _ _ <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map, Loom.Order.embed]
 
 -- instance : MAlgTotal DivM where
 --   bot_lift := by
---     rintro _ _; simp [MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure]
+--     rintro _ _; simp [MAlg.lift, MAlgOrdered.μ, Functor.map, Loom.Order.embed]
 --     rw [<-CCPOBotLawful.prop]; simp
 
 end TotalCorrectness

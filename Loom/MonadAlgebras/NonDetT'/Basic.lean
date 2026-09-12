@@ -1,9 +1,8 @@
-import Mathlib.Order.CompleteBooleanAlgebra
-import Mathlib.Order.Lattice
-import Mathlib.Order.Basic
 
 import Loom.MonadAlgebras.WP.Basic
 import Loom.MonadAlgebras.WP.Tactic
+
+open Loom Loom.Order
 
 universe u v w
 
@@ -38,11 +37,11 @@ instance [LawfulMonad m] : LawfulMonad (NonDetT m) := by
 
 variable [CompleteBooleanAlgebra l] [MAlgOrdered m l]
 
-lemma meet_himp (x x' y z : l) :
+theorem meet_himp (x x' y z : l) :
   x = x' ->
-  (x ⇨ y) ⊓ (x' ⇨ z) = x ⇨ (y ⊓ z) := by
+  (x ⇨ₗ y) ⊓ₗ (x' ⇨ₗ z) = x ⇨ₗ (y ⊓ₗ z) := by
   rintro rfl
-  simp [himp_eq]; rw [@sup_inf_right]
+  simp only [himp_eq]; exact (sup_inf_left _ _ _).symm
 
 def NonDetT.pick (τ : Type u) : NonDetT m τ :=
   NonDetT.pickCont _ (fun _ => True) pure
@@ -70,25 +69,27 @@ namespace DemonicChoice
 def NonDetT.wp {l : Type u} {α : Type u} [CompleteLattice l] [MAlgOrdered m l] : NonDetT m α -> Cont l α
   | .pure ret => pure ret
   | .vis x f => fun post => _root_.wp x fun a => wp (f a) post
-  | .pickCont τ p f => fun post => let p : Set τ := p; ⨅ a ∈ (p : Set τ), wp (f a) post
+  | .pickCont _τ p f => fun post => ⨅ₗ a, ⨅ₗ _ha : p a, wp (f a) post
 
 omit [MAlgOrdered m l] in
-lemma spec_mono {α : Type u}  {l : Type u} [CompleteLattice l] (pre : l) (post : α -> l) (f g : α -> l) :
-  (∀ a, f a <= g a) ->
-  spec pre post f <= spec pre post g := by
+theorem spec_mono {α : Type u}  {l : Type u} [CompleteLattice l] (pre : l) (post : α -> l) (f g : α -> l) :
+  (∀ a, f a ⊑ₗ g a) ->
+  spec pre post f ⊑ₗ spec pre post g := by
     unfold spec; intro
-    refine inf_le_inf (by rfl) ?_
-    refine LE.pure_imp (post ≤ f) (post ≤ g) ?_
+    refine inf_mono (le_refl _) ?_
+    refine Loom.Order.embed_imp (post ⊑ₗ f) (post ⊑ₗ g) ?_
     intro h a; apply le_trans; apply h a; solve_by_elim
 
-lemma NonDetT.wp_mono  {l : Type u} [CompleteLattice l] [MAlgOrdered m l] [LawfulMonad m] {α : Type u} (x : NonDetT m α) (f g : α -> l) :
-  (∀ a, f a <= g a) ->
-  NonDetT.wp x f <= NonDetT.wp x g := by
-    intro h; induction x
-    <;> simp [NonDetT.wp, pure, -le_himp_iff, -iSup_le_iff]
-    <;> try solve_by_elim [wp_cons, iInf_le_of_le, himp_le_himp_left]
-    intro _ _; solve_by_elim [iInf₂_le_of_le]
-lemma NonDetT.wp_bind  {l : Type u} [CompleteLattice l] [MAlgOrdered m l] [LawfulMonad m] {α β : Type u} (x : NonDetT m α) (f : α -> NonDetT m β)
+theorem NonDetT.wp_mono  {l : Type u} [CompleteLattice l] [MAlgOrdered m l] [LawfulMonad m] {α : Type u} (x : NonDetT m α) (f g : α -> l) :
+  (∀ a, f a ⊑ₗ g a) ->
+  NonDetT.wp x f ⊑ₗ NonDetT.wp x g := by
+    intro h
+    induction x with
+    | pure a => exact h a
+    | vis c f ih => exact wp_cons c _ _ ih
+    | pickCont τ p f ih => exact iInf_mono fun a => iInf_mono fun _ => ih a
+
+theorem NonDetT.wp_bind  {l : Type u} [CompleteLattice l] [MAlgOrdered m l] [LawfulMonad m] {α β : Type u} (x : NonDetT m α) (f : α -> NonDetT m β)
   (post : β -> l):
   NonDetT.wp (x.bind f) post = NonDetT.wp x (fun x => NonDetT.wp (f x) post) := by
     unhygienic induction x
@@ -114,7 +115,7 @@ instance {l : Type u} [CompleteLattice l] [MAlgOrdered m l] : MAlgOrdered (NonDe
     simp [NonDetT.μ, bind, NonDetT.wp_bind]; intros
     solve_by_elim [NonDetT.wp_mono]
 
-lemma NonDetT.wp_eq_wp {α : Type u} (x : NonDetT m α) (post : α -> l) :
+theorem NonDetT.wp_eq_wp {α : Type u} (x : NonDetT m α) (post : α -> l) :
   _root_.wp x post = NonDetT.wp x post := by
     simp +instances [_root_.wp, liftM, monadLift, MAlg.lift, MAlgOrdered.μ, NonDetT.μ, Id]
     erw [map_eq_pure_bind, NonDetT.wp_bind]
@@ -122,44 +123,44 @@ lemma NonDetT.wp_eq_wp {α : Type u} (x : NonDetT m α) (post : α -> l) :
 
 
 @[simp]
-lemma NonDetT.wp_vis {β : Type u} (x : m β) (f : β → NonDetT m α) post :
+theorem NonDetT.wp_vis {β : Type u} (x : m β) (f : β → NonDetT m α) post :
   _root_.wp (NonDetT.vis x f) post = _root_.wp x fun a => _root_.wp (f a) post := by
   simp [NonDetT.wp_eq_wp]; rfl
 
-lemma NonDetT.wp_lift (c : m α) post :
+theorem NonDetT.wp_lift (c : m α) post :
   _root_.wp (liftM (n := NonDetT m) c) post = _root_.wp c post := by
   simp [NonDetT.wp_eq_wp]; rfl
 
 @[simp]
-lemma NonDetT.wp_pickCont {τ : Type u} p (f : τ → NonDetT m α) post :
-  _root_.wp (NonDetT.pickCont τ p f) post = ⨅ a, ⌜p a⌝ ⇨ _root_.wp (f a) post := by
+theorem NonDetT.wp_pickCont {τ : Type u} p (f : τ → NonDetT m α) post :
+  _root_.wp (NonDetT.pickCont τ p f) post = ⨅ₗ a, ⌜p a⌝ ⇨ₗ _root_.wp (f a) post := by
   simp +instances [NonDetT.wp_eq_wp, NonDetT.wp, Id]; congr; ext x
-  simp [Membership.mem, Set.Mem]
   by_cases h: p x <;> simp [h]
 
 
 @[simp]
-lemma NonDetT.wp_pure (x : α) post :
+theorem NonDetT.wp_pure (x : α) post :
   _root_.wp (NonDetT.pure (m := m) x) post = post x := by erw [_root_.wp_pure]
 
-lemma MonadNonDet.wp_pick {τ : Type u} post :
+theorem MonadNonDet.wp_pick {τ : Type u} post :
   _root_.wp (MonadNonDet.pick (m := NonDetT m) τ) post = iInf post := by
   simp [MonadNonDet.pick, NonDetT.pick]
 
-lemma MonadNonDet.wp_assume {as : Prop} post : _root_.wp (MonadNonDet.assume (m := NonDetT m) as) post = ⌜as⌝ ⇨ post .unit := by
+theorem MonadNonDet.wp_assume {as : Prop} post : _root_.wp (MonadNonDet.assume (m := NonDetT m) as) post = ⌜as⌝ ⇨ₗ post .unit := by
   simp [MonadNonDet.assume, NonDetT.assume, iInf_const]
 
-lemma MonadNonDet.wp_pickSuchThat {τ : Type u} (p : τ → Prop) post :
-  _root_.wp (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) post = ⨅ a, ⌜p a⌝ ⇨ post a := by
+theorem MonadNonDet.wp_pickSuchThat {τ : Type u} (p : τ → Prop) post :
+  _root_.wp (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) post = ⨅ₗ a, ⌜p a⌝ ⇨ₗ post a := by
   simp [MonadNonDet.pickSuchThat, NonDetT.pickSuchThat]
 
-lemma NonDetT.wp_iInf {ι : Type u} {α : Type u} {l : Type u} [CompleteBooleanAlgebra l] [MAlgOrdered m l] [MAlgDet m l] [Nonempty ι]
+theorem NonDetT.wp_iInf {ι : Type u} {α : Type u} {l : Type u} [CompleteBooleanAlgebra l] [MAlgOrdered m l] [MAlgDet m l] [Nonempty ι]
   (x : NonDetT m α) (post : ι -> α -> l) :
-  _root_.wp x (fun a => iInf post a) = ⨅ i, _root_.wp x (post i) := by
+  _root_.wp x (fun a => iInf post a) = ⨅ₗ i, _root_.wp x (post i) := by
   simp [NonDetT.wp_eq_wp]
   unhygienic induction x <;> simp [NonDetT.wp, pure, Id, *]
   { erw [_root_.wp_iInf] }
-  rw [iInf_psigma', iInf_comm]; congr!; simp [iInf_psigma']
+  conv => lhs; arg 1; ext a; rw [iInf_comm]
+  rw [iInf_comm]
 
 instance [NoFailure m] : NoFailure (NonDetT m) where
   noFailure := by
@@ -168,10 +169,9 @@ instance [NoFailure m] : NoFailure (NonDetT m) where
     rw [this, NonDetT.wp_eq_wp]; clear this
     induction c <;> simp [NonDetT.wp, pure, Id, *] at *
 
-set_option linter.overlappingInstances false in
 noncomputable
 scoped
-instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
+instance [Monad m] [LawfulMonad m] [Loom.Order.CompleteLattice l]
   [inst: MAlgOrdered m l] :
   MAlgLift m l (NonDetT m) l where
     cl := by exact LogicLift.refl
@@ -187,24 +187,26 @@ noncomputable
 def   NonDetT.wp {l : Type u} {α : Type u} [CompleteLattice l] [MAlgOrdered m l] : NonDetT m α -> Cont l α
   | .pure ret => pure ret
   | .vis x f => fun post => _root_.wp x fun a => wp (f a) post
-  | .pickCont _ p f => fun post => ⨆ a, ⌜p a⌝ ⊓ wp (f a) post
+  | .pickCont _ p f => fun post => ⨆ₗ a, ⌜p a⌝ ⊓ₗ wp (f a) post
 
-lemma spec_mono {α : Type u} {l : Type u} [CompleteLattice l] (pre : l) (post : α -> l) (f g : α -> l) :
-  (∀ a, f a <= g a) ->
-  spec pre post f <= spec pre post g := by
+theorem spec_mono {α : Type u} {l : Type u} [CompleteLattice l] (pre : l) (post : α -> l) (f g : α -> l) :
+  (∀ a, f a ⊑ₗ g a) ->
+  spec pre post f ⊑ₗ spec pre post g := by
     unfold spec; intro
-    refine inf_le_inf (by rfl) ?_
-    refine LE.pure_imp (post ≤ f) (post ≤ g) ?_
+    refine inf_mono (le_refl _) ?_
+    refine Loom.Order.embed_imp (post ⊑ₗ f) (post ⊑ₗ g) ?_
     intro h a; apply le_trans; apply h a; solve_by_elim
 
-lemma NonDetT.wp_mono [LawfulMonad m] {α : Type u} {l : Type u} [CompleteLattice l] [MAlgOrdered m l] (x : NonDetT m α) (f g : α -> l) :
-  (∀ a, f a <= g a) ->
-  NonDetT.wp x f <= NonDetT.wp x g := by
-    intro h; induction x
-    <;> simp [NonDetT.wp, pure, -le_himp_iff, -iSup_le_iff]
-    <;> try solve_by_elim [wp_cons, le_iSup_of_le, inf_le_inf_left, iSup_mono]
+theorem NonDetT.wp_mono [LawfulMonad m] {α : Type u} {l : Type u} [CompleteLattice l] [MAlgOrdered m l] (x : NonDetT m α) (f g : α -> l) :
+  (∀ a, f a ⊑ₗ g a) ->
+  NonDetT.wp x f ⊑ₗ NonDetT.wp x g := by
+    intro h
+    induction x with
+    | pure a => exact h a
+    | vis c f ih => exact wp_cons c _ _ ih
+    | pickCont τ p f ih => exact iSup_mono fun a => inf_mono (le_refl _) (ih a)
 
-lemma NonDetT.wp_bind [LawfulMonad m] {α β : Type u} {l : Type u} [CompleteLattice l] [MAlgOrdered m l] (x : NonDetT m α) (f : α -> NonDetT m β)
+theorem NonDetT.wp_bind [LawfulMonad m] {α β : Type u} {l : Type u} [CompleteLattice l] [MAlgOrdered m l] (x : NonDetT m α) (f : α -> NonDetT m β)
   (post : β -> l):
   NonDetT.wp (x.bind f) post = NonDetT.wp x (fun x => NonDetT.wp (f x) post) := by
     unhygienic induction x
@@ -230,7 +232,7 @@ instance {l : outParam (Type u)} [CompleteLattice l] [MAlgOrdered m l] : MAlgOrd
     simp [NonDetT.μ, bind, NonDetT.wp_bind]; intros
     solve_by_elim [NonDetT.wp_mono]
 
-lemma NonDetT.wp_eq_wp {α : Type u} (x : NonDetT m α) (post : α -> l) :
+theorem NonDetT.wp_eq_wp {α : Type u} (x : NonDetT m α) (post : α -> l) :
   _root_.wp x post = NonDetT.wp x post := by
     simp [Id, _root_.wp, liftM, monadLift, MAlg.lift, MAlgOrdered.μ, NonDetT.μ]
     erw [map_eq_pure_bind, NonDetT.wp_bind]
@@ -238,38 +240,37 @@ lemma NonDetT.wp_eq_wp {α : Type u} (x : NonDetT m α) (post : α -> l) :
 
 
 @[simp]
-lemma NonDetT.wp_vis {β : Type u} (x : m β) (f : β → NonDetT m α) post :
+theorem NonDetT.wp_vis {β : Type u} (x : m β) (f : β → NonDetT m α) post :
   _root_.wp (NonDetT.vis x f) post = _root_.wp x fun a => _root_.wp (f a) post := by
   simp [NonDetT.wp_eq_wp]; rfl
 
-lemma NonDetT.wp_lift (c : m α) post :
+theorem NonDetT.wp_lift (c : m α) post :
   _root_.wp (liftM (n := NonDetT m) c) post = _root_.wp c post := by
   simp [NonDetT.wp_eq_wp]; rfl
 
 @[simp]
-lemma NonDetT.wp_pickCont {τ : Type u} p (f : τ → NonDetT m α) post :
-  _root_.wp (NonDetT.pickCont τ p f) post = ⨆ a, ⌜p a⌝ ⊓ _root_.wp (f a) post := by
+theorem NonDetT.wp_pickCont {τ : Type u} p (f : τ → NonDetT m α) post :
+  _root_.wp (NonDetT.pickCont τ p f) post = ⨆ₗ a, ⌜p a⌝ ⊓ₗ _root_.wp (f a) post := by
   simp [NonDetT.wp_eq_wp]; rfl
 
 @[simp]
-lemma NonDetT.wp_pure (x : α) post :
+theorem NonDetT.wp_pure (x : α) post :
   _root_.wp (NonDetT.pure (m := m) x) post = post x := by erw [_root_.wp_pure]
 
-lemma MonadNonDet.wp_pick {τ : Type u} post :
+theorem MonadNonDet.wp_pick {τ : Type u} post :
   _root_.wp (MonadNonDet.pick (m := NonDetT m) τ) post = iSup post := by
   simp [MonadNonDet.pick, NonDetT.pick]
 
-lemma MonadNonDet.wp_assume {as : Prop} post : _root_.wp (MonadNonDet.assume (m := NonDetT m) as) post = ⌜as⌝ ⊓ post .unit := by
+theorem MonadNonDet.wp_assume {as : Prop} post : _root_.wp (MonadNonDet.assume (m := NonDetT m) as) post = ⌜as⌝ ⊓ₗ post .unit := by
   simp [MonadNonDet.assume, NonDetT.assume, iSup_const]
 
-lemma MonadNonDet.wp_pickSuchThat {τ : Type u} (p : τ → Prop) post :
-  _root_.wp (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) post = ⨆ a, ⌜p a⌝ ⊓ post a := by
+theorem MonadNonDet.wp_pickSuchThat {τ : Type u} (p : τ → Prop) post :
+  _root_.wp (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) post = ⨆ₗ a, ⌜p a⌝ ⊓ₗ post a := by
   simp [MonadNonDet.pickSuchThat, NonDetT.pickSuchThat]
 
-set_option linter.overlappingInstances false in
 noncomputable
 scoped
-instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l]
+instance [Monad m] [LawfulMonad m] [Loom.Order.CompleteLattice l]
   [inst: MAlgOrdered m l] :
   MAlgLift m l (NonDetT m) l where
     cl := by exact LogicLift.refl

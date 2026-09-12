@@ -44,8 +44,20 @@ scoped infixl:70 " ⊓ₗ " => inf
 scoped infixl:65 " ⊔ₗ " => sup
 
 attribute [simp] le_refl le_top bot_le
+attribute [simp] inf_le_left inf_le_right le_sup_left le_sup_right
 
 variable {α : Type u}
+
+def ge [Preorder α] (a b : α) : Prop := b ⊑ₗ a
+
+@[simp] theorem ge_iff_le [Preorder α] {a b : α} : ge a b ↔ b ⊑ₗ a := Iff.rfl
+
+theorem ge_refl [Preorder α] (a : α) : ge a a := le_refl a
+
+theorem le_trans' [Preorder α] {a b c : α} (h : b ⊑ₗ c) (k : a ⊑ₗ b) : a ⊑ₗ c :=
+  le_trans k h
+
+theorem le_of_eq [Preorder α] {a b : α} (h : a = b) : a ⊑ₗ b := h ▸ le_refl a
 
 def Monotone [Preorder α] [Preorder β] (f : α → β) : Prop :=
   ∀ ⦃a b⦄, a ⊑ₗ b → f a ⊑ₗ f b
@@ -57,6 +69,9 @@ def Monotone [Preorder α] [Preorder β] (f : α → β) : Prop :=
 @[simp] theorem le_bot_iff [PartialOrder α] [OrderBot α] {a : α} :
     a ⊑ₗ bot ↔ a = bot :=
   ⟨fun h => le_antisymm h (bot_le _), fun h => h ▸ le_refl _⟩
+
+theorem eq_bot_iff [PartialOrder α] [OrderBot α] {a : α} :
+    a = bot ↔ a ⊑ₗ bot := le_bot_iff.symm
 
 section
 variable [Lattice α] {a b c d : α}
@@ -74,6 +89,20 @@ theorem inf_mono (h : a ⊑ₗ b) (k : c ⊑ₗ d) : a ⊓ₗ c ⊑ₗ b ⊓ₗ 
 
 theorem sup_mono (h : a ⊑ₗ b) (k : c ⊑ₗ d) : a ⊔ₗ c ⊑ₗ b ⊔ₗ d :=
   sup_le (le_trans h (le_sup_left ..)) (le_trans k (le_sup_right ..))
+
+theorem inf_le_of_left_le (h : a ⊑ₗ c) : a ⊓ₗ b ⊑ₗ c := le_trans (inf_le_left ..) h
+theorem inf_le_of_right_le (h : b ⊑ₗ c) : a ⊓ₗ b ⊑ₗ c := le_trans (inf_le_right ..) h
+theorem le_sup_of_le_left (h : a ⊑ₗ b) : a ⊑ₗ b ⊔ₗ c := le_trans h (le_sup_left ..)
+theorem le_sup_of_le_right (h : a ⊑ₗ c) : a ⊑ₗ b ⊔ₗ c := le_trans h (le_sup_right ..)
+
+@[simp] theorem inf_le_sup_ll (a b c : α) : a ⊓ₗ b ⊑ₗ a ⊔ₗ c :=
+  le_trans (inf_le_left ..) (le_sup_left ..)
+@[simp] theorem inf_le_sup_lr (a b c : α) : a ⊓ₗ b ⊑ₗ c ⊔ₗ a :=
+  le_trans (inf_le_left ..) (le_sup_right ..)
+@[simp] theorem inf_le_sup_rl (a b c : α) : a ⊓ₗ b ⊑ₗ b ⊔ₗ c :=
+  le_trans (inf_le_right ..) (le_sup_left ..)
+@[simp] theorem inf_le_sup_rr (a b c : α) : a ⊓ₗ b ⊑ₗ c ⊔ₗ b :=
+  le_trans (inf_le_right ..) (le_sup_right ..)
 
 theorem inf_comm (a b : α) : a ⊓ₗ b = b ⊓ₗ a :=
   le_antisymm (le_inf (inf_le_right ..) (inf_le_left ..))

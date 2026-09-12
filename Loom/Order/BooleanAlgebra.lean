@@ -138,4 +138,48 @@ theorem sup_iInf {ι : Sort v} (a : α) (f : ι → α) :
   simpa only [compl_inf, compl_iSup, compl_compl] using h
 
 end CompleteBoolean
+
+section Simp
+variable [BooleanAlgebra α] {a b c : α}
+
+theorem himp_eq_sup_compl (a b : α) : himp a b = b ⊔ₗ compl a := by
+  rw [himp_eq, sup_comm]
+
+@[simp] theorem compl_le_compl_iff : compl a ⊑ₗ compl b ↔ b ⊑ₗ a :=
+  ⟨fun h => by simpa only [compl_compl] using compl_antitone h, compl_antitone⟩
+
+theorem le_himp_iff' : a ⊑ₗ himp b c ↔ b ⊓ₗ a ⊑ₗ c := by
+  rw [le_himp_iff, inf_comm]
+
+@[simp] theorem himp_self (a : α) : himp a a = top := by
+  rw [himp_eq_sup_compl, sup_compl_eq_top]
+
+@[simp] theorem top_himp (a : α) : himp top a = a := by simp [himp_eq]
+@[simp] theorem bot_himp (a : α) : himp bot a = top := by simp [himp_eq]
+@[simp] theorem himp_top (a : α) : himp a top = top := by simp [himp_eq]
+
+theorem eq_top_iff : a = top ↔ top ⊑ₗ a := top_le_iff.symm
+
+@[simp] theorem compl_inf_eq_bot (a : α) : compl a ⊓ₗ a = bot := by
+  rw [inf_comm, inf_compl_eq_bot]
+
+@[simp] theorem compl_sup_eq_top (a : α) : compl a ⊔ₗ a = top := by
+  rw [sup_comm, sup_compl_eq_top]
+
+theorem compl_le_iff : compl a ⊑ₗ b ↔ top ⊑ₗ a ⊔ₗ b := by
+  simpa only [himp_eq, top_inf, compl_compl] using
+    (le_himp_iff (a := top) (b := compl a) (c := b)).symm
+
+theorem inf_inf_distrib_right (a b c : α) :
+    (a ⊓ₗ b) ⊓ₗ c = (a ⊓ₗ c) ⊓ₗ (b ⊓ₗ c) := by
+  apply le_antisymm
+  · exact le_inf (le_inf (le_trans (inf_le_left ..) (inf_le_left ..)) (inf_le_right ..))
+      (le_inf (le_trans (inf_le_left ..) (inf_le_right ..)) (inf_le_right ..))
+  · exact le_inf (le_inf (le_trans (inf_le_left ..) (inf_le_left ..))
+      (le_trans (inf_le_right ..) (inf_le_left ..)))
+      (le_trans (inf_le_left ..) (inf_le_right ..))
+
+end Simp
+
+attribute [simp] compl_inf compl_sup le_himp_iff
 end Loom.Order

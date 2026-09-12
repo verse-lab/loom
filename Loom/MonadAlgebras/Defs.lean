@@ -1,49 +1,51 @@
-import Mathlib.Order.CompleteLattice.Basic
+import Loom.Order.Notation
 
 import Loom.MonadUtil
-import Loom.MonadAlgebras.LegacyControl
 import Loom.SpecMonad
+
+open Loom Loom.Order
 
 universe u v w
 
 /- Prop embedding into PartialOrder -/
 
 open Classical in
-noncomputable def LE.pure {l : Type u} [inst: LE l] [OrderTop l] [OrderBot l] : Prop -> l := fun p =>
-  if p then ⊤ else ⊥
+noncomputable def Loom.Order.embed {l : Type u} [inst: Preorder l] [OrderTop l] [OrderBot l] : Prop -> l := fun p =>
+  if p then ⊤ₗ else ⊥ₗ
 
-macro "⌜" p:term "⌝" : term => `(LE.pure $p)
+macro "⌜" p:term "⌝" : term => `(Loom.Order.embed $p)
 
-@[app_unexpander LE.pure] def unexpandPure : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Loom.Order.embed] def unexpandPure : Lean.PrettyPrinter.Unexpander
   | `($(_) $p:term) => `(⌜$p:term⌝)
   | _ => throw ()
 
 @[simp]
-lemma trueE (l : Type v) [inst: LE l] [OrderTop l] [OrderBot l] : ⌜True⌝ = (⊤ : l) := by
-  simp [LE.pure]
+theorem trueE (l : Type v) [inst: Preorder l] [OrderTop l] [OrderBot l] : ⌜True⌝ = (⊤ₗ : l) := by
+  simp [Loom.Order.embed]
 
 @[simp]
-lemma falseE (l : Type v) [inst: LE l] [OrderTop l] [OrderBot l] : ⌜False⌝ = (⊥ : l) := by
-  simp [LE.pure]
+theorem falseE (l : Type v) [inst: Preorder l] [OrderTop l] [OrderBot l] : ⌜False⌝ = (⊥ₗ : l) := by
+  simp [Loom.Order.embed]
 
 open Classical in
-lemma LE.pure_imp {l : Type u} [inst: LE l] [OrderTop l] [OrderBot l]
-  (p₁ p₂ : Prop) : (p₁ -> p₂) -> ⌜p₁⌝ <= (⌜p₂⌝ : l) := by
-  simp [LE.pure]; split <;> aesop
+theorem Loom.Order.embed_imp {l : Type u} [inst: Preorder l] [OrderTop l] [OrderBot l]
+  (p₁ p₂ : Prop) : (p₁ -> p₂) -> ⌜p₁⌝ ⊑ₗ (⌜p₂⌝ : l) := by
+  intro h
+  by_cases h₁ : p₁ <;> by_cases h₂ : p₂ <;> simp_all [Loom.Order.embed]
 
 @[simp]
-lemma LE.pure_intro {l : Type u} [inst: LE l] [OrderTop l] [OrderBot l]
-  (p : Prop) (h : l) : (⌜p⌝ <= h) = (p -> ⊤ <= h) := by
-    simp [LE.pure]; split <;> aesop
+theorem Loom.Order.embed_intro {l : Type u} [inst: Preorder l] [OrderTop l] [OrderBot l]
+  (p : Prop) (h : l) : (⌜p⌝ ⊑ₗ h) = (p -> ⊤ₗ ⊑ₗ h) := by
+    by_cases hp : p <;> simp [Loom.Order.embed, hp]
 
 @[simp]
-lemma pure_intro_l {l : Type u} [CompleteLattice l] (x y : l) :
-  (x ⊓ ⌜ p ⌝ <= y) = (p -> x <= y) := by
+theorem pure_intro_l {l : Type u} [CompleteLattice l] (x y : l) :
+  (x ⊓ₗ ⌜ p ⌝ ⊑ₗ y) = (p -> x ⊑ₗ y) := by
   by_cases h : p <;> simp [h, trueE, falseE]
 
 @[simp]
-lemma pure_intro_r {l : Type u} [CompleteLattice l] (x y : l) :
-  (⌜ p ⌝ ⊓ x <= y) = (p -> x <= y) := by
+theorem pure_intro_r {l : Type u} [CompleteLattice l] (x y : l) :
+  (⌜ p ⌝ ⊓ₗ x ⊑ₗ y) = (p -> x ⊑ₗ y) := by
   by_cases h : p <;> simp [h, trueE, falseE]
 
 variable (m : Type v -> Type u)
@@ -77,8 +79,8 @@ class MAlgOrdered (l : outParam (Type v)) [Monad m] [CompleteLattice l] where
   μ : m l -> l
   μ_ord_pure : ∀ l, μ (pure l) = l
   μ_ord_bind {α : Type v} :
-    ∀ (f g : α -> m l), μ ∘ f ≤ μ ∘ g ->
-      ∀ x : m α, μ (x >>= f) ≤ μ (x >>= g)
+    ∀ (f g : α -> m l), μ ∘ f ⊑ₗ μ ∘ g ->
+      ∀ x : m α, μ (x >>= f) ⊑ₗ μ (x >>= g)
 
 /- Deriving Monad Algebra instance from an Ordered Monad Algebra instance -/
 instance OfMAlgPartialOrdered {m : Type u -> Type v} {l : Type u} [Monad m] [CompleteLattice l] [mprop : MAlgOrdered m l] : MAlg m l where
@@ -88,22 +90,22 @@ instance OfMAlgPartialOrdered {m : Type u -> Type v} {l : Type u} [Monad m] [Com
     <;> apply MAlgOrdered.μ_ord_bind
     <;> simp_all only [le_refl]
 
-lemma MAlgOrdered.bind {α : Type u} {m} {l : Type u} [Monad m] [CompleteLattice l] [MAlgOrdered m l] :
+theorem MAlgOrdered.bind {α : Type u} {m} {l : Type u} [Monad m] [CompleteLattice l] [MAlgOrdered m l] :
     ∀ (x : m α) (f g : α -> m l), μ ∘ f = μ ∘ g ->
      μ (x >>= f) = μ (x >>= g) := MAlg.bind
 
-lemma Cont.monotone_lift {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [CompleteLattice l] [MAlgOrdered m l] :
+theorem Loom.Cont.monotone_lift {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [CompleteLattice l] [MAlgOrdered m l] :
   ∀ {α : Type u} (x : m α), MAlg.lift x |>.monotone := by
   unfold Cont.monotone; intros; simp [MAlg.lift]; rw [map_eq_pure_bind, map_eq_pure_bind]
   apply MAlgOrdered.μ_ord_bind; intro; simp [MAlgOrdered.μ_ord_pure, Id, *]
 
 @[simp]
-lemma MAlg.μ_eq {m l} [Monad m] [CompleteLattice l] [MAlgOrdered m l] : MAlg.μ (m := m) = MAlgOrdered.μ (m := m) := by rfl
+theorem MAlg.μ_eq {m l} [Monad m] [CompleteLattice l] [MAlgOrdered m l] : MAlg.μ (m := m) = MAlgOrdered.μ (m := m) := by rfl
 
-lemma MAlg.monadLift_bind {α β} {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [CompleteLattice l] [MAlgOrdered m l]
+theorem MAlg.monadLift_bind {α β} {l : Type u} {m : Type u -> Type v} [Monad m] [LawfulMonad m] [CompleteLattice l] [MAlgOrdered m l]
   (x : m α) (f g : α -> Cont l β) :
-    f <= g ->
-    (lift x >>= f) ≤ (lift x >>= g) := by
+    f ⊑ₗ g ->
+    (lift x >>= f) ⊑ₗ (lift x >>= g) := by
     intro fLg h; simp [Bind.bind]
     apply Cont.monotone_lift; intros h; apply fLg
 
@@ -111,41 +113,41 @@ lemma MAlg.monadLift_bind {α β} {l : Type u} {m : Type u -> Type v} [Monad m] 
 class MAlgDet (l : outParam (Type v)) [Monad m] [CompleteLattice l] [MAlgOrdered m l] where
   /-- Demonic determinism -/
   demonic {α ι : Type v} (c : m α) (p : ι -> α -> l) [Nonempty ι] :
-    ⨅ i, MAlg.lift c (p i) ≤ MAlg.lift c (fun x => ⨅ i, p i x)
+    ⨅ₗ i, MAlg.lift c (p i) ⊑ₗ MAlg.lift c (fun x => ⨅ₗ i, p i x)
   /-- Angelic determinism -/
   angelic {α ι : Type v} (c : m α) (p : ι -> α -> l) [Nonempty ι] :
-    ⨆ i, MAlg.lift c (p i) ≥ MAlg.lift c (fun x => ⨆ i, p i x)
+    ⨆ₗ i, MAlg.lift c (p i) ⊒ₗ MAlg.lift c (fun x => ⨆ₗ i, p i x)
 
 /-- Class for partial correctness monadic algebras -/
 class MAlgPartial (m : Type u -> Type v) [Monad m] [∀ α, Lean.Order.CCPO (m α)]
   [CompleteLattice l] [MAlgOrdered m l] where
-  csup_lift {α : Type u} (xc : Set (m α)) (post : α -> l) :
+  csup_lift {α : Type u} (xc : m α → Prop) (post : α -> l) :
     ∀ (hc : Lean.Order.chain xc),
-    ⨅ x ∈ xc, MAlg.lift x post <= MAlg.lift (Lean.Order.CCPO.csup hc) post
+    ⨅ₗ x, ⨅ₗ _h : xc x, MAlg.lift x post ⊑ₗ MAlg.lift (Lean.Order.CCPO.csup hc) post
 
 /-- Class for total correctness monadic algebras -/
 class MAlgTotal (m : Type u -> Type v) [Monad m] [∀ α, Lean.Order.CCPO (m α)]
   [CompleteLattice l] [MAlgOrdered m l] where
   bot_lift {α : Type u} (post : α -> l) :
-    MAlg.lift (Lean.Order.bot : m α) post <= ⊥
+    MAlg.lift (Lean.Order.bot : m α) post ⊑ₗ ⊥ₗ
 
 class NoFailure (m : Type u -> Type v) [Monad m] [CompleteLattice l] [MAlgOrdered m l] where
   noFailure {α : Type u} (c : m α) :
-    MAlg.lift c (fun _ => ⊤) = ⊤
+    MAlg.lift c (fun _ => ⊤ₗ) = ⊤ₗ
 
 class LogicLiftT (l : (Type u)) ( k : Type u) [CompleteLattice l] [CompleteLattice k] where
   [lift : MonadLiftT (Cont l) (Cont k)]
   lift_top {α : Type u} :
-    monadLift (m := Cont l) (n := Cont k) (fun (_ : α -> l) => ⊤) = ⊤
+    monadLift (m := Cont l) (n := Cont k) (fun (_ : α -> l) => ⊤ₗ) = ⊤ₗ
   lift_bot {α : Type u} :
-    monadLift (m := Cont l) (n := Cont k) (fun (_ : α -> l) => ⊥) = ⊥
+    monadLift (m := Cont l) (n := Cont k) (fun (_ : α -> l) => ⊥ₗ) = ⊥ₗ
 
 class LogicLift (l : outParam (Type u)) ( k : Type u) [CompleteLattice l] [CompleteLattice k] where
   [lift : MonadLift (Cont l) (Cont k)]
   lift_top {α : Type u} :
-    monadLift (m := Cont l) (n := Cont k) (fun (_ : α -> l) => ⊤) = ⊤
+    monadLift (m := Cont l) (n := Cont k) (fun (_ : α -> l) => ⊤ₗ) = ⊤ₗ
   lift_bot {α : Type u} :
-    monadLift (m := Cont l) (n := Cont k) (fun (_ : α -> l) => ⊥) = ⊥
+    monadLift (m := Cont l) (n := Cont k) (fun (_ : α -> l) => ⊥ₗ) = ⊥ₗ
 
 @[implicit_reducible]
 def LogicLift.refl [CompleteLattice l] : LogicLift l l where
@@ -162,7 +164,7 @@ instance [CompleteLattice l] [CompleteLattice k] [LogicLift l k] : MonadLift (Co
 
 
 @[simp]
-lemma lift_cont_eq {l σ : Type u} [CompleteLattice l] [CompleteLattice σ] (c : Cont l α) :
+theorem lift_cont_eq {l σ : Type u} [CompleteLattice l] [CompleteLattice σ] (c : Cont l α) :
   liftM (m := Cont l) (n := Cont (σ -> l)) c = fun post s => c (post · s)  := by
     rfl
 
@@ -173,14 +175,14 @@ instance {l} [CompleteLattice l] : LogicLiftT l l where
 instance [CompleteLattice l] [CompleteLattice k] [CompleteLattice p] [linst₁ : LogicLiftT l k] [linst₂ : LogicLift k p] : LogicLiftT l p where
   lift_top := by
     simp +instances [instMonadLiftTOfMonadLift]; intro
-    have : (monadLift (m := Cont l) (n := Cont k) (fun (_ : _ -> l) => ⊤)) = ⊤ := by {
+    have : (monadLift (m := Cont l) (n := Cont k) (fun (_ : _ -> l) => ⊤ₗ)) = ⊤ₗ := by {
       apply linst₁.lift_top
       assumption }
     rw [this]
     apply linst₂.lift_top
   lift_bot := by
     simp +instances [instMonadLiftTOfMonadLift]; intro
-    have : (monadLift (m := Cont l) (n := Cont k) (fun (_ : _ -> l) => ⊥)) = ⊥ := by {
+    have : (monadLift (m := Cont l) (n := Cont k) (fun (_ : _ -> l) => ⊥ₗ)) = ⊥ₗ := by {
       apply linst₁.lift_bot
       assumption }
     rw [this]
@@ -211,7 +213,7 @@ def MAlgLift.mk_rep  (m : semiOutParam (Type u -> Type v)) (l : semiOutParam (Ty
     constructor; intro α f x
     simp [MAlg.lift]; rw [←lift_map]
     unfold Id at *
-    trans ; apply μ_lift
+    apply Eq.trans (μ_lift _)
     simp [Functor.map_map]; rfl
 
 @[implicit_reducible]
@@ -245,9 +247,15 @@ instance MAlgLiftTTrans
   [inst': MAlgLiftT m l n k] [inst: MAlgLift n k p q] :
   MAlgLiftT m l p q where
     cl := by
-      haveI := inst.cl
-      haveI := inst'.cl
+      letI := inst.cl
+      letI := inst'.cl
       infer_instance
     μ_lift := by
-      intros; simp only [liftM, monadLift, MonadLiftT.monadLift]
-      erw [inst.μ_lift]; congr! 2; ext; apply inst'.μ_lift
+      intro α f x
+      letI := inst.cl
+      letI := inst'.cl
+      have h : MAlg.lift (liftM (m := m) (n := n) x) =
+          liftM (n := Cont k) (MAlg.lift x) := funext fun post => inst'.μ_lift (f := post) x
+      change MAlg.lift (liftM (m := n) (n := p) (liftM (m := m) (n := n) x)) f = _
+      rw [inst.μ_lift, h]
+      rfl

@@ -101,6 +101,6 @@ example {κ ε ρ σ : Type} {hd : ε → Prop} [IsHandler hd] :
       ExceptT.map, ExceptT.mk, Except.getD, TsilTCore.op,
       StateT.map, StateT.pure, StateT.bind,
       MonadPersistentLog.log, MonadLift.monadLift, StateT.lift, ExceptT.lift,
-      PeDivM.log, PeDivM.prepend, pure, bind, LE.pure]
+      PeDivM.log, PeDivM.prepend, pure, bind, Loom.Order.embed]
 
 end LoomTest.Extraction

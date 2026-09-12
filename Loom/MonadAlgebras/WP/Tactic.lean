@@ -1,61 +1,63 @@
 import Loom.MonadAlgebras.WP.Attr
 
+open Loom Loom.Order
+
 @[loomLogicSimp]
-lemma leE (l : Type u) [PartialOrder l] (a b : α -> l) : a ≤ b ↔ ∀ x, a x ≤ b x := by
+theorem leE (l : Type u) [PartialOrder l] (a b : α -> l) : a ⊑ₗ b ↔ ∀ x, a x ⊑ₗ b x := by
   rfl
 @[loomLogicSimp]
-lemma lePropE (a b : Prop) : (a ≤ b) = (a → b) := by
-  rfl
-
-@[loomLogicSimp]
-lemma pureE (l : Type u) [CompleteLattice l] (a : Prop) : (⌜a⌝ : α -> l) = fun _ => ⌜a⌝ := by
-  simp [LE.pure]; split <;> rfl
-
-@[loomLogicSimp]
-lemma purePropE  : (⌜a⌝ : Prop) = a := by
-  simp [LE.pure]
-
-@[loomLogicSimp]
-lemma infPropE (a b : Prop) : (a ⊓ b) = (a ∧ b) := by
+theorem lePropE (a b : Prop) : (a ⊑ₗ b) = (a → b) := by
   rfl
 
 @[loomLogicSimp]
-lemma infE (l : Type u) [CompleteLattice l] (a b : α -> l) : (a ⊓ b) = fun x => a x ⊓ b x := by
+theorem pureE (l : Type u) [CompleteLattice l] (a : Prop) : (⌜a⌝ : α -> l) = fun _ => ⌜a⌝ := by
+  simp [Loom.Order.embed]; split <;> rfl
+
+@[loomLogicSimp]
+theorem purePropE  : (⌜a⌝ : Prop) = a := by
+  simp [Loom.Order.embed]
+
+@[loomLogicSimp]
+theorem infPropE (a b : Prop) : (a ⊓ₗ b) = (a ∧ b) := by
   rfl
 
 @[loomLogicSimp]
-lemma supE (l : Type u) [CompleteLattice l] (a b : α -> l) : (a ⊔ b) = fun x => a x ⊔ b x := by
+theorem infE (l : Type u) [CompleteLattice l] (a b : α -> l) : (a ⊓ₗ b) = fun x => a x ⊓ₗ b x := by
   rfl
 
 @[loomLogicSimp]
-lemma supPropE (a b : Prop) : (a ⊔ b) = (a ∨ b) := by
+theorem supE (l : Type u) [CompleteLattice l] (a b : α -> l) : (a ⊔ₗ b) = fun x => a x ⊔ₗ b x := by
   rfl
 
 @[loomLogicSimp]
-lemma iInfE (l : Type u) [CompleteLattice l] (a : ι -> α -> Prop) : (⨅ i, a i) = fun x => ⨅ i, a i x := by
+theorem supPropE (a b : Prop) : (a ⊔ₗ b) = (a ∨ b) := by
+  rfl
+
+@[loomLogicSimp]
+theorem iInfE (l : Type u) [CompleteLattice l] (a : ι -> α -> Prop) : (⨅ₗ i, a i) = fun x => ⨅ₗ i, a i x := by
   ext; simp
 
 @[loomLogicSimp]
-lemma iSupE (l : Type u) [CompleteLattice l] (a : ι -> α -> Prop) : (⨆ i, a i) = fun x => ⨆ i, a i x := by
+theorem iSupE (l : Type u) [CompleteLattice l] (a : ι -> α -> Prop) : (⨆ₗ i, a i) = fun x => ⨆ₗ i, a i x := by
   ext; simp
 
 @[loomLogicSimp]
-lemma himpE  (l : Type u) [CompleteBooleanAlgebra l] (a b : α -> l) :
-  (a ⇨ b) = fun x => a x ⇨ b x := by rfl
+theorem himpE  (l : Type u) [CompleteBooleanAlgebra l] (a b : α -> l) :
+  (a ⇨ₗ b) = fun x => a x ⇨ₗ b x := by rfl
 
 @[loomLogicSimp]
-lemma himpPureE (a b : Prop) :
-  (a ⇨ b) = (a -> b) := by rfl
+theorem himpPureE (a b : Prop) :
+  (a ⇨ₗ b) = (a -> b) := by rfl
 
 @[loomLogicSimp]
-lemma topE (l : Type u) [CompleteLattice l] : (⊤ : α -> l) = fun _ => ⊤ := by rfl
+theorem topE (l : Type u) [CompleteLattice l] : (⊤ₗ : α -> l) = fun _ => ⊤ₗ := by rfl
 
 @[loomLogicSimp]
-lemma topPureE : (⊤ : Prop) = True := by rfl
+theorem topPureE : (⊤ₗ : Prop) = True := by rfl
 
 attribute [loomLogicSimp]
   forall_const
   implies_true and_true true_and
-  iInf_Prop_eq
+  prop_iInf prop_iSup
   and_imp
 attribute [simp←] Nat.mul_add_one

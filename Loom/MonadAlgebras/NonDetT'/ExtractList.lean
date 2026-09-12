@@ -1,6 +1,8 @@
 import Loom.MonadAlgebras.NonDetT'.ExtractListCore
 import Loom.Util.Meta
 
+open Loom Loom.Order
+
 namespace MultiExtractor
 
 section
@@ -394,61 +396,63 @@ namespace AngelicChoice
 include h
 
 theorem extract_list_refines_wp
-  [instl : LawfulMonadFlatMapGo m m' l GE.ge]
-  [instl2 : LawfulMonadFlatMapSup m' l GE.ge]
+  [instl : LawfulMonadFlatMapGo m m' l Loom.Order.ge]
+  [instl2 : LawfulMonadFlatMapSup m' l Loom.Order.ge]
   (findOf_sound : ∀ {τ : Type u} (p : τ → Prop) (ec : ExtCandidates findable κ p) x,
     x ∈ findOf p ec () → p x) :
-  wp s' post ≤ wp s post := by
+  wp s' post ⊑ₗ wp s post := by
   induction h with
   | @pure x => simp [wp_pure]
   | @vis β x f f' h ih =>
     simp [NonDetT.wp_vis, wp_bind]
     have tmp := instl.go_sound _ x
-    simp only [ge_iff_le] at tmp
-    trans ; apply tmp ; apply wp_cons ; aesop (add norm inf_comm)
+    simp only [Loom.Order.ge_iff_le] at tmp
+    apply le_trans (tmp _)
+    exact wp_cons _ _ _ ih
   | @pickCont τ p f f' extcd h ih =>
     simp [NonDetT.wp_pickCont]
     rename_i extcd
     specialize findOf_sound p extcd
     generalize (findOf p extcd ()) = lis at findOf_sound ⊢
     have tmp := @instl2.sound
-    simp only [ge_iff_le] at tmp
-    trans ; apply tmp ; rw [iSup_list_map] ; simp only [wp_bind, LawfulMonadPersistentLog.log_sound]
+    simp only [Loom.Order.ge_iff_le] at tmp
+    apply le_trans (tmp _ _) ; rw [iSup_list_map] ; simp only [wp_bind, LawfulMonadPersistentLog.log_sound]
     simp
-    intro a hin ; trans ; apply ih
+    intro a hin ; apply le_trans (ih a)
     apply le_iSup_of_le a ; simp [findOf_sound _ hin]
   | @assumeCont p f f' _ h ih =>
     simp [NonDetT.wp_pickCont]
-    split_ifs with h
-    · apply le_iSup_of_le .unit ; simp [h] ; apply ih
+    split <;> rename_i h
+    · simpa [h] using ih
     · have tmp := @instl2.sound α [] post
-      simp [ge_iff_le] at tmp
+      simp [Loom.Order.ge_iff_le] at tmp
       rw [tmp] ; simp
 
 theorem wp_refines_extract_list
-  [instl : LawfulMonadFlatMapGo m m' l LE.le]
-  [instl2 : LawfulMonadFlatMapSup m' l LE.le]
+  [instl : LawfulMonadFlatMapGo m m' l Loom.Order.Preorder.le]
+  [instl2 : LawfulMonadFlatMapSup m' l Loom.Order.Preorder.le]
   (findOf_complete : ∀ {τ : Type u} (p : τ → Prop) (ec : ExtCandidates findable κ p) x,
     p x → x ∈ findOf p ec ()) :
-  wp s post ≤ wp s' post := by
+  wp s post ⊑ₗ wp s' post := by
   induction h with
   | @pure x => simp [wp_pure]
   | @vis β x f f' h ih =>
     simp [NonDetT.wp_vis, wp_bind]
     have tmp := instl.go_sound _ x
-    trans ; (on_goal 2=> apply tmp) ; apply wp_cons ; aesop (add norm inf_comm)
+    apply le_trans' (tmp _)
+    exact wp_cons _ _ _ ih
   | @pickCont τ p f f' extcd h ih =>
     simp only [NonDetT.wp_pickCont]
     specialize findOf_complete p extcd
     generalize (findOf p extcd ()) = lis at findOf_complete ⊢
     have tmp := @instl2.sound
-    trans ; (on_goal 2=> apply tmp) ; rw [iSup_list_map] ; simp only [wp_bind, LawfulMonadPersistentLog.log_sound]
+    apply le_trans' (tmp _ _) ; rw [iSup_list_map] ; simp only [wp_bind, LawfulMonadPersistentLog.log_sound]
     simp
-    intro a hin ; trans ; apply ih
+    intro a hin ; apply le_trans (ih a)
     apply le_iSup_of_le a ; simp [findOf_complete, hin]
   | @assumeCont p f f' _ h ih =>
     simp [NonDetT.wp_pickCont]
-    rintro ⟨⟩ hp ; simp [hp] ; apply ih
+    intro hp ; simp [hp] ; apply ih
 
 omit findOf h in
 theorem extract_list_eq_wp
@@ -744,14 +748,14 @@ elab "extract_list_use_extracted" : tactic => withMainContext do
 macro "extract_list_step_fallback" : tactic =>
   `(tactic|
     first
-      | eapply $(Lean.mkIdent ``ConstrainedExtractResult.bind)
-      | eapply $(Lean.mkIdent ``ConstrainedExtractResult.liftM)
-      | eapply $(Lean.mkIdent ``ConstrainedExtractResult.assume) _ _ _ ($(Lean.mkIdent `decp) := by first | find_local_decidable_and_apply | infer_instance)
-      | eapply $(Lean.mkIdent ``ConstrainedExtractResult.pickList)
-      | eapply $(Lean.mkIdent ``ExtractConstraint.toConstrainedExtractResult) <;> any_goals eapply $(Lean.mkIdent ``ExtractConstraint.vis)
-      | eapply $(Lean.mkIdent ``ConstrainedExtractResult.pure)
-      | eapply $(Lean.mkIdent ``ExtractConstraint.toConstrainedExtractResult) <;> any_goals eapply $(Lean.mkIdent ``ExtractConstraint.pickCont)
-      | eapply $(Lean.mkIdent ``ConstrainedExtractResult.ite)
+      | apply $(Lean.mkIdent ``ConstrainedExtractResult.bind)
+      | apply $(Lean.mkIdent ``ConstrainedExtractResult.liftM)
+      | apply $(Lean.mkIdent ``ConstrainedExtractResult.assume) _ _ _ ($(Lean.mkIdent `decp) := by first | find_local_decidable_and_apply | infer_instance)
+      | apply $(Lean.mkIdent ``ConstrainedExtractResult.pickList)
+      | apply $(Lean.mkIdent ``ExtractConstraint.toConstrainedExtractResult) <;> any_goals apply $(Lean.mkIdent ``ExtractConstraint.vis)
+      | apply $(Lean.mkIdent ``ConstrainedExtractResult.pure)
+      | apply $(Lean.mkIdent ``ExtractConstraint.toConstrainedExtractResult) <;> any_goals apply $(Lean.mkIdent ``ExtractConstraint.pickCont)
+      | apply $(Lean.mkIdent ``ConstrainedExtractResult.ite)
     )
 
 -- NOTE: The order of tactics in `extract_list_step` matters;

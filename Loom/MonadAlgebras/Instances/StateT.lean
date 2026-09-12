@@ -1,6 +1,8 @@
 import Loom.MonadAlgebras.Defs
 import Loom.MonadAlgebras.Instances.Basic
 
+open Loom Loom.Order
+
 /- Ordered Monad Algebra instance for StateT -/
 instance (σ : Type u) (l : Type u) (m : Type u -> Type v)
   [CompleteLattice l]
@@ -9,7 +11,7 @@ instance (σ : Type u) (l : Type u) (m : Type u -> Type v)
   μ_ord_pure := by intro f; ext s₁; simp [pure, StateT.pure, MAlgOrdered.μ_ord_pure]
   μ_ord_bind := by
     intros α f g
-    simp +instances [Function.comp, Pi.hasLe]; intros le x s
+    simp +instances [Function.comp, Loom.Order.piPreorder]; intros le x s
     have leM := @inst.μ_ord_bind (α × σ) (fun as => (fun fs => fs.1 fs.2) <$> f as.1 as.2) (fun as => (fun fs => fs.1 fs.2) <$> g as.1 as.2)
     simp only [<-map_bind] at leM
     apply leM; intro; apply le
@@ -54,18 +56,18 @@ instance [Monad m] [CCPOBot m] : CCPOBot (StateT σ m) where
 --     apply CCPOBotLawful.prop
 
 
-lemma MAlg.lift_StateT [Monad m] [LawfulMonad m] [CompleteLattice l] [inst: MAlgOrdered m l] (x : StateT σ m α) :
+theorem MAlg.lift_StateT [Monad m] [LawfulMonad m] [CompleteLattice l] [inst: MAlgOrdered m l] (x : StateT σ m α) :
   MAlg.lift x post = fun s => MAlg.lift (x s) (fun xs => post xs.1 xs.2) := by
     simp +instances [MAlg.lift, Functor.map, MAlgOrdered.μ, StateT.map, Id]
 
 -- open Lean.Order
--- instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MAlgOrdered m l]
+-- instance [Monad m] [LawfulMonad m] [Loom.Order.CompleteLattice l] [inst: MAlgOrdered m l]
 --   [∀ α, CCPO (m α)] [MonoBind m]
 --   [MAlgPartial m] : MAlgPartial (StateT σ m) where
 --   csup_lift {α} chain := by
 --     intro post hchain
 --     simp [instCCPOStateTOfMonad_loom, CCPO.csup, MAlg.lift_StateT]
---     rw [@Pi.le_def]; simp; unfold fun_csup; intro s
+--     rw [@Loom.Order.pi_le_iff]; simp; unfold fun_csup; intro s
 --     apply le_trans'
 --     apply MAlgPartial.csup_lift (m := m)
 --     { simp [Lean.Order.chain]; rintro x y f cf rfl g cg rfl
@@ -76,7 +78,7 @@ lemma MAlg.lift_StateT [Monad m] [LawfulMonad m] [CompleteLattice l] [inst: MAlg
 --     refine iInf_mono' ?_; simp [Membership.mem, Set.Mem]; aesop
 
 -- attribute [-simp] le_bot_iff in
--- instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MAlgOrdered m l]
+-- instance [Monad m] [LawfulMonad m] [Loom.Order.CompleteLattice l] [inst: MAlgOrdered m l]
 --   [∀ α, CCPO (m α)]  [MonoBind m]
 --   [MAlgTotal m] : MAlgTotal (StateT σ m) where
 --   bot_lift := by
@@ -84,13 +86,13 @@ lemma MAlg.lift_StateT [Monad m] [LawfulMonad m] [CompleteLattice l] [inst: MAlg
 --     intros; intro; simp;
 --     apply MAlgTotal.bot_lift (m := m)
 
-instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MAlgOrdered m l]
+instance [Monad m] [LawfulMonad m] [Loom.Order.CompleteLattice l] [inst: MAlgOrdered m l]
   [inst': NoFailure m] : NoFailure (StateT σ m) where
   noFailure := by
     intro _ _; simp +instances [MAlg.lift_StateT, Id]; ext ; simp [Id.run] ; apply inst'.noFailure
 
 /- Monad Transformer Algebra instance for StateT -/
-instance [Monad m] [LawfulMonad m] [_root_.CompleteLattice l] [inst: MAlgOrdered m l] :
+instance [Monad m] [LawfulMonad m] [Loom.Order.CompleteLattice l] [inst: MAlgOrdered m l] :
   MAlgLift m l (StateT σ m) (σ -> l) where
     μ_lift := by
       intros; simp [MAlg.lift_StateT]; ext;

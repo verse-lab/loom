@@ -125,6 +125,9 @@ instance piCompleteBooleanAlgebra {ι : Type u} {α : ι → Type v}
   { piCompleteLattice, piBooleanAlgebra with }
 
 @[simp] theorem prop_le (p q : Prop) : (p ⊑ₗ q) = (p → q) := rfl
+
+theorem pi_le_iff {ι : Type u} {α : ι → Type v} [∀ i, Preorder (α i)]
+    (f g : (i : ι) → α i) : (f ⊑ₗ g) ↔ ∀ i, f i ⊑ₗ g i := Iff.rfl
 @[simp] theorem prop_inf (p q : Prop) : (p ⊓ₗ q) = (p ∧ q) := rfl
 @[simp] theorem prop_sup (p q : Prop) : (p ⊔ₗ q) = (p ∨ q) := rfl
 @[simp] theorem prop_himp (p q : Prop) : himp p q = (p → q) := rfl
@@ -145,6 +148,20 @@ instance piCompleteBooleanAlgebra {ι : Type u} {α : ι → Type v}
 
 @[simp] theorem pi_sup_apply {ι : Type u} {α : ι → Type v} [∀ i, Lattice (α i)]
     (f g : (i : ι) → α i) (i : ι) : (f ⊔ₗ g) i = f i ⊔ₗ g i := rfl
+
+@[simp] theorem pi_compl_apply {ι : Type u} {α : ι → Type v} [∀ i, BooleanAlgebra (α i)]
+    (f : (i : ι) → α i) (i : ι) : compl f i = compl (f i) := rfl
+
+@[simp] theorem pi_himp_apply {ι : Type u} {α : ι → Type v} [∀ i, BooleanAlgebra (α i)]
+    (f g : (i : ι) → α i) (i : ι) : himp f g i = himp (f i) (g i) := rfl
+
+@[simp] theorem pi_top_apply {ι : Type u} {α : ι → Type v}
+    [∀ i, Preorder (α i)] [∀ i, OrderTop (α i)] (i : ι) :
+    (top : (i : ι) → α i) i = top := rfl
+
+@[simp] theorem pi_bot_apply {ι : Type u} {α : ι → Type v}
+    [∀ i, Preorder (α i)] [∀ i, OrderBot (α i)] (i : ι) :
+    (bot : (i : ι) → α i) i = bot := rfl
 
 @[simp] theorem pi_iInf_apply {ι : Type u} {α : ι → Type v} [∀ i, CompleteLattice (α i)]
     {κ : Sort w} (f : κ → (i : ι) → α i) (i : ι) :

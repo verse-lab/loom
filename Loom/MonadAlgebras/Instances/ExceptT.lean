@@ -1,6 +1,8 @@
 import Loom.MonadAlgebras.Defs
 import Loom.MonadAlgebras.Instances.Basic
 
+open Loom Loom.Order
+
 abbrev Except.getD {ε α} (default : ε -> α)  : Except ε α -> α
   | Except.ok p => p
   | Except.error e => default e
@@ -8,7 +10,7 @@ abbrev Except.getD {ε α} (default : ε -> α)  : Except ε α -> α
 abbrev Except.bind' {m : Type u -> Type v} {ε α β} [Monad m] : Except ε α -> (α -> ExceptT ε m β) -> ExceptT ε m β :=
   fun x f => bind (m := ExceptT ε m) (pure (f := m) x) f
 
-lemma Except.bind'_bind {m : Type u -> Type v} {ε α β} [Monad m] [LawfulMonad m] (i : m (Except ε α)) (f : α -> ExceptT ε m β) :
+theorem Except.bind'_bind {m : Type u -> Type v} {ε α β} [Monad m] [LawfulMonad m] (i : m (Except ε α)) (f : α -> ExceptT ε m β) :
   (i >>= fun a => Except.bind' a f) = bind (m := ExceptT ε m) i f := by
   simp [Except.bind', bind, ExceptT.bind]; rfl
 
@@ -24,11 +26,11 @@ def MAlgExcept (ε : Type u) (df : ε -> Prop) (l : Type u) (m : Type u -> Type 
     solve_by_elim [MAlgOrdered.μ_ord_pure]
   μ_ord_bind := by
     intros α f g
-    simp +instances [Function.comp, Pi.hasLe]; intros le x
+    simp +instances [Function.comp, Loom.Order.piPreorder]; intros le x
     have leM := @inst.μ_ord_bind (Except ε α)
       (fun x => Except.getD (⌜df ·⌝) <$> Except.bind' x f)
       (fun x => Except.getD (⌜df ·⌝) <$> Except.bind' x g)
-    simp +instances only [Function.comp, Pi.hasLe, <-map_bind, Except.bind'_bind] at leM
+    simp +instances only [Function.comp, Loom.Order.piPreorder, <-map_bind, Except.bind'_bind] at leM
     apply leM; rintro (e | p) <;> simp +instances [Except.bind', ExceptT.instMonad, ExceptT.bind, ExceptT.bindCont]
     apply le
 
@@ -36,7 +38,7 @@ section ExeceptHandler
 
 variable (ε : Type u) (l : Type u) (m : Type u -> Type v) [Monad m] [LawfulMonad m]
 
-class IsHandler {ε : Type*} (handler : outParam (ε -> Prop)) where
+class IsHandler {ε : Type _} (handler : outParam (ε -> Prop)) where
 
 set_option linter.unusedVariables false in
 noncomputable
@@ -44,7 +46,7 @@ instance OfHd {hd : ε -> Prop} [hdInst : IsHandler hd]
   [CompleteLattice l] [inst: MAlgOrdered m l] : MAlgOrdered (ExceptT ε m) l := MAlgExcept ε hd l m
 
 
-lemma MAlg.lift_ExceptT ε (hd : ε -> Prop) [IsHandler hd] [CompleteLattice l] [inst: MAlgOrdered m l]
+theorem MAlg.lift_ExceptT ε (hd : ε -> Prop) [IsHandler hd] [CompleteLattice l] [inst: MAlgOrdered m l]
    (c : ExceptT ε m α) post :
   MAlg.lift c post = MAlg.lift (m := m) c (fun | .ok x => post x | .error e => ⌜hd e⌝) := by
     simp +instances [MAlg.lift, OfHd, MAlgExcept, Functor.map, ExceptT.map, ExceptT.mk, Id]
@@ -65,14 +67,14 @@ instance MAlgExceptHdDet (hd : ε -> Prop)
         | Except.error e => ⌜hd e⌝ )
     simp [MAlg.lift, MAlg.μ] at h
     have h₁ : ∀ p : ι -> α -> l,
-      ⨆ i,
+      ⨆ₗ i,
       (MAlgOrdered.μ (m := m) (do
         bind (m := m) c fun a =>
         Except.getD (⌜hd ·⌝) <$>
             match a with
             | Except.ok a => pure (Except.ok (p i a))
             | Except.error e => pure (Except.error e))) =
-      ⨆ i,
+      ⨆ₗ i,
       MAlgOrdered.μ (Functor.map (f := m) (α := Except ε α)
         (fun a =>
           match a with
@@ -81,7 +83,6 @@ instance MAlgExceptHdDet (hd : ε -> Prop)
       intro p; congr; ext i; rw [map_eq_pure_bind]; apply MAlg.bind (m := m); ext a; cases a <;> simp
     (repeat erw [h₁]); clear h₁; apply le_trans'; apply h
     apply le_of_eq;rw [map_eq_pure_bind]; apply MAlg.bind (m := m); ext a; cases a <;> simp [Id]
-    simp [Except.getD, iSup_const]
   demonic := by
     intros α ι c p _
     simp +instances [MAlg.lift, MAlg.μ, Functor.map, ExceptT.map, ExceptT.mk, Id]
@@ -93,14 +94,14 @@ instance MAlgExceptHdDet (hd : ε -> Prop)
         | Except.error e => ⌜hd e⌝ )
     simp [MAlg.lift, MAlg.μ] at h
     have h₁ : ∀ p : ι -> α -> l,
-      ⨅ i,
+      ⨅ₗ i,
       (MAlgOrdered.μ (m := m) (do
         bind (m := m) c fun a =>
         Except.getD (⌜hd ·⌝) <$>
             match a with
             | Except.ok a => pure (Except.ok (p i a))
             | Except.error e => pure (Except.error e))) =
-      ⨅ i,
+      ⨅ₗ i,
       MAlgOrdered.μ (Functor.map (f := m) (α := Except ε α)
         (fun a =>
           match a with
@@ -109,7 +110,6 @@ instance MAlgExceptHdDet (hd : ε -> Prop)
       intro p; congr; ext i; rw [map_eq_pure_bind]; apply MAlg.bind (m := m); ext a; cases a <;> simp
     (repeat erw [h₁]); clear h₁; apply le_trans; apply h
     apply le_of_eq;rw [map_eq_pure_bind]; apply MAlg.bind (m := m); ext a; cases a <;> simp [Id]
-    simp [Except.getD, iInf_const]
 
 instance
   [CompleteLattice l] [inst: MAlgOrdered m l] [IsHandler (fun (_ : ε) => True)]
@@ -117,12 +117,12 @@ instance
   noFailure := by
     rintro _ c
     rw (occs := [2]) [<-inst'.noFailure (c := c)]
-    simp +instances [MAlg.lift, MAlgOrdered.μ, Functor.map, LE.pure, ExceptT.map, ExceptT.mk, OfHd, MAlgExcept, Id]
+    simp +instances [MAlg.lift, MAlgOrdered.μ, Functor.map, Loom.Order.embed, ExceptT.map, ExceptT.mk, OfHd, MAlgExcept, Id]
     rw [map_eq_pure_bind]; apply MAlgOrdered.bind; ext (_|_) <;> simp
 
 /- Monad Transformer Algebra instance for ExceptT -/
 noncomputable
-instance [_root_.CompleteLattice l]
+instance [Loom.Order.CompleteLattice l]
   [IsHandler (ε := ε) hd]
   [inst: MAlgOrdered m l] :
   MAlgLift m l (ExceptT ε m) l where
@@ -163,7 +163,7 @@ instance [Monad m] [CCPOBot m] : CCPOBot (ExceptT ε m) where
 -- instance [Monad m] [inst : ∀ α, Lean.Order.CCPO (m α)] [CCPOBot m] [CCPOBotLawful m] : CCPOBotLawful (ExceptT ε m) where
 --   prop := CCPOBotLawful.prop (m := m)
 
-instance (hd : ε -> _) [IsHandler hd] [_root_.CompleteLattice l] [Monad m] [LawfulMonad m] [inst: MAlgOrdered m l]
+instance (hd : ε -> _) [IsHandler hd] [Loom.Order.CompleteLattice l] [Monad m] [LawfulMonad m] [inst: MAlgOrdered m l]
   [∀ α, CCPO (m α)] [MonoBind m]
   [MAlgPartial m] : MAlgPartial (ExceptT ε m) where
   csup_lift {α} chain := by
@@ -171,7 +171,7 @@ instance (hd : ε -> _) [IsHandler hd] [_root_.CompleteLattice l] [Monad m] [Law
     solve_by_elim [MAlgPartial.csup_lift (m := m)]
 
 attribute [-simp] le_bot_iff in
-instance (hd : ε -> _) [IsHandler hd] [_root_.CompleteLattice l] [Monad m] [LawfulMonad m] [inst: MAlgOrdered m l]
+instance (hd : ε -> _) [IsHandler hd] [Loom.Order.CompleteLattice l] [Monad m] [LawfulMonad m] [inst: MAlgOrdered m l]
   [∀ α, CCPO (m α)] [MonoBind m]
   [MAlgTotal m] : MAlgTotal (ExceptT ε m) where
   bot_lift := by

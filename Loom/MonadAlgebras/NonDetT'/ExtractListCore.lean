@@ -3,6 +3,8 @@ import Loom.Util.List
 import Loom.Control.Writer
 import Loom.Control.Persistent
 
+open Loom Loom.Order
+
 open Loom (LogMonoid)
 
 open MultiExtractor
@@ -10,7 +12,7 @@ open MultiExtractor
 section BasicStuff
 
 theorem iSup_list_map {l : Type w} [CompleteLattice l] {α : Type u} {β : Type v} (post : β → l) (f : α → β) (xs : List α) :
-  ⨆ y ∈ xs.map f, post y = ⨆ x ∈ xs, post (f x) := by
+  ⨆ₗ y ∈ xs.map f, post y = ⨆ₗ x ∈ xs, post (f x) := by
   induction xs with
   | nil => simp
   | cons x xs ih =>
@@ -18,7 +20,7 @@ theorem iSup_list_map {l : Type w} [CompleteLattice l] {α : Type u} {β : Type 
     simp
 
 theorem iSup_list_flatMap {l : Type w} [CompleteLattice l] {α : Type u} {β : Type v} (post : β → l) (f : α → List β) (xs : List α) :
-  ⨆ y ∈ xs.flatMap f, post y = ⨆ x ∈ xs, ⨆ x' ∈ f x, post x' := by
+  ⨆ₗ y ∈ xs.flatMap f, post y = ⨆ₗ x ∈ xs, ⨆ₗ x' ∈ f x, post x' := by
   induction xs with
   | nil => simp
   | cons x xs ih =>
@@ -26,11 +28,11 @@ theorem iSup_list_flatMap {l : Type w} [CompleteLattice l] {α : Type u} {β : T
     simp
 
 def pointwiseInf {l : Type v} [CompleteLattice l] {α : Type u} (post : α → l) : List α → l :=
-  fun xs => ⨅ a ∈ xs, post a
+  fun xs => ⨅ₗ a ∈ xs, post a
 
 noncomputable
 def pointwiseInf' {l : Type v} [CompleteBooleanAlgebra l] {α : Type u} (post : α → l) : List α → l :=
-  fun xs => ⨅ a, ⌜ a ∈ xs ⌝ ⇨ post a
+  fun xs => ⨅ₗ a, ⌜ a ∈ xs ⌝ ⇨ₗ post a
 
 theorem pointwiseInf_alt {l : Type v} [CompleteBooleanAlgebra l] {α : Type u} (post : α → l) lis :
   pointwiseInf post lis = pointwiseInf' post lis := by
@@ -39,15 +41,15 @@ theorem pointwiseInf_alt {l : Type v} [CompleteBooleanAlgebra l] {α : Type u} (
   by_cases h : a ∈ lis <;> simp [h]
 
 def pointwiseSup {l : Type v} [CompleteLattice l] {α : Type u} (post : α → l) : List α → l :=
-  fun xs => ⨆ a ∈ xs, post a
+  fun xs => ⨆ₗ a ∈ xs, post a
 
 theorem pointwiseSup_append {l : Type v} [CompleteLattice l] {α : Type u} (post : α → l) (xs ys : List α) :
-  pointwiseSup post (xs ++ ys) = pointwiseSup post xs ⊔ pointwiseSup post ys := by
+  pointwiseSup post (xs ++ ys) = pointwiseSup post xs ⊔ₗ pointwiseSup post ys := by
   simp [pointwiseSup, iSup_or, iSup_sup_eq]
 
 noncomputable
 def pointwiseSup' {l : Type v} [CompleteBooleanAlgebra l] {α : Type u} (post : α → l) : List α → l :=
-  fun xs => ⨆ a, ⌜ a ∈ xs ⌝ ⊓ post a
+  fun xs => ⨆ₗ a, ⌜ a ∈ xs ⌝ ⊓ₗ post a
 
 theorem pointwiseSup_alt {l : Type v} [CompleteBooleanAlgebra l] {α : Type u} (post : α → l) lis :
   pointwiseSup post lis = pointwiseSup' post lis := by
@@ -153,17 +155,17 @@ variable (m : Type u → Type v) (n : Type u → Type w)
   [CompleteLattice l]
   [MAlgOrdered m l] [MAlgOrdered n l]
 
-class LawfulMonadFlatMapGo (p : l → l → Prop)  -- what about equality? `≤` is just one direction, so maybe parameterize it with `p`
+class LawfulMonadFlatMapGo (p : l → l → Prop)  -- what about equality? `⊑ₗ` is just one direction, so maybe parameterize it with `p`
   where
   -- must be relating the results before and after `go`;
   -- a wrong formulation is about all `b : n α`
   go_sound : ∀ α (a : m α) post,
     p (wp a post) (wp (inst.go a) post)
 
-instance [inst : LawfulMonadFlatMapGo m n l Eq] : LawfulMonadFlatMapGo m n l LE.le where
+instance [inst : LawfulMonadFlatMapGo m n l Eq] : LawfulMonadFlatMapGo m n l Loom.Order.Preorder.le where
   go_sound := by intro α a post ; rw [inst.go_sound α a post]
 
-instance [inst : LawfulMonadFlatMapGo m n l Eq] : LawfulMonadFlatMapGo m n l GE.ge where
+instance [inst : LawfulMonadFlatMapGo m n l Eq] : LawfulMonadFlatMapGo m n l Loom.Order.ge where
   go_sound := by intro α a post ; rw [inst.go_sound α a post]
 
 end
@@ -372,12 +374,12 @@ variable (m : Type u → Type v) (l : Type u) [Monad m] [CompleteLattice l]
 class MonadFlatMap' where
   op : ∀ {α}, List (m α) → m α
 
--- TODO maybe also generalize over `⊔`?
-/-- Typeclass relating the result of `MonadFlatMap'.op` to the `⊔` of results
+-- TODO maybe also generalize over `⊔ₗ`?
+/-- Typeclass relating the result of `MonadFlatMap'.op` to the `⊔ₗ` of results
 of the individual computations. -/
 class LawfulMonadFlatMapSup [MAlgOrdered m l] [inst : MonadFlatMap' m] (p : l → l → Prop) where
   sound : ∀ (xs : List (m α)) (post : α → l),
-    p (⨆ a ∈ xs, wp a post) (wp (inst.op xs) post)
+    p (⨆ₗ a ∈ xs, wp a post) (wp (inst.op xs) post)
 
 -- TODO this might relate to `TsilT`?
 class MonadFlatMap'FMapDistributive [inst : MonadFlatMap' m] where
@@ -405,10 +407,10 @@ instance [MAlgOrdered m (a → l)] [instl : LawfulMonadFlatMapSup m (a → l) (r
 
 variable [MAlgOrdered m l] [instl : LawfulMonadFlatMapSup m l Eq]
 
-instance : LawfulMonadFlatMapSup m l LE.le where
+instance : LawfulMonadFlatMapSup m l Loom.Order.Preorder.le where
   sound := by intro α a post ; rw [instl.sound a post]
 
-instance : LawfulMonadFlatMapSup m l GE.ge where
+instance : LawfulMonadFlatMapSup m l Loom.Order.ge where
   sound := by intro α a post ; rw [instl.sound a post]
 
 end Basic
@@ -531,7 +533,7 @@ instance [inst : MonadFlatMapGo m m'] : MonadFlatMapGo m (TsilT m') where
   go := fun x => [inst.go x]
 
 -- the "core" might be important here: `m α → (α → TsilT m β) → TsilT m β`
--- TODO how to use it in other places? one place: for `⨅`
+-- TODO how to use it in other places? one place: for `⨅ₗ`
 class TsilTCore (m : Type u → Type v) where
   op : ∀ {α β}, m α → (α → TsilT m β) → TsilT m β
 
@@ -616,9 +618,9 @@ class LawfulTsilTCore' (m : Type u → Type v) [Monad m] [TsilTCore m] where
 class LawfulTsilTCoreMAlgSup (m : Type u → Type v) (l : Type u)
   [Monad m] [TsilTCore m] [CompleteLattice l] [MAlgOrdered m l] where
   sup : ∀ (f g : α → TsilT m l),
-    (pointwiseSup MAlgOrdered.μ ∘ f ≤ pointwiseSup MAlgOrdered.μ ∘ g) →
+    (pointwiseSup MAlgOrdered.μ ∘ f ⊑ₗ pointwiseSup MAlgOrdered.μ ∘ g) →
     ∀ (x : m α),
-      pointwiseSup MAlgOrdered.μ (TsilTCore.op x f) ≤ pointwiseSup MAlgOrdered.μ (TsilTCore.op x g)
+      pointwiseSup MAlgOrdered.μ (TsilTCore.op x f) ⊑ₗ pointwiseSup MAlgOrdered.μ (TsilTCore.op x g)
 
 namespace AngelicChoice
 
@@ -634,7 +636,7 @@ scoped instance : MAlgOrdered (TsilT m) l where
     | nil => simp [pointwiseSup, bind]
     | cons x xs ih =>
       simp only [TsilTCore.bind_cons, pointwiseSup_append]
-      apply sup_le_sup <;> try assumption
+      apply sup_mono <;> try assumption
       -- simp only [bind, pointwiseSup, List.flatMap_singleton]
       apply LawfulTsilTCoreMAlgSup.sup ; assumption
 
@@ -699,7 +701,10 @@ instance [Monad m] [LawfulMonad m] [TsilTCore m] [inst : LawfulTsilTCore m] : La
     have tmp2 := ExceptT.run_map f x
     simp only [ExceptT.run] at tmp2
     -- kind of awkward ...
-    rw [tmp2, ← tmp] ; congr! 1 ; ext1 a ; rcases a with e | a <;> rfl
+    rw [tmp2, ← tmp]
+    apply congrArg (TsilTCore.op (m := m) x)
+    funext a
+    cases a <;> rfl
   pure_op := by
     intro α β x f
     simp [TsilTCore.op, pure, ExceptT.pure, ExceptT.mk, LawfulTsilTCore.pure_op, ExceptT.TsilTCore.op]
@@ -707,8 +712,9 @@ instance [Monad m] [LawfulMonad m] [TsilTCore m] [inst : LawfulTsilTCore m] : La
     intro α β γ x f g
     simp [TsilTCore.op]
     have tmp := inst.op_assoc x (ExceptT.TsilTCore.op f) (ExceptT.TsilTCore.op g)
-    trans ; apply tmp
-    congr! 1 ; funext a
+    apply Eq.trans tmp
+    apply congrArg (TsilTCore.op (m := m) x)
+    funext a
     unfold ExceptT.TsilTCore.op ; dsimp
     rcases a with e | a <;> simp [LawfulTsilTCore.pure_op]
     rfl

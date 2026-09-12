@@ -2,7 +2,8 @@ The first implementation increment reduces imports and prepares standalone
 control foundations. It is committed as `0dc0ce1`. The second increment adds
 the standalone assertion-order hierarchy and is committed as `ef4245c`.
 The third increment migrates the control utilities and extraction's logging
-types. Full mathlib removal remains in progress.
+types (`a794551`). The fourth increment ports all assertion and extraction
+proofs. Package-level removal and downstream validation remain in progress.
 
 Implemented changes:
 
@@ -93,19 +94,23 @@ The third increment adds:
   sequencing and divergence logs as well as an extracted result. Adapter tests
   cover generic mathlib log types and Boolean continuation conversions.
 
-The old mathlib continuation helpers used by unported algebra/WP proofs moved
-to `Loom.MonadAlgebras.LegacyControl`. This is a temporary internal port boundary,
-not a new optional adapter or a completed assertion-proof migration. `Defs`
-imports it explicitly; delete it once its consumers use `Loom.Cont` and Loom's
-assertion hierarchy. The old `Cont.inv`/`Cont.monotone` names remain available
-through that path until then. `Loom.MonadUtil` itself has no mathlib imports.
+The fourth increment ports `MonadAlgebras/Defs`, every effect algebra,
+WP/WLP and loop proofs, nondeterministic choice, and extraction correctness to
+`Loom.Order`. The temporary `LegacyControl` file is deleted. `import Loom` now
+compiles without importing mathlib; the root Lake requirement is retained only
+until the next package-removal milestone.
 
-Standalone clients can import `Loom.MonadUtil` and `Loom.SpecMonad` directly.
-`import Loom` now transitively includes the new order foundation through the
-migrated utilities, alongside the remaining mathlib semantics.
-The updated audit still reports 222 imported mathlib modules, but direct
-references to mathlib declarations decreased from 224 to 205. The remaining
-legacy imports continue to determine the transitive mathlib module count.
+Generic interfaces retain their assumption levels: plain `MAlg` is order-free,
+ordered and deterministic algebras need a complete lattice, and Boolean laws
+remain restricted to duality/choice results that used them before. Tests apply
+WP and reader/state/exception interfaces to the non-Boolean three-element chain.
+`Lean.Order.CCPO` continues to describe computational fixed points.
+
+Assertion syntax is scoped to `Loom.Order`: `⊑ₗ`, `⊒ₗ`, `⊤ₗ`, `⊥ₗ`, `⊓ₗ`,
+`⊔ₗ`, `⨅ₗ`, `⨆ₗ`, `⇨ₗ`, and `ᶜₗ`. `⌜p⌝` now expands to `Loom.Order.embed`.
+Ordinary numerical comparisons retain Lean's notation. Bounds include
+proposition indices; congruence rules let simplification rewrite those index
+propositions, including list membership used by extraction.
 
 Generic log clients must replace `[Monoid κ]` with `[Loom.LogMonoid κ]`, or use
 the explicit mathlib log bridge locally. List logs require no adapter. Loom no
@@ -113,15 +118,15 @@ longer exports its former global `Monoid (List κ)` instance or algebra instance
 for mathlib's `WriterT`; mathlib writer clients can convert to `Loom.WriterT`.
 Veil's full build has not yet been validated against these changes.
 
-Next are `MonadAlgebras/Defs`, the effect algebras, the WP/WLP assertion proof
-ports, removal of `LegacyControl`, and the Veil migration.
-The foundation's lemma surface can grow as those proof ports expose additional
-requirements. Full Veil validation, Git distribution of the adapter, fresh
-mathlib-free builds of the entire library, and performance comparison remain
-outstanding. The audit and focused regression tests are a starting baseline;
-they do not constitute completion of every baseline task in the full plan.
+Next are removing the root package requirement, fresh standalone builds,
+native precompilation, adapter distribution, and the Veil companion migration.
+Performance comparison and full downstream validation remain outstanding.
 
 Validation commands:
+
+For the fourth increment, `lake test` and the full standalone test check passed.
+The compiled audit reports 1,565 Loom declarations, zero imported Mathlib
+modules, and zero direct references to Mathlib declarations.
 
 For the third increment, `lake test`, `check_foundations.py`,
 `lake build Loom:static`, the integration suite, and the native executable

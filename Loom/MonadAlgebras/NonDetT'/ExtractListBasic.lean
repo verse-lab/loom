@@ -1,8 +1,7 @@
-import Mathlib.Order.CompleteBooleanAlgebra
-import Mathlib.Order.Lattice
-import Mathlib.Order.Basic
 
 import Loom.MonadAlgebras.NonDetT'.Basic
+
+open Loom Loom.Order
 
 namespace MultiExtractor
 
