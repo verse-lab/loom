@@ -11,10 +11,11 @@ classes or its transitively exported declarations.
 The implementation should stay on Lean 4.32.0 during this migration. Toolchain
 upgrades and unrelated refactors would make failures harder to attribute.
 
-Implementation has begun with the dependency trim, regression infrastructure,
-and standalone control modules. Progress and remaining work are recorded in
+Implementation includes the dependency trim, regression infrastructure,
+standalone controls, and the assertion-order hierarchy with generic models
+and explicit mathlib conversions. Progress and remaining work are recorded in
 `docs/mathlib-removal-progress.md`. The root semantics still require mathlib;
-the new order hierarchy and its proof migration have not been implemented.
+their migration to the new foundations has not been implemented.
 
 **The acceptance criteria apply to the complete library.**
 

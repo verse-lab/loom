@@ -49,9 +49,11 @@ solvers.
 
 Mathlib removal is in progress. The semantics still depend on mathlib's order
 hierarchy. The new `Loom.Control.Cont`, `Loom.Control.Log`, and
-`Loom.Control.Writer` modules and `Loom.Util.Meta` compile without external
-packages; they are the foundations for the subsequent port. The control types
-are namespaced and coexist with mathlib's types.
+`Loom.Control.Writer` modules, `Loom.Util.Meta`, and `Loom.Order.*` compile
+without external packages. The order hierarchy supports generic complete
+lattices and Boolean algebras, with proposition, dependent-function, and
+continuation instances. These foundations coexist with mathlib and are not
+yet substituted into the existing semantics.
 
 To inspect the compiled dependency graph after a build:
 
@@ -68,6 +70,7 @@ See the [migration plan](docs/mathlib-removal-plan.md) and
 - `Loom/MonadUtil.lean` and `Loom/SpecMonad.lean`: shared monad utilities and
   specification monads.
 - `Loom/Control/`: standalone continuation, writer, and logging foundations.
+- `Loom/Order/`: standalone assertion order, lattices, Boolean laws, and models.
 - `Loom/MonadAlgebras/Defs.lean` and `Instances/`: monad algebras and instances
   for the supported effects.
 - `Loom/MonadAlgebras/WP/`: weakest-precondition semantics, shared attributes,
