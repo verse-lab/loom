@@ -1,9 +1,17 @@
-The first implementation increment reduces imports and prepares standalone
-control foundations. It is committed as `0dc0ce1`. The second increment adds
-the standalone assertion-order hierarchy and is committed as `ef4245c`.
-The third increment migrates the control utilities and extraction's logging
-types (`a794551`). The fourth increment ports all assertion and extraction
-proofs. Package-level removal and downstream validation remain in progress.
+The root Loom package is now independent of mathlib, including its generic
+algebras, WP/WLP proofs, and extraction. The optional integration package
+retains mathlib explicitly. Full downstream Veil validation remains in progress.
+
+Committed milestones:
+
+- `0dc0ce1`: import trim and standalone control foundations.
+- `ef4245c`: standalone assertion-order hierarchy and explicit bridges.
+- `a794551`: control utilities and extraction logging.
+- `6f87380`: generic algebra, WP/WLP, and extraction proof ports.
+- `09b9d5d`: root dependency removal, fresh builds, and native precompilation.
+- `e3544ae`: Git adapter distribution checks and client migration guide.
+
+The sections below record the implementation and validation of each increment.
 
 Implemented changes:
 
@@ -30,7 +38,7 @@ Implemented changes:
 The compiled audit of `import Loom` went from 440 to 222 mathlib modules.
 Direct references to mathlib declarations went from 229 to 224. This illustrates
 that the trim mostly removes transitive imports: the order-theory work remains.
-The root manifest still requires mathlib and its packages. These figures are
+At that stage the root manifest still required mathlib and its packages. These figures are
 import counts, not build-time measurements.
 
 Consumers supplying `Candidates` directly retain that interface. Consumers

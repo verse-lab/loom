@@ -193,7 +193,7 @@ def ConstrainedExtractResult.filterAuxM
 /-! ## Sharing `let`s during extraction
 
 Loom's extraction rules are indexed by the shape of the source program, and
-none of them matches a `let`. Without the rules below, `eapply` whnfs the goal
+none of them matches a `let`. Without the rules below, `apply` whnfs the goal
 and every `let` in the chain is zeta-reduced away, so the continuation shared by
 a branching statement (Lean's `do` elaborator binds it to a `__do_jp` join
 point) is extracted once per branch and the extracted term grows exponentially
@@ -714,7 +714,7 @@ where
     replaceMainGoal [← (← getMainGoal).change goalType']
   /-- Zeta-reduce `CER (let x := v; body)` to `CER body[v]`, one binding at a time.
   This is the counterpart of `shareValueLet` for `-shareValueLets`. Reducing the
-  binding here rather than letting the fallback rules' `eapply` whnf the goal
+  binding here rather than letting the fallback rules' `apply` whnf the goal
   matters: whnf would reduce the whole chain of `let`s at once and take any join
   point further down with it, which is what makes extraction exponential. -/
   inlineValueLet (goalType val bodyE : Expr) : TacticM Unit := do

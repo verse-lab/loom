@@ -3,6 +3,7 @@
 Run from a committed checkout. The Git remote is local so this also works before
 publishing; mathlib downloads/builds use normal Lake resolution and caching.
 """
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -27,15 +28,22 @@ example [FinEnum α] (p : α → Prop) [DecidablePred p] : MultiExtractor.Candid
 example (p q : Nat → Prop) : (p ≤ q) = (p ⊑ₗ q) := rfl
 example (p : Nat → Prop) : wp (pure 7 : Id Nat) p = p 7 := wp_pure ..
 ''')
-    # Reuse already-resolved integration dependencies when available. The adapter
-    # and its root Loom are always fresh Git checkouts, never path substitutions.
-    cache = consumer / ".lake/packages"
-    cache.mkdir(parents=True)
+    # Use explicit path requirements for cached external dependencies. Never
+    # symlink whole Git package directories: Lake can replace their contents.
+    # LoomMathlib and its relative root Loom always come from the fresh clone.
+    manifest = root / "integrations/mathlib/lake-manifest.json"
     existing = root / "integrations/mathlib/.lake/packages"
-    if existing.exists():
-        for child in existing.iterdir():
-            if child.is_dir() and child.name not in ("Loom", "LoomMathlib"):
-                (cache / child.name).symlink_to(child.resolve(), target_is_directory=True)
+    for entry in json.loads(manifest.read_text())["packages"]:
+        name = entry["name"]
+        cached = existing / name
+        if name in ("Loom", "LoomMathlib") or not cached.is_dir():
+            continue
+        actual = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=cached, text=True).strip()
+        if actual != entry.get("rev"):
+            raise RuntimeError(f"Cached {name} does not match integration manifest")
+        with (consumer / "lakefile.lean").open("a") as config:
+            config.write(f'\nrequire {name} from {json.dumps(str(cached.resolve()))}\n')
     env = dict(os.environ, MATHLIB_NO_CACHE_ON_UPDATE="1")
     subprocess.run(["lake", "update"], cwd=consumer, env=env, check=True)
     subprocess.run(["lake", "build"], cwd=consumer, env=env, check=True)
