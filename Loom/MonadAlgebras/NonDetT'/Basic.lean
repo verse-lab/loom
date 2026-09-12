@@ -5,7 +5,6 @@ import Mathlib.Order.Basic
 
 import Loom.MonadAlgebras.WP.Basic
 import Loom.MonadAlgebras.WP.Tactic
-import Loom.MonadAlgebras.WP.Gen
 
 universe u v w
 

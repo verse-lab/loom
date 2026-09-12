@@ -14,7 +14,5 @@ jobs:
       - uses: leanprover/lean-action@v1
         with:
           use-github-cache: false
-      - name: Build Cashmere
-        run: lake build Cashmere
-      - name: Build Velvet
-        run: lake build Velvet
+      - name: Build Loom native library
+        run: lake build Loom:static

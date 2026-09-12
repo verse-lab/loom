@@ -4,7 +4,6 @@ import Loom.MonadAlgebras.Instances.Basic
 import Loom.MonadAlgebras.Instances.ExceptT
 import Loom.MonadAlgebras.Instances.StateT
 import Loom.MonadAlgebras.Instances.ReaderT
-import Loom.MonadAlgebras.Instances.Gen
 
 universe u v w
 
@@ -497,43 +496,3 @@ lemma ReaderT.wp_read (post : σ -> σ -> l) :
 
 
 end ReaderT
-
-section Gen
-
-open Plausible
-
--- TODO: Fix this instance
-/- WP for rand in Gen -/
--- lemma Gen.wp_rand {α : Type} (c : Gen α) :
---   triple ⊤ c (fun _ => ⊤) := by
---     simp [triple, MAlgGenInst, ReaderT.wp_eq, StateT.wp_eq]
---     simp [wp, liftM, monadLift, MAlg.lift, MAlgOrdered.μ]; rfl
-
-end Gen
-
-
--- section StrongestPostcondition
-
--- variable [inst: CompleteLattice l] [MAlgOrdered m l]
-
--- def sp (x : m α) (pre : l) : α -> l := (sInf fun post => pre <= wp x post)
-
--- lemma le_wp_sp_le (x : m α) [LawfulMonad m] [MAlgDet m l] :
---   post ≠ ⊤ ->
---    (sp x pre <= post -> pre <= wp x post) := by
---     intro pne
---     by_cases ex:  Nonempty (Set.Elem fun post ↦ pre ≤ wp x post)
---     { have : pre <= wp x (sp x pre) := by {
---         unfold sp; simp [sInf]; rw [@wp_iInf]
---         revert ex; simp [Set.Elem, Set.Mem, Membership.mem] }
---       solve_by_elim [wp_cons, le_trans] }
---     rw [@Set.not_nonempty_iff_eq_empty'] at ex
---     simp [sp, ex, *]
-
--- lemma sp_le_le_wp (x : m α) :
---    (pre <= wp x post -> sp x pre <= post) := by
---     intro a; --refine inf_le_of_left_le ?_
---     exact CompleteSemilatticeInf.sInf_le (fun post ↦ pre ≤ wp x post) post a
-
-
--- end StrongestPostcondition

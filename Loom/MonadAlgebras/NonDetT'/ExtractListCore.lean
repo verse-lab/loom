@@ -401,30 +401,6 @@ There is a canonical distributive law when m is commutative — then ListT m is 
 
 -/
 
-/-
--- class MonadFlatMap (m : Type u → Type v) where
---   op : ∀ {α}, List (m (List α)) → m (List α)
-
-section test
-
-variable (σ : Type u) [Monad m] [MonadFlatMap m]
-
-instance : MonadFlatMap (StateT σ m) where
-  op := fun {α} xs s =>
-    letI tmp := xs.map (· s)
-    letI tmp := tmp.map ((fun (as, b) => as.map (Prod.mk · b)) <$> ·)
-    letI tmp := MonadFlatMap.op tmp
-    sorry
-
-end test
-
--- well, `m (List α)` does not work, for example with `StateT σ m`,
--- we can only keep one copy of the state, not multiple copies.
--- so it should not be `m (List α)`, but some more general type `m' α` ...?
-
--- it seems that we cannot directly use `StateT σ m`, but it has to be something else
--/
-
 /-!
 
 ## 6. Merging Computations
