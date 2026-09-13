@@ -20,7 +20,7 @@ variable [mprop : MAlgOrdered m l]
 def wp (c : m α) (post : α -> l) : l := liftM (n := Cont l) c post
 /- Hoare triple definition -/
 def triple (pre : l) (c : m α) (post : α -> l) : Prop :=
-  pre ⊑ₗ wp c post
+  pre ≤ wp c post
 
 /- WP of pure (defintion 4 from the paper) -/
 theorem wp_pure (x : α) (post : α -> l) : wp (m := m) (pure x) post = post x := by
@@ -29,7 +29,7 @@ theorem wp_pure (x : α) (post : α -> l) : wp (m := m) (pure x) post = post x :
 
 /- WP of bind (defintion 5 from the paper) -/
 theorem triple_pure (pre : l) (x : α) (post : α -> l) :
-  triple pre (pure (f := m) x) post <-> pre ⊑ₗ (post x)
+  triple pre (pure (f := m) x) post <-> pre ≤ (post x)
   := by
     rw [triple, wp]; simp [liftM]; rfl
 
@@ -47,14 +47,14 @@ theorem wp_map {β} (x : m α) (f : α -> β) (post : β -> l) :
 
 /- monotonicity for WP (definition 9 from the paper) -/
 theorem wp_cons (x : m α) (post post' : α -> l) :
-  (∀ y, post y ⊑ₗ post' y) ->
-  wp x post ⊑ₗ wp x post' := by
+  (∀ y, post y ≤ post' y) ->
+  wp x post ≤ wp x post' := by
     intros h; simp [wp, liftM, monadLift]; apply Cont.monotone_lift; intros y
     apply h
 
 theorem triple_cons (x : m α) {pre pre' : l} {post post' : α -> l} :
-  pre' ⊑ₗ pre ->
-  (∀ y, post y ⊑ₗ post' y) ->
+  pre' ≤ pre ->
+  (∀ y, post y ≤ post' y) ->
   triple pre x post ->
   triple pre' x post' := by
     intros hpre hpost h
@@ -72,7 +72,7 @@ theorem triple_bind {β} (pre : l) (x : m α) (cut : α -> l)
 omit [LawfulMonad m] in
 @[simp]
 theorem wp_top (c : m α) [NoFailure m] :
-  wp c (fun _ => ⊤ₗ) = ⊤ₗ := by
+  wp c (fun _ => ⊤) = ⊤ := by
     simp [wp, liftM, monadLift] ; apply NoFailure.noFailure
 
 end
@@ -82,20 +82,20 @@ variable [CompleteLattice l] [MAlgOrdered m l]
 
 noncomputable
 def spec (pre : l) (post : α -> l) : Cont l α :=
-  fun p => pre ⊓ₗ ⌜post ⊑ₗ p⌝
+  fun p => pre ⊓ ⌜post ≤ p⌝
 
 theorem triple_spec (pre : l) (c : m α) (post : α -> l) :
-  spec pre post ⊑ₗ wp c <->
+  spec pre post ≤ wp c <->
   triple pre c post := by
     constructor
     { intro h; unfold triple
       specialize h post; apply le_trans'; apply h
       unfold spec; simp [trueE] }
     intro t p; unfold spec
-    by_cases h: post ⊑ₗ p
+    by_cases h: post ≤ p
     { apply inf_le_of_left_le; apply le_trans; apply t
       solve_by_elim [Cont.monotone_lift (x := c)] }
-    have : (post ⊑ₗ p) = False := by simp [h]
+    have : (post ≤ p) = False := by simp [h]
     simp [this, falseE]
 
 end
@@ -105,21 +105,21 @@ section Determinism
 variable [inst: CompleteLattice l] [MAlgOrdered m l]
 
 theorem wp_iInf {ι : Type u} [Nonempty ι] [MAlgDet m l] (c : m α) (post : ι -> α -> l) :
-  wp c (fun x => ⨅ₗ i, post i x) = ⨅ₗ i, wp c (post i) := by
+  wp c (fun x => ⨅ i, post i x) = ⨅ i, wp c (post i) := by
     apply le_antisymm
     { refine le_iInf ?_; intros i; apply wp_cons; intro y
       exact iInf_le (fun i ↦ post i y) i }
     apply MAlgDet.demonic
 
 theorem wp_and [MAlgDet m l] (c : m α) (post₁ post₂ : α -> l) :
-  wp c (fun x => post₁ x ⊓ₗ post₂ x) = wp c post₁ ⊓ₗ wp c post₂ := by
+  wp c (fun x => post₁ x ⊓ post₂ x) = wp c post₁ ⊓ wp c post₂ := by
   have h := wp_iInf (ι := ULift Bool) c
     (fun | .up false => post₁ | .up true => post₂)
   simpa using h
 
 
 theorem wp_iSup {ι : Type u} [Nonempty ι] [MAlgDet m l] (c : m α) (post : ι -> α -> l) :
-  wp c (fun x => ⨆ₗ i, post i x) = ⨆ₗ i, wp c (post i) := by
+  wp c (fun x => ⨆ i, post i x) = ⨆ i, wp c (post i) := by
     apply le_antisymm
     { apply MAlgDet.angelic }
     refine iSup_le ?_; intros i; apply wp_cons; intro y
@@ -127,7 +127,7 @@ theorem wp_iSup {ι : Type u} [Nonempty ι] [MAlgDet m l] (c : m α) (post : ι 
 
 
 theorem wp_or [MAlgDet m l] (c : m α) (post₁ post₂ : α -> l) :
-  wp c (fun x => post₁ x ⊔ₗ post₂ x) = wp c post₁ ⊔ₗ wp c post₂ := by
+  wp c (fun x => post₁ x ⊔ post₂ x) = wp c post₁ ⊔ wp c post₂ := by
   have h := wp_iSup (ι := ULift Bool) c
     (fun | .up false => post₁ | .up true => post₂)
   simpa using h
@@ -166,12 +166,12 @@ variable [∀ α, CCPO (m α)] [MonoBind m] [MAlgPartial m]
 -- omit [MonoBind m] [LawfulMonad m] in
 -- theorem wp_csup (xc : Set (m α)) (post : α -> l) :
 --   Lean.Order.chain xc ->
---   ⨅ₗ c ∈ xc, wp c post ⊑ₗ wp (Lean.Order.CCPO.csup xc) post := by
+--   ⨅ c ∈ xc, wp c post ≤ wp (Lean.Order.CCPO.csup xc) post := by
 --   apply MAlgPartial.csup_lift
 
 -- omit [MonoBind m] [LawfulMonad m] in
 -- theorem wp_bot :
---   wp (bot : m α) = fun _ => (⊤ₗ : l) := by
+--   wp (bot : m α) = fun _ => (⊤ : l) := by
 --   ext post; refine eq_top_iff.mpr ?_
 --   apply le_trans'; apply wp_csup; simp [chain]
 --   refine le_iInf₂ ?_
@@ -198,10 +198,10 @@ variable [∀ α, CCPO (m α)] [MonoBind m] [MAlgPartial m]
 -- theorem repeat_inv_split (f : Unit -> β -> m (ForInStep β))
 --   (inv : β -> l) (doneWith : β -> l)
 --   init :
---    (∀ b, triple (inv b) (f () b) (fun | .yield b' => inv b' | .done b' => inv b' ⊓ₗ doneWith b')) ->
---    triple (inv init) (Loop.forIn.loop f init) (fun b => inv b ⊓ₗ doneWith b) := by
+--    (∀ b, triple (inv b) (f () b) (fun | .yield b' => inv b' | .done b' => inv b' ⊓ doneWith b')) ->
+--    triple (inv init) (Loop.forIn.loop f init) (fun b => inv b ⊓ doneWith b) := by
 --   intro hstep
---   apply repeat_inv f (fun | .yield b => inv b | .done b => inv b ⊓ₗ doneWith b) init
+--   apply repeat_inv f (fun | .yield b => inv b | .done b => inv b ⊓ doneWith b) init
 --   apply hstep
 
 end PartialCorrectness
@@ -213,7 +213,7 @@ variable [∀ α, CCPO (m α)] [MonoBind m]
 theorem repeat_inv (f : Unit -> β -> m (ForInStep β))
   (inv : ForInStep β -> l) (measure : β -> Nat)
   init :
-   (∀ b, triple (inv (.yield b)) (f () b) (fun | .yield b' => inv (.yield b') ⊓ₗ ⌜ measure b' < measure b ⌝ | .done b' => inv (.done b'))) ->
+   (∀ b, triple (inv (.yield b)) (f () b) (fun | .yield b' => inv (.yield b') ⊓ ⌜ measure b' < measure b ⌝ | .done b' => inv (.done b'))) ->
    triple (inv (.yield init)) (Loop.forIn.loop f init) (fun b => inv (.done b)) := by
   intro hstep
   have induc (C : β → Prop) (a : β) (h : ∀ x, (∀ y, measure y < measure x → C y) → C x): C a := by
@@ -250,10 +250,10 @@ theorem repeat_inv (f : Unit -> β -> m (ForInStep β))
 theorem repeat_inv_split (f : Unit -> β -> m (ForInStep β))
   (inv : β -> l) (doneWith : β -> l)
   init  (measure: β -> Nat):
-    (∀ b, triple (inv b) (f () b) (fun | .yield b' => inv b' ⊓ₗ ⌜ measure b' < measure b ⌝ | .done b' => inv b' ⊓ₗ doneWith b')) ->
-    triple (inv init) (Loop.forIn.loop f init) (fun b => inv b ⊓ₗ doneWith b) := by
+    (∀ b, triple (inv b) (f () b) (fun | .yield b' => inv b' ⊓ ⌜ measure b' < measure b ⌝ | .done b' => inv b' ⊓ doneWith b')) ->
+    triple (inv init) (Loop.forIn.loop f init) (fun b => inv b ⊓ doneWith b) := by
   intro hstep
-  apply repeat_inv f (fun | .yield b => inv b | .done b => inv b ⊓ₗ doneWith b) measure init
+  apply repeat_inv f (fun | .yield b => inv b | .done b => inv b ⊓ doneWith b) measure init
   apply hstep
 
 variable [MAlgTotal m]
@@ -262,7 +262,7 @@ omit [LawfulMonad m] [MonoBind m] in
 attribute [-simp] le_bot_iff in
 @[simp]
 theorem wp_bot :
-  wp (bot : m α) = fun _ => (⊥ₗ : l) := by
+  wp (bot : m α) = fun _ => (⊥ : l) := by
   ext post; refine eq_bot_iff.mpr ?_
   simp [wp, liftM, monadLift]; apply  MAlgTotal.bot_lift
 
@@ -357,12 +357,12 @@ theorem wp_except_handler_eq ε (hd : ε -> Prop) [IsHandler hd] (c : ExceptT ε
 
 open ExceptionAsSuccess in
 theorem wp_part_eq ε (c : ExceptT ε m α) post :
-  wp c post = wp (m := m) c (fun | .ok x => post x | .error _ => ⊤ₗ) := by
+  wp c post = wp (m := m) c (fun | .ok x => post x | .error _ => ⊤) := by
     simp [wp_except_handler_eq]
 
 open ExceptionAsFailure in
 theorem wp_tot_eq ε (c : ExceptT ε m α) post :
-  wp c post = wp (m := m) c (fun | .ok x => post x | .error _ => ⊥ₗ) := by
+  wp c post = wp (m := m) c (fun | .ok x => post x | .error _ => ⊥) := by
     simp [wp_except_handler_eq]
 
 

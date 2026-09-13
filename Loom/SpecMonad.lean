@@ -13,7 +13,7 @@ instance (α : Type u) [inst: PreOrderFunctor w] : Loom.Order.Preorder (w α) :=
 
 class MonadOrder extends Monad w, PreOrderFunctor w where
   bind_le {α : Type u} {β : Type u} (x y : w α) (f g : α -> w β) :
-    x ⊑ₗ y → (∀ a, f a ⊑ₗ g a) → bind x f ⊑ₗ bind y g
+    x ≤ y → (∀ a, f a ≤ g a) → bind x f ≤ bind y g
 
 theorem lift_map {α : Type u} {β : Type u} (f : α -> β) (x : m α)
   [Monad m] [Monad n] [LawfulMonad m] [LawfulMonad n] [MonadLiftT m n] [LawfulMonadLiftT m n] :

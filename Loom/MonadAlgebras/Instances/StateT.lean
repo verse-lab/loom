@@ -11,7 +11,7 @@ instance (σ : Type u) (l : Type u) (m : Type u -> Type v)
   μ_ord_pure := by intro f; ext s₁; simp [pure, StateT.pure, MAlgOrdered.μ_ord_pure]
   μ_ord_bind := by
     intros α f g
-    simp +instances [Function.comp, Loom.Order.piLE]; intros le x s
+    simp +instances [Loom.Order.piLE]; intros le x s
     have leM := @inst.μ_ord_bind (α × σ) (fun as => (fun fs => fs.1 fs.2) <$> f as.1 as.2) (fun as => (fun fs => fs.1 fs.2) <$> g as.1 as.2)
     simp only [<-map_bind] at leM
     apply leM; intro; apply le

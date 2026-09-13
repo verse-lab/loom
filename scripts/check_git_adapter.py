@@ -25,7 +25,7 @@ lean_lib Main
 import LoomMathlib
 open scoped Loom.Order
 example [FinEnum α] (p : α → Prop) [DecidablePred p] : MultiExtractor.Candidates p := inferInstance
-example (p q : Nat → Prop) : (p ≤ q) = (p ⊑ₗ q) := rfl
+example (p q : Nat → Prop) : (p ≤ q) = _root_.LE.le p q := rfl
 example (p : Nat → Prop) : wp (pure 7 : Id Nat) p = p 7 := wp_pure ..
 ''')
     # Use explicit path requirements for cached external dependencies. Never

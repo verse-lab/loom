@@ -29,8 +29,8 @@ example : MAlgOrdered Stack (Bool → Nat → Order.Chain) := inferInstance
 example : MAlgDet Stack (Bool → Nat → Order.Chain) := inferInstance
 
 example (p q : Nat → Order.Chain) :
-    wp (pure 7 : Id Nat) (fun n => p n ⊓ₗ q n) =
-      wp (pure 7 : Id Nat) p ⊓ₗ wp (pure 7 : Id Nat) q := wp_and ..
+    wp (pure 7 : Id Nat) (fun n => p n ⊓ q n) =
+      wp (pure 7 : Id Nat) p ⊓ wp (pure 7 : Id Nat) q := wp_and ..
 
 example [IsHandler (fun (_ : String) => False)] :
     MAlgOrdered (ExceptT String Stack) (Bool → Nat → Order.Chain) := inferInstance
@@ -38,10 +38,10 @@ example [IsHandler (fun (_ : String) => False)] :
 -- Bounds must stop parsing before the outer entailment/equality. Prop-index
 -- simplification must rewrite the index domain, including list membership.
 example [CompleteLattice α] (f : Nat → α) (a : α) :
-    (⨅ₗ n, f n ⊑ₗ a) = (iInf f ⊑ₗ a) := rfl
-example [CompleteLattice α] (f : Nat → α) : (⨆ₗ n, f n) = iSup f := rfl
+    (⨅ n, f n ≤ a) = (iInf f ≤ a) := rfl
+example [CompleteLattice α] (f : Nat → α) : (⨆ n, f n) = iSup f := rfl
 example [CompleteLattice α] (f : Nat → α) (n : Nat) :
-    (⨆ₗ k ∈ [n], f k) = f n := by simp
+    (⨆ k ∈ [n], f k) = f n := by simp
 
 end
 
@@ -62,7 +62,7 @@ instance : OrderBot Carrier where
   bot := .low
   bot_le _ := Or.inl rfl
 
-example : ¬ (Carrier.middle ⊑ₗ Carrier.middle) := by
+example : ¬ (Carrier.middle ≤ Carrier.middle) := by
   intro h
   cases h with
   | inl h => cases h
@@ -70,8 +70,8 @@ example : ¬ (Carrier.middle ⊑ₗ Carrier.middle) := by
 
 example : (⌜True⌝ : Carrier) = Carrier.high := trueE Carrier
 example : (⌜False⌝ : Carrier) = Carrier.low := falseE Carrier
-example (p q : Prop) (h : p → q) : (⌜p⌝ : Carrier) ⊑ₗ ⌜q⌝ := embed_imp p q h
-example (p : Prop) (a : Carrier) : (⌜p⌝ ⊑ₗ a) = (p → ⊤ₗ ⊑ₗ a) := embed_intro p a
+example (p q : Prop) (h : p → q) : (⌜p⌝ : Carrier) ≤ ⌜q⌝ := embed_imp p q h
+example (p : Prop) (a : Carrier) : (⌜p⌝ ≤ a) = (p → ⊤ ≤ a) := embed_intro p a
 
 -- Weak bounds also propagate through the standard assertion wrappers.
 example : OrderTop (Id Carrier) := inferInstance
@@ -83,8 +83,26 @@ end BareBounds
 
 section BareRelation
 variable [Loom.Order.LE α] [OrderTop α] [OrderBot α]
-example (p q : Prop) (h : p → q) : (⌜p⌝ : α) ⊑ₗ ⌜q⌝ := embed_imp p q h
-example (p : Prop) (a : α) : (⌜p⌝ ⊑ₗ a) = (p → ⊤ₗ ⊑ₗ a) := embed_intro p a
+example (p q : Prop) (h : p → q) : (⌜p⌝ : α) ≤ ⌜q⌝ := embed_imp p q h
+example (p : Prop) (a : α) : (⌜p⌝ ≤ a) = (p → ⊤ ≤ a) := embed_intro p a
 end BareRelation
+
+-- Familiar notation selects Loom assertions and preserves numeric comparisons.
+example [Loom.Order.Preorder α] (a : α) : a <= a := Loom.Order.le_refl a
+example [Loom.Order.Preorder α] (a : α) : a >= a := Loom.Order.le_refl a
+example (p : Prop) : p ≤ ⊤ := Loom.Order.le_top p
+example (p : Prop) : ⊥ ≤ p := Loom.Order.bot_le p
+example (p q : Prop) : (p ≥ q) = (q → p) := rfl
+example (p q : Prop) : (p ⇨ q) = (p → q) := rfl
+example (p : Prop) : pᶜ = ¬p := rfl
+def defaultNumericComparison := fun n => n ≤ 1
+example : defaultNumericComparison 0 := by unfold defaultNumericComparison; decide
+example (n m : Nat) (h : Nat.le n m) : Nat.le n m := by
+  change (_ : Nat) ≤ _
+  exact h
+example (n m : Nat) : (n ≤ m) = Nat.le n m := rfl
+example (n m : Int) : (n ≥ m) = Int.le m n := rfl
+example (n m : Nat) (h : n ≤ m) : n < m + 1 := by omega
+example (n m : Int) (h : n ≤ m) : n < m + 1 := by omega
 
 end LoomTest.Algebras

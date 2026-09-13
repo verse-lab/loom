@@ -14,7 +14,7 @@ def inv {t : Type v} {α : Type u} [Order.BooleanAlgebra t] (wp : Cont t α) : C
   fun f => Order.compl (wp fun x => Order.compl (f x))
 
 @[simp] def monotone {t : Type v} {α : Type u} [Order.Preorder t] (wp : Cont t α) :=
-  ∀ (f f' : α → t), (∀ a, f a ⊑ₗ f' a) → wp f ⊑ₗ wp f'
+  ∀ (f f' : α → t), (∀ a, f a ≤ f' a) → wp f ≤ wp f'
 
 @[simp] theorem inv_inv {t : Type v} {α : Type u} [Order.BooleanAlgebra t]
     (wp : Cont t α) : inv (inv wp) = wp := by

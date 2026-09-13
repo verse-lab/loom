@@ -400,7 +400,7 @@ theorem extract_list_refines_wp
   [instl2 : LawfulMonadFlatMapSup m' l Loom.Order.ge]
   (findOf_sound : ∀ {τ : Type u} (p : τ → Prop) (ec : ExtCandidates findable κ p) x,
     x ∈ findOf p ec () → p x) :
-  wp s' post ⊑ₗ wp s post := by
+  wp s' post ≤ wp s post := by
   induction h with
   | @pure x => simp [wp_pure]
   | @vis β x f f' h ih =>
@@ -433,7 +433,7 @@ theorem wp_refines_extract_list
   [instl2 : LawfulMonadFlatMapSup m' l Loom.Order.Preorder.le]
   (findOf_complete : ∀ {τ : Type u} (p : τ → Prop) (ec : ExtCandidates findable κ p) x,
     p x → x ∈ findOf p ec ()) :
-  wp s post ⊑ₗ wp s' post := by
+  wp s post ≤ wp s' post := by
   induction h with
   | @pure x => simp [wp_pure]
   | @vis β x f f' h ih =>

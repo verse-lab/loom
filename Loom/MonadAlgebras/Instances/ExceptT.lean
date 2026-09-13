@@ -26,11 +26,11 @@ def MAlgExcept (ε : Type u) (df : ε -> Prop) (l : Type u) (m : Type u -> Type 
     solve_by_elim [MAlgOrdered.μ_ord_pure]
   μ_ord_bind := by
     intros α f g
-    simp +instances [Function.comp, Loom.Order.piLE]; intros le x
+    simp +instances [Loom.Order.piLE]; intros le x
     have leM := @inst.μ_ord_bind (Except ε α)
       (fun x => Except.getD (⌜df ·⌝) <$> Except.bind' x f)
       (fun x => Except.getD (⌜df ·⌝) <$> Except.bind' x g)
-    simp +instances only [Function.comp, Loom.Order.piLE, <-map_bind, Except.bind'_bind] at leM
+    simp +instances only [Loom.Order.piLE, <-map_bind, Except.bind'_bind] at leM
     apply leM; rintro (e | p) <;> simp +instances [Except.bind', ExceptT.instMonad, ExceptT.bind, ExceptT.bindCont]
     apply le
 
@@ -67,14 +67,14 @@ instance MAlgExceptHdDet (hd : ε -> Prop)
         | Except.error e => ⌜hd e⌝ )
     simp [MAlg.lift, MAlg.μ] at h
     have h₁ : ∀ p : ι -> α -> l,
-      ⨆ₗ i,
+      ⨆ i,
       (MAlgOrdered.μ (m := m) (do
         bind (m := m) c fun a =>
         Except.getD (⌜hd ·⌝) <$>
             match a with
             | Except.ok a => pure (Except.ok (p i a))
             | Except.error e => pure (Except.error e))) =
-      ⨆ₗ i,
+      ⨆ i,
       MAlgOrdered.μ (Functor.map (f := m) (α := Except ε α)
         (fun a =>
           match a with
@@ -94,14 +94,14 @@ instance MAlgExceptHdDet (hd : ε -> Prop)
         | Except.error e => ⌜hd e⌝ )
     simp [MAlg.lift, MAlg.μ] at h
     have h₁ : ∀ p : ι -> α -> l,
-      ⨅ₗ i,
+      ⨅ i,
       (MAlgOrdered.μ (m := m) (do
         bind (m := m) c fun a =>
         Except.getD (⌜hd ·⌝) <$>
             match a with
             | Except.ok a => pure (Except.ok (p i a))
             | Except.error e => pure (Except.error e))) =
-      ⨅ₗ i,
+      ⨅ i,
       MAlgOrdered.μ (Functor.map (f := m) (α := Except ε α)
         (fun a =>
           match a with

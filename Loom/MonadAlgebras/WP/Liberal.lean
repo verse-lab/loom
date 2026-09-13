@@ -13,34 +13,34 @@ variable [inst: CompleteBooleanAlgebra l] [mprop: MAlgOrdered m l]
 attribute [simp] trueE falseE
 @[local simp]
 private theorem compl_fun {α} (x y : α -> l) :
-  (fun a => x a ⊔ₗ y a)ᶜₗ = (fun a => (x a)ᶜₗ ⊓ₗ (y a)ᶜₗ) := by funext a; simp
+  (fun a => x a ⊔ y a)ᶜ = (fun a => (x a)ᶜ ⊓ (y a)ᶜ) := by funext a; simp
 
 @[local simp]
 private theorem compl_fun' {α} (x y : α -> l) :
-  (fun a => x a ⊓ₗ y a)ᶜₗ = (fun a => (x a)ᶜₗ ⊔ₗ (y a)ᶜₗ) := by funext a; simp
+  (fun a => x a ⊓ y a)ᶜ = (fun a => (x a)ᶜ ⊔ (y a)ᶜ) := by funext a; simp
 
 set_option warning.simp.otherHead false in
 @[local simp]
 private theorem compl_fun'' {α} (x : α -> l) :
-  (fun a => (x a)ᶜₗ) = xᶜₗ := by rfl
+  (fun a => (x a)ᶜ) = xᶜ := by rfl
 
 
 @[local simp]
 private theorem compl_fun_true {α} :
-  (fun (_ : α) => ⊤ₗ)ᶜₗ = fun _ => (⊥ₗ : l) := by funext a; simp
+  (fun (_ : α) => ⊤)ᶜ = fun _ => (⊥ : l) := by funext a; simp
 
 abbrev iwp (c : m α) : Cont l α := Cont.inv (wp c)
 
 omit [LawfulMonad m] in
 @[simp]
 theorem iwp_eq (c : m α) (post : α -> l) :
-  iwp c post = (wp c postᶜₗ)ᶜₗ := by
+  iwp c post = (wp c postᶜ)ᶜ := by
     simp [Id, iwp, Cont.inv]
 
-def wlp (c : m α) (post : α -> l) : l := iwp c post ⊔ₗ wp c post
+def wlp (c : m α) (post : α -> l) : l := iwp c post ⊔ wp c post
 
 @[simp]
-theorem wlp_true (c : m α) : wlp c (fun _ => ⊤ₗ) = ⊤ₗ := by
+theorem wlp_true (c : m α) : wlp c (fun _ => ⊤) = ⊤ := by
   simp [wlp]; rw [@eq_top_iff, sup_comm, <-himp_eq_sup_compl]; simp
   apply wp_cons; simp
 
@@ -51,14 +51,14 @@ theorem wlp_pure (x : α) (post : α -> l) :
 
 omit [LawfulMonad m] in
 theorem wp_wlp (c : m α) (post : α -> l) :
-  wp c post ⊑ₗ wlp c post := by
+  wp c post ≤ wlp c post := by
     simp [wlp, wp]
 
 section Determinism
 variable [MAlgDet m l]
 
 theorem wlp_and (c : m α) (post₁ post₂ : α -> l) :
-  wlp c (fun x => post₁ x ⊓ₗ post₂ x) = wlp c post₁ ⊓ₗ wlp c post₂ := by
+  wlp c (fun x => post₁ x ⊓ post₂ x) = wlp c post₁ ⊓ wlp c post₂ := by
   simp [wlp]; apply le_antisymm
   { simp [wp_or, wp_and] }
   rw (occs := .pos [3]) [sup_comm]; rw [<-himp_eq_sup_compl]; simp
@@ -98,15 +98,15 @@ theorem wlp_bind {β} (x : m α) (f : α -> m β) (post : β -> l) :
 
 
 theorem wlp_himp (c : m α) (post post' : α -> l) :
-  wp c (fun x => post' x ⇨ₗ post x) = wlp c post' ⇨ₗ wp c post := by
+  wp c (fun x => post' x ⇨ post x) = wlp c post' ⇨ wp c post := by
     rw [himp_eq_sup_compl, wlp]; simp [himp_eq_sup_compl, wp_or]
     apply le_antisymm <;> simp
-    rw [<-compl_compl (a := wp c post'ᶜₗ ⊓ₗ (wp c post')ᶜₗ)]
+    rw [<-compl_compl (a := wp c post'ᶜ ⊓ (wp c post')ᶜ)]
     rw [<-himp_eq_sup_compl]; simp; rw [@inf_sup_left]; simp [<-wp_and]
     apply wp_cons; simp
 
 theorem wlp_join_wp (c : m α) (post post' : α -> l) :
-  wlp c post ⊓ₗ wp c post' = wp c (fun x => post x ⊓ₗ post' x) := by
+  wlp c post ⊓ wp c post' = wp c (fun x => post x ⊓ post' x) := by
   apply le_antisymm
   { rw [← @le_himp_iff', <-wlp_himp];
     apply wp_cons; simp }
@@ -115,20 +115,20 @@ theorem wlp_join_wp (c : m α) (post post' : α -> l) :
   apply wp_cons; simp
 
 theorem wp_top_wlp (c : m α) (post : α -> l) :
-  wp c ⊤ₗ ⊓ₗ wlp c post = wp c post := by
+  wp c ⊤ ⊓ wlp c post = wp c post := by
   rw [inf_comm, wlp_join_wp]; simp
 
 omit [MAlgDet m l] in
 theorem wlp_cons (c : m α) (post post' : α -> l) :
-  post ⊑ₗ post' ->
-  wlp c post ⊑ₗ wlp c post' := by
+  post ≤ post' ->
+  wlp c post ≤ wlp c post' := by
     intro; unfold wlp iwp; simp; constructor
     { refine le_sup_of_le_left ?_; simp; apply wp_cons; simp; solve_by_elim }
     solve_by_elim [le_sup_of_le_right, wp_cons]
 
 theorem wp_top_iwp (c : m α) (post : α -> l) :
-  wp c ⊥ₗ = ⊥ₗ ->
-  wp c ⊤ₗ ⊓ₗ iwp c post = wp c post := by
+  wp c ⊥ = ⊥ ->
+  wp c ⊤ ⊓ iwp c post = wp c post := by
   intro wpb
   apply le_antisymm
   { simp; simp [<-le_himp_iff, himp_eq_sup_compl, <-wp_or]; rfl }
@@ -136,9 +136,9 @@ theorem wp_top_iwp (c : m α) (post : α -> l) :
   { apply wp_cons; simp }
   apply le_compl_iff.mpr
   rw [← wp_and]
-  have he : (fun x => post x ⊓ₗ (post x)ᶜₗ) = (⊥ₗ : α → l) :=
+  have he : (fun x => post x ⊓ (post x)ᶜ) = (⊥ : α → l) :=
     funext fun x => inf_compl_eq_bot _
-  change wp c (fun x => post x ⊓ₗ (post x)ᶜₗ) ⊑ₗ ⊥ₗ
+  change wp c (fun x => post x ⊓ (post x)ᶜ) ≤ ⊥
   rw [he, wpb]
 
 set_option quotPrecheck false in
@@ -149,31 +149,31 @@ set_option quotPrecheck false in
 notation "[handler" hd "|" t "]" => have : IsHandler hd := ⟨⟩; t
 
 theorem wp_tot_part ε (c : ExceptT ε m α) post :
-  [totl| wp c ⊤ₗ] ⊓ₗ [part| wp c post] = [totl| wp c post] := by
+  [totl| wp c ⊤] ⊓ [part| wp c post] = [totl| wp c post] := by
   rw [wp_part_eq, wp_tot_eq, wp_tot_eq, <-wp_and]
   congr; ext x; cases x <;> simp
 
-theorem wp_compl (c : m α) post (wp_bot : ∀ α (c : m α), wp c ⊤ₗ = ⊤ₗ) :
-  (wp c postᶜₗ)ᶜₗ ⊑ₗ wp c post := by
+theorem wp_compl (c : m α) post (wp_bot : ∀ α (c : m α), wp c ⊤ = ⊤) :
+  (wp c postᶜ)ᶜ ≤ wp c post := by
     apply compl_le_iff.mpr
     rw [← wp_or]
-    have he : (fun x => (post x)ᶜₗ ⊔ₗ post x) = (⊤ₗ : α → l) :=
+    have he : (fun x => (post x)ᶜ ⊔ post x) = (⊤ : α → l) :=
       funext fun x => compl_sup_eq_top _
-    change ⊤ₗ ⊑ₗ wp c (fun x => (post x)ᶜₗ ⊔ₗ post x)
+    change ⊤ ≤ wp c (fun x => (post x)ᶜ ⊔ post x)
     rw [he, wp_bot α c]
 
-theorem wp_compl'  (c : m α) post (wp_bot : ∀ α (c : m α), wp c ⊥ₗ = ⊥ₗ) :
-  wp c post ⊑ₗ (wp c postᶜₗ)ᶜₗ := by
+theorem wp_compl'  (c : m α) post (wp_bot : ∀ α (c : m α), wp c ⊥ = ⊥) :
+  wp c post ≤ (wp c postᶜ)ᶜ := by
   apply le_compl_iff.mpr
   rw [← wp_and]
-  have he : (fun x => post x ⊓ₗ (post x)ᶜₗ) = (⊥ₗ : α → l) :=
+  have he : (fun x => post x ⊓ (post x)ᶜ) = (⊥ : α → l) :=
     funext fun x => inf_compl_eq_bot _
-  change wp c (fun x => post x ⊓ₗ (post x)ᶜₗ) ⊑ₗ ⊥ₗ
+  change wp c (fun x => post x ⊓ (post x)ᶜ) ≤ ⊥
   rw [he, wp_bot α c]
 
 -- theorem wp_tot_eq_iwp_part ε (c : ExceptT ε m α) (post : α -> l)
---    (wp_bot : ∀ α (c : m α), wp c ⊥ₗ = ⊥ₗ)
---    (wp_top : ∀ α (c : m α), wp c ⊤ₗ = ⊤ₗ) :
+--    (wp_bot : ∀ α (c : m α), wp c ⊥ = ⊥)
+--    (wp_top : ∀ α (c : m α), wp c ⊤ = ⊤) :
 --    [totl| wp c post] = [part| iwp c post] := by
 --     simp only [iwp, wp_tot_eq, wp_part_eq]
 --     apply le_antisymm <;> try simp
@@ -183,7 +183,7 @@ theorem wp_compl'  (c : m α) post (wp_bot : ∀ α (c : m α), wp c ⊥ₗ = �
 --     simp; apply wp_cons; rintro (_|_) <;> simp
 
 private theorem le_coml_sup (x y z : l) :
-  y ⊑ₗ x ⊔ₗ z -> xᶜₗ ⊑ₗ yᶜₗ ⊔ₗ z := by
+  y ≤ x ⊔ z -> xᶜ ≤ yᶜ ⊔ z := by
   intro h;
   rw [sup_comm, <-himp_eq_sup_compl]; simp
   rw [inf_comm, <-le_himp_iff, himp_eq_sup_compl]; simp

@@ -39,7 +39,7 @@ variable [CompleteBooleanAlgebra l] [MAlgOrdered m l]
 
 theorem meet_himp (x x' y z : l) :
   x = x' ->
-  (x ⇨ₗ y) ⊓ₗ (x' ⇨ₗ z) = x ⇨ₗ (y ⊓ₗ z) := by
+  (x ⇨ y) ⊓ (x' ⇨ z) = x ⇨ (y ⊓ z) := by
   rintro rfl
   simp only [himp_eq]; exact (sup_inf_left _ _ _).symm
 
@@ -69,20 +69,20 @@ namespace DemonicChoice
 def NonDetT.wp {l : Type u} {α : Type u} [CompleteLattice l] [MAlgOrdered m l] : NonDetT m α -> Cont l α
   | .pure ret => pure ret
   | .vis x f => fun post => _root_.wp x fun a => wp (f a) post
-  | .pickCont _τ p f => fun post => ⨅ₗ a, ⨅ₗ _ha : p a, wp (f a) post
+  | .pickCont _τ p f => fun post => ⨅ a, ⨅ _ha : p a, wp (f a) post
 
 omit [MAlgOrdered m l] in
 theorem spec_mono {α : Type u}  {l : Type u} [CompleteLattice l] (pre : l) (post : α -> l) (f g : α -> l) :
-  (∀ a, f a ⊑ₗ g a) ->
-  spec pre post f ⊑ₗ spec pre post g := by
+  (∀ a, f a ≤ g a) ->
+  spec pre post f ≤ spec pre post g := by
     unfold spec; intro
     refine inf_mono (le_refl _) ?_
-    refine Loom.Order.embed_imp (post ⊑ₗ f) (post ⊑ₗ g) ?_
+    refine Loom.Order.embed_imp (post ≤ f) (post ≤ g) ?_
     intro h a; apply le_trans; apply h a; solve_by_elim
 
 theorem NonDetT.wp_mono  {l : Type u} [CompleteLattice l] [MAlgOrdered m l] [LawfulMonad m] {α : Type u} (x : NonDetT m α) (f g : α -> l) :
-  (∀ a, f a ⊑ₗ g a) ->
-  NonDetT.wp x f ⊑ₗ NonDetT.wp x g := by
+  (∀ a, f a ≤ g a) ->
+  NonDetT.wp x f ≤ NonDetT.wp x g := by
     intro h
     induction x with
     | pure a => exact h a
@@ -133,7 +133,7 @@ theorem NonDetT.wp_lift (c : m α) post :
 
 @[simp]
 theorem NonDetT.wp_pickCont {τ : Type u} p (f : τ → NonDetT m α) post :
-  _root_.wp (NonDetT.pickCont τ p f) post = ⨅ₗ a, ⌜p a⌝ ⇨ₗ _root_.wp (f a) post := by
+  _root_.wp (NonDetT.pickCont τ p f) post = ⨅ a, ⌜p a⌝ ⇨ _root_.wp (f a) post := by
   simp +instances [NonDetT.wp_eq_wp, NonDetT.wp, Id]; congr; ext x
   by_cases h: p x <;> simp [h]
 
@@ -146,16 +146,16 @@ theorem MonadNonDet.wp_pick {τ : Type u} post :
   _root_.wp (MonadNonDet.pick (m := NonDetT m) τ) post = iInf post := by
   simp [MonadNonDet.pick, NonDetT.pick]
 
-theorem MonadNonDet.wp_assume {as : Prop} post : _root_.wp (MonadNonDet.assume (m := NonDetT m) as) post = ⌜as⌝ ⇨ₗ post .unit := by
+theorem MonadNonDet.wp_assume {as : Prop} post : _root_.wp (MonadNonDet.assume (m := NonDetT m) as) post = ⌜as⌝ ⇨ post .unit := by
   simp [MonadNonDet.assume, NonDetT.assume, iInf_const]
 
 theorem MonadNonDet.wp_pickSuchThat {τ : Type u} (p : τ → Prop) post :
-  _root_.wp (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) post = ⨅ₗ a, ⌜p a⌝ ⇨ₗ post a := by
+  _root_.wp (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) post = ⨅ a, ⌜p a⌝ ⇨ post a := by
   simp [MonadNonDet.pickSuchThat, NonDetT.pickSuchThat]
 
 theorem NonDetT.wp_iInf {ι : Type u} {α : Type u} {l : Type u} [CompleteBooleanAlgebra l] [MAlgOrdered m l] [MAlgDet m l] [Nonempty ι]
   (x : NonDetT m α) (post : ι -> α -> l) :
-  _root_.wp x (fun a => iInf post a) = ⨅ₗ i, _root_.wp x (post i) := by
+  _root_.wp x (fun a => iInf post a) = ⨅ i, _root_.wp x (post i) := by
   simp [NonDetT.wp_eq_wp]
   unhygienic induction x <;> simp [NonDetT.wp, pure, Id, *]
   { erw [_root_.wp_iInf] }
@@ -187,19 +187,19 @@ noncomputable
 def   NonDetT.wp {l : Type u} {α : Type u} [CompleteLattice l] [MAlgOrdered m l] : NonDetT m α -> Cont l α
   | .pure ret => pure ret
   | .vis x f => fun post => _root_.wp x fun a => wp (f a) post
-  | .pickCont _ p f => fun post => ⨆ₗ a, ⌜p a⌝ ⊓ₗ wp (f a) post
+  | .pickCont _ p f => fun post => ⨆ a, ⌜p a⌝ ⊓ wp (f a) post
 
 theorem spec_mono {α : Type u} {l : Type u} [CompleteLattice l] (pre : l) (post : α -> l) (f g : α -> l) :
-  (∀ a, f a ⊑ₗ g a) ->
-  spec pre post f ⊑ₗ spec pre post g := by
+  (∀ a, f a ≤ g a) ->
+  spec pre post f ≤ spec pre post g := by
     unfold spec; intro
     refine inf_mono (le_refl _) ?_
-    refine Loom.Order.embed_imp (post ⊑ₗ f) (post ⊑ₗ g) ?_
+    refine Loom.Order.embed_imp (post ≤ f) (post ≤ g) ?_
     intro h a; apply le_trans; apply h a; solve_by_elim
 
 theorem NonDetT.wp_mono [LawfulMonad m] {α : Type u} {l : Type u} [CompleteLattice l] [MAlgOrdered m l] (x : NonDetT m α) (f g : α -> l) :
-  (∀ a, f a ⊑ₗ g a) ->
-  NonDetT.wp x f ⊑ₗ NonDetT.wp x g := by
+  (∀ a, f a ≤ g a) ->
+  NonDetT.wp x f ≤ NonDetT.wp x g := by
     intro h
     induction x with
     | pure a => exact h a
@@ -250,7 +250,7 @@ theorem NonDetT.wp_lift (c : m α) post :
 
 @[simp]
 theorem NonDetT.wp_pickCont {τ : Type u} p (f : τ → NonDetT m α) post :
-  _root_.wp (NonDetT.pickCont τ p f) post = ⨆ₗ a, ⌜p a⌝ ⊓ₗ _root_.wp (f a) post := by
+  _root_.wp (NonDetT.pickCont τ p f) post = ⨆ a, ⌜p a⌝ ⊓ _root_.wp (f a) post := by
   simp [NonDetT.wp_eq_wp]; rfl
 
 @[simp]
@@ -261,11 +261,11 @@ theorem MonadNonDet.wp_pick {τ : Type u} post :
   _root_.wp (MonadNonDet.pick (m := NonDetT m) τ) post = iSup post := by
   simp [MonadNonDet.pick, NonDetT.pick]
 
-theorem MonadNonDet.wp_assume {as : Prop} post : _root_.wp (MonadNonDet.assume (m := NonDetT m) as) post = ⌜as⌝ ⊓ₗ post .unit := by
+theorem MonadNonDet.wp_assume {as : Prop} post : _root_.wp (MonadNonDet.assume (m := NonDetT m) as) post = ⌜as⌝ ⊓ post .unit := by
   simp [MonadNonDet.assume, NonDetT.assume, iSup_const]
 
 theorem MonadNonDet.wp_pickSuchThat {τ : Type u} (p : τ → Prop) post :
-  _root_.wp (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) post = ⨆ₗ a, ⌜p a⌝ ⊓ₗ post a := by
+  _root_.wp (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) post = ⨆ a, ⌜p a⌝ ⊓ post a := by
   simp [MonadNonDet.pickSuchThat, NonDetT.pickSuchThat]
 
 noncomputable

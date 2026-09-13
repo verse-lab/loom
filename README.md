@@ -61,12 +61,15 @@ use Loom's own control and assertion interfaces. Generic complete lattices and
 Boolean algebras remain supported, including proposition, dependent-function,
 and continuation instances. Computational fixed points still use `Lean.Order`.
 
-Open `Loom.Order` to use its classes and scoped assertion notation: `⊑ₗ`, `⊒ₗ`,
-`⊤ₗ`, `⊥ₗ`, `⊓ₗ`, `⊔ₗ`, `⨅ₗ`, `⨆ₗ`, `⇨ₗ`, and `ᶜₗ`. In files also using
-mathlib, prefer `open scoped Loom.Order` and qualified class/operation names.
+Open `Loom.Order` to use its classes and scoped assertion notation: `≤`, `≥`,
+`⊤`, `⊥`, `⊓`, `⊔`, `⨅`, `⨆`, `⇨`, and `ᶜ`. In files also using
+mathlib, prefer `open scoped Loom.Order` and qualified class names. The scope
+selects Loom's operations for these symbols; use qualified mathlib operations
+when both are needed in the same expression. Numeric comparisons still use
+Lean's usual relation.
 `⌜p⌝` uses `Loom.Order.embed`; continuations use `Loom.Cont`/`Loom.ContT`.
 Existing consumers that import mathlib themselves must require it directly;
-Veil's companion migration and full downstream validation are in progress.
+Veil's companion migration and full downstream validation remain deferred.
 
 To inspect the compiled dependency graph after a build:
 

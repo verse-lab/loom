@@ -47,7 +47,7 @@ instance : MonadOrder EqBox where
     exact k x
 
 example {α β : Type u} {x y : EqBox α} {f g : α → EqBox β}
-    (h : x ⊑ₗ y) (k : ∀ a, f a ⊑ₗ g a) : (x >>= f) ⊑ₗ (y >>= g) :=
+    (h : x ≤ y) (k : ∀ a, f a ≤ g a) : (x >>= f) ≤ (y >>= g) :=
   MonadOrder.bind_le x y f g h k
 
 -- Composed lawful lifts through a reader/state/exception stack.

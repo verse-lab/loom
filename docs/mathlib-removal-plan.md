@@ -1,3 +1,7 @@
+> Notation update: the implementation now retains the conventional mathlib
+> symbols through `open scoped Loom.Order`. References below to subscripted
+> symbols describe the original plan and have been superseded.
+
 Remove mathlib from Loom while preserving its generic abstractions.
 
 This plan targets the Veil-focused Loom checkout audited at `12b4f9b`, on Lean

@@ -29,7 +29,7 @@ instance : Lattice Chain where
   le_sup_right := by intro a b; cases a <;> cases b <;> decide
   sup_le := by intro a b c; cases a <;> cases b <;> cases c <;> decide
 
-instance (a b : Chain) : Decidable (a ⊑ₗ b) :=
+instance (a b : Chain) : Decidable (a ≤ b) :=
   inferInstanceAs (Decidable (rank a ≤ rank b))
 
 noncomputable def meet (s : Chain → Prop) : Chain := by
@@ -82,7 +82,7 @@ noncomputable instance : CompleteLattice Chain where
       · cases a <;> decide
 
 -- The model really is non-Boolean: the middle element has no complement.
-example : ¬ ∃ c : Chain, middle ⊓ₗ c = bot ∧ middle ⊔ₗ c = top := by
+example : ¬ ∃ c : Chain, middle ⊓ c = bot ∧ middle ⊔ c = top := by
   rintro ⟨c, h⟩
   cases c <;> cases h with
   | intro h₁ h₂ => contradiction
@@ -119,7 +119,7 @@ noncomputable example : CompleteLattice ((b : Bool) → if b then Prop else Chai
 example (p q : Nat → Bool → Prop) (s : Nat) (r : Bool) :
     himp p q s r = (p s r → q s r) := rfl
 example (p q : Nat → Bool → Prop) :
-    (p ⊑ₗ q) = (∀ s r, p s r → q s r) := rfl
+    (p ≤ q) = (∀ s r, p s r → q s r) := rfl
 
 -- Index universes are independent of the carrier and include propositions.
 example (f : Sort u → Prop) : iInf f = (∀ i, f i) := prop_iInf f
@@ -131,8 +131,8 @@ example (f : Nat → Bool → Prop) (b : Bool) :
     iInf f b = (∀ n, f n b) := by simp
 
 example [CompleteBooleanAlgebra α] (a : α) (f : Sort u → α) :
-    a ⊓ₗ iSup f = iSup (fun i => a ⊓ₗ f i) := inf_iSup a f
+    a ⊓ iSup f = iSup (fun i => a ⊓ f i) := inf_iSup a f
 example [CompleteBooleanAlgebra α] (a : α) (f : Sort u → α) :
-    a ⊔ₗ iInf f = iInf (fun i => a ⊔ₗ f i) := sup_iInf a f
+    a ⊔ iInf f = iInf (fun i => a ⊔ f i) := sup_iInf a f
 
 end LoomTest.Order

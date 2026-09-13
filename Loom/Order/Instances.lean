@@ -2,6 +2,8 @@ import Loom.Order.BooleanAlgebra
 
 namespace Loom.Order
 
+local infix:50 (priority := high + 2) " ≤ " => LE.le
+
 universe u v w
 
 instance propPreorder : Preorder Prop where
@@ -65,7 +67,7 @@ instance propCompleteBooleanAlgebra : CompleteBooleanAlgebra Prop :=
 
 instance piLE {ι : Type u} {α : ι → Type v} [∀ i, LE (α i)] :
     LE ((i : ι) → α i) where
-  le f g := ∀ i, f i ⊑ₗ g i
+  le f g := ∀ i, f i ≤ g i
 
 instance piPreorder {ι : Type u} {α : ι → Type v} [∀ i, Preorder (α i)] :
     Preorder ((i : ι) → α i) where
@@ -91,8 +93,8 @@ instance piOrderBot {ι : Type u} {α : ι → Type v}
 instance piLattice {ι : Type u} {α : ι → Type v} [∀ i, Lattice (α i)] :
     Lattice ((i : ι) → α i) where
   toPartialOrder := piPartialOrder
-  inf f g i := f i ⊓ₗ g i
-  sup f g i := f i ⊔ₗ g i
+  inf f g i := f i ⊓ g i
+  sup f g i := f i ⊔ g i
   inf_le_left _ _ _ := inf_le_left ..
   inf_le_right _ _ _ := inf_le_right ..
   le_inf h k i := le_inf (h i) (k i)
@@ -128,12 +130,12 @@ instance piCompleteBooleanAlgebra {ι : Type u} {α : ι → Type v}
     [∀ i, CompleteBooleanAlgebra (α i)] : CompleteBooleanAlgebra ((i : ι) → α i) :=
   { piCompleteLattice, piBooleanAlgebra with }
 
-@[simp] theorem prop_le (p q : Prop) : (p ⊑ₗ q) = (p → q) := rfl
+@[simp] theorem prop_le (p q : Prop) : (p ≤ q) = (p → q) := rfl
 
 theorem pi_le_iff {ι : Type u} {α : ι → Type v} [∀ i, Preorder (α i)]
-    (f g : (i : ι) → α i) : (f ⊑ₗ g) ↔ ∀ i, f i ⊑ₗ g i := Iff.rfl
-@[simp] theorem prop_inf (p q : Prop) : (p ⊓ₗ q) = (p ∧ q) := rfl
-@[simp] theorem prop_sup (p q : Prop) : (p ⊔ₗ q) = (p ∨ q) := rfl
+    (f g : (i : ι) → α i) : (f ≤ g) ↔ ∀ i, f i ≤ g i := Iff.rfl
+@[simp] theorem prop_inf (p q : Prop) : (p ⊓ q) = (p ∧ q) := rfl
+@[simp] theorem prop_sup (p q : Prop) : (p ⊔ q) = (p ∨ q) := rfl
 @[simp] theorem prop_himp (p q : Prop) : himp p q = (p → q) := rfl
 @[simp] theorem prop_compl (p : Prop) : compl p = ¬p := rfl
 @[simp] theorem prop_top : (top : Prop) = True := rfl
@@ -148,10 +150,10 @@ theorem pi_le_iff {ι : Type u} {α : ι → Type v} [∀ i, Preorder (α i)]
   exact ⟨fun ⟨_, ⟨i, hi⟩, h⟩ => ⟨i, hi.symm ▸ h⟩, fun ⟨i, h⟩ => ⟨_, ⟨i, rfl⟩, h⟩⟩
 
 @[simp] theorem pi_inf_apply {ι : Type u} {α : ι → Type v} [∀ i, Lattice (α i)]
-    (f g : (i : ι) → α i) (i : ι) : (f ⊓ₗ g) i = f i ⊓ₗ g i := rfl
+    (f g : (i : ι) → α i) (i : ι) : (f ⊓ g) i = f i ⊓ g i := rfl
 
 @[simp] theorem pi_sup_apply {ι : Type u} {α : ι → Type v} [∀ i, Lattice (α i)]
-    (f g : (i : ι) → α i) (i : ι) : (f ⊔ₗ g) i = f i ⊔ₗ g i := rfl
+    (f g : (i : ι) → α i) (i : ι) : (f ⊔ g) i = f i ⊔ g i := rfl
 
 @[simp] theorem pi_compl_apply {ι : Type u} {α : ι → Type v} [∀ i, BooleanAlgebra (α i)]
     (f : (i : ι) → α i) (i : ι) : compl f i = compl (f i) := rfl
@@ -172,7 +174,7 @@ theorem pi_le_iff {ι : Type u} {α : ι → Type v} [∀ i, Preorder (α i)]
     iInf f i = iInf (fun k => f k i) := by
   apply le_antisymm
   · exact le_iInf fun k => iInf_le f k i
-  · change _ ⊑ₗ sInf _
+  · change _ ≤ sInf _
     apply le_sInf
     rintro a ⟨g, ⟨k, rfl⟩, rfl⟩
     exact iInf_le (fun k => f k i) k
@@ -181,7 +183,7 @@ theorem pi_le_iff {ι : Type u} {α : ι → Type v} [∀ i, Preorder (α i)]
     {κ : Sort w} (f : κ → (i : ι) → α i) (i : ι) :
     iSup f i = iSup (fun k => f k i) := by
   apply le_antisymm
-  · change sSup _ ⊑ₗ _
+  · change sSup _ ≤ _
     apply sSup_le
     rintro a ⟨g, ⟨k, rfl⟩, rfl⟩
     exact le_iSup (fun k => f k i) k

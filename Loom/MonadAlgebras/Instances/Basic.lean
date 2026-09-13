@@ -44,7 +44,7 @@ namespace PartialCorrectness
 scoped instance : MAlgOrdered DivM Prop where
   μ := fun x => match x with
     | .res x => x
-    | .div => ⊤ₗ
+    | .div => ⊤
   μ_ord_pure := by solve_by_elim
   μ_ord_bind {α} f g := by
     rintro h (_|_) <;> solve_by_elim
@@ -76,7 +76,7 @@ namespace TotalCorrectness
 scoped instance : MAlgOrdered DivM Prop where
   μ := fun x => match x with
     | .res x => ⌜x⌝
-    | .div => ⊥ₗ
+    | .div => ⊥
   μ_ord_pure := by simp [Loom.Order.embed, pure]
   μ_ord_bind {α} f g := by
     rintro h (_|_) <;> solve_by_elim
