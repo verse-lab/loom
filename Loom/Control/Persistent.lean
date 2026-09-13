@@ -3,7 +3,8 @@ import Loom.Control.Log
 
 /-! Logs outside `DivM` survive divergence. Result and log universes are independent. -/
 
-universe u v w
+-- Keep explicit universe arguments in their original order: log, then result.
+universe w u
 
 def PeDivM (κ : Type w) (α : Type u) := κ × DivM α
 

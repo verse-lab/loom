@@ -25,7 +25,9 @@ clients with the old bounded-relation assumptions.
 Numerical comparisons retain Lean's ordinary `≤`.
 `DivM`, `PeDivM`, `W`, `wp`, `wlp`, the algebra interfaces, and extraction
 interfaces retain their public names. `W.wp_montone` retains its original
-spelling. `Lean.Order.CCPO` and its computational relation are unchanged.
+spelling. Explicit `PeDivM.{logUniverse, resultUniverse}` applications and its
+associated helpers retain the original universe order. `Lean.Order.CCPO` and
+its computational relation are unchanged.
 Arbitrary choices remain arbitrary; extraction still uses caller-supplied
 candidate enumerations and preserves their order and duplicates.
 

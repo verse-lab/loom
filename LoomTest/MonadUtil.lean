@@ -86,4 +86,24 @@ example {κ : Type v} {α : Type u} [Loom.LogMonoid κ] (a : α) : PeDivM κ α 
 example [Monad m] [LawfulMonad m] [Loom.LogMonoid κ] :
     LawfulMonadLift m (Loom.WriterT κ m) := inferInstance
 
+-- Explicit universe applications retain the original log-first order.
+example : PeDivM.{0, 1} Unit Type := ((), .res Nat)
+example : PeDivM.{1, 0} (List Type) Nat := ([Nat], .res 7)
+
+section ExplicitPersistentUniverses
+variable {κ : Type v} {α β : Type u} [Loom.LogMonoid κ]
+
+example (k : κ) (a : α) : PeDivM.{v, u} κ α := (k, .res a)
+example (k : κ) (x : PeDivM κ α) : PeDivM.prepend.{v, u} k x = x.prepend k := rfl
+example (k : κ) (x : PeDivM κ α) : (x.prepend k).2 = x.2 :=
+  PeDivM.prepend_snd_same.{v, u} k x
+example (k k' : κ) (a : DivM α) :
+    PeDivM.prepend k (k', a) = (Loom.LogMonoid.append k k', a) :=
+  PeDivM.prepend.eq_1.{v, u} k k' a
+example (x : PeDivM κ α) (f : α → PeDivM κ β) :
+    (x >>= f).2 = x.2 >>= (Prod.snd ∘ f) := PeDivM.bind_snd.{v, u} x f
+example (k : κ) : PeDivM κ PUnit.{u + 1} := PeDivM.log.{v, u} k
+
+end ExplicitPersistentUniverses
+
 end LoomTest.MonadUtil
