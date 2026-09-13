@@ -63,9 +63,13 @@ instance propBooleanAlgebra : BooleanAlgebra Prop where
 instance propCompleteBooleanAlgebra : CompleteBooleanAlgebra Prop :=
   { propCompleteLattice, propBooleanAlgebra with }
 
+instance piLE {ι : Type u} {α : ι → Type v} [∀ i, LE (α i)] :
+    LE ((i : ι) → α i) where
+  le f g := ∀ i, f i ⊑ₗ g i
+
 instance piPreorder {ι : Type u} {α : ι → Type v} [∀ i, Preorder (α i)] :
     Preorder ((i : ι) → α i) where
-  le f g := ∀ i, f i ⊑ₗ g i
+  toLE := piLE
   le_refl _ _ := le_refl _
   le_trans h k i := le_trans (h i) (k i)
 
@@ -75,12 +79,12 @@ instance piPartialOrder {ι : Type u} {α : ι → Type v} [∀ i, PartialOrder 
   le_antisymm h k := funext fun i => le_antisymm (h i) (k i)
 
 instance piOrderTop {ι : Type u} {α : ι → Type v}
-    [∀ i, Preorder (α i)] [∀ i, OrderTop (α i)] : OrderTop ((i : ι) → α i) where
+    [∀ i, LE (α i)] [∀ i, OrderTop (α i)] : OrderTop ((i : ι) → α i) where
   top _ := top
   le_top _ _ := le_top _
 
 instance piOrderBot {ι : Type u} {α : ι → Type v}
-    [∀ i, Preorder (α i)] [∀ i, OrderBot (α i)] : OrderBot ((i : ι) → α i) where
+    [∀ i, LE (α i)] [∀ i, OrderBot (α i)] : OrderBot ((i : ι) → α i) where
   bot _ := bot
   bot_le _ _ := bot_le _
 
@@ -156,11 +160,11 @@ theorem pi_le_iff {ι : Type u} {α : ι → Type v} [∀ i, Preorder (α i)]
     (f g : (i : ι) → α i) (i : ι) : himp f g i = himp (f i) (g i) := rfl
 
 @[simp] theorem pi_top_apply {ι : Type u} {α : ι → Type v}
-    [∀ i, Preorder (α i)] [∀ i, OrderTop (α i)] (i : ι) :
+    [∀ i, LE (α i)] [∀ i, OrderTop (α i)] (i : ι) :
     (top : (i : ι) → α i) i = top := rfl
 
 @[simp] theorem pi_bot_apply {ι : Type u} {α : ι → Type v}
-    [∀ i, Preorder (α i)] [∀ i, OrderBot (α i)] (i : ι) :
+    [∀ i, LE (α i)] [∀ i, OrderBot (α i)] (i : ι) :
     (bot : (i : ι) → α i) i = bot := rfl
 
 @[simp] theorem pi_iInf_apply {ι : Type u} {α : ι → Type v} [∀ i, CompleteLattice (α i)]

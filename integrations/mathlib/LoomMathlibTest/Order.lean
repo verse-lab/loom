@@ -1,5 +1,6 @@
 import LoomMathlib.Order
 import Loom.Order.Control
+import Loom.MonadAlgebras.Defs
 
 open scoped Loom.Order
 
@@ -11,6 +12,20 @@ example : Loom.Order.CompleteBooleanAlgebra (Nat → Prop) := inferInstance
 example (p q : Nat → Prop) : (p ≤ q) = (p ⊑ₗ q) := rfl
 example (p q : Nat → Prop) : (p ⊓ q) = (p ⊓ₗ q) := rfl
 example (p q : Prop) : (p ⇨ q) = Loom.Order.himp p q := rfl
+
+-- The original embedding signature accepts any bounded relation.
+section AbstractBoundedRelation
+variable {α : Type u} [LE α] [OrderTop α] [OrderBot α]
+local instance : Loom.Order.LE α := LoomMathlib.leOfMathlib α
+local instance : Loom.Order.OrderTop α := LoomMathlib.orderTopOfMathlib α
+local instance : Loom.Order.OrderBot α := LoomMathlib.orderBotOfMathlib α
+
+example (a b : α) : (a ⊑ₗ b) = (a ≤ b) := rfl
+example : (⌜True⌝ : α) = ⊤ := trueE α
+example : (⌜False⌝ : α) = ⊥ := falseE α
+example (p q : Prop) (h : p → q) : (⌜p⌝ : α) ≤ ⌜q⌝ := Loom.Order.embed_imp (l := α) p q h
+example (p : Prop) (a : α) : ((⌜p⌝ : α) ≤ a) = (p → ⊤ ≤ a) := Loom.Order.embed_intro p a
+end AbstractBoundedRelation
 
 section AbstractCompleteLattice
 variable {α : Type u} [CompleteLattice α]

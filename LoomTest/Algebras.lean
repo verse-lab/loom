@@ -45,4 +45,46 @@ example [CompleteLattice α] (f : Nat → α) (n : Nat) :
 
 end
 
+-- Embedding needs bounds on a relation, not reflexivity or transitivity.
+namespace BareBounds
+
+inductive Carrier where
+  | low | middle | high
+
+instance : Loom.Order.LE Carrier where
+  le a b := a = .low ∨ b = .high
+
+instance : OrderTop Carrier where
+  top := .high
+  le_top _ := Or.inr rfl
+
+instance : OrderBot Carrier where
+  bot := .low
+  bot_le _ := Or.inl rfl
+
+example : ¬ (Carrier.middle ⊑ₗ Carrier.middle) := by
+  intro h
+  cases h with
+  | inl h => cases h
+  | inr h => cases h
+
+example : (⌜True⌝ : Carrier) = Carrier.high := trueE Carrier
+example : (⌜False⌝ : Carrier) = Carrier.low := falseE Carrier
+example (p q : Prop) (h : p → q) : (⌜p⌝ : Carrier) ⊑ₗ ⌜q⌝ := embed_imp p q h
+example (p : Prop) (a : Carrier) : (⌜p⌝ ⊑ₗ a) = (p → ⊤ₗ ⊑ₗ a) := embed_intro p a
+
+-- Weak bounds also propagate through the standard assertion wrappers.
+example : OrderTop (Id Carrier) := inferInstance
+example : OrderBot (Id Carrier) := inferInstance
+example : (⌜True⌝ : Nat → Carrier) = fun _ => Carrier.high := trueE _
+example : (⌜False⌝ : Loom.Cont Carrier Nat) = fun _ => Carrier.low := falseE _
+
+end BareBounds
+
+section BareRelation
+variable [Loom.Order.LE α] [OrderTop α] [OrderBot α]
+example (p q : Prop) (h : p → q) : (⌜p⌝ : α) ⊑ₗ ⌜q⌝ := embed_imp p q h
+example (p : Prop) (a : α) : (⌜p⌝ ⊑ₗ a) = (p → ⊤ₗ ⊑ₗ a) := embed_intro p a
+end BareRelation
+
 end LoomTest.Algebras

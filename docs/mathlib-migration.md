@@ -17,7 +17,12 @@ that proofs unfolding mathlib internals remain source-compatible.
 | `[Monoid κ]` for persistent logs | `[Loom.LogMonoid κ]` |
 | automatic `FinEnum` candidates from core Loom | import `LoomMathlib.Candidates` |
 
-`⌜p⌝` retains its syntax. Numerical comparisons retain Lean's ordinary `≤`.
+`⌜p⌝` retains its syntax and its original generality: embedding and its basic
+lemmas need only `Loom.Order.LE` with `OrderTop` and `OrderBot`, without
+reflexivity or transitivity. Every `Preorder` supplies that bare relation. The optional
+adapter provides `leOfMathlib`, `orderTopOfMathlib`, and `orderBotOfMathlib` for
+clients with the old bounded-relation assumptions.
+Numerical comparisons retain Lean's ordinary `≤`.
 `DivM`, `PeDivM`, `W`, `wp`, `wlp`, the algebra interfaces, and extraction
 interfaces retain their public names. `W.wp_montone` retains its original
 spelling. `Lean.Order.CCPO` and its computational relation are unchanged.

@@ -10,7 +10,7 @@ universe u v w
 /- Prop embedding into PartialOrder -/
 
 open Classical in
-noncomputable def Loom.Order.embed {l : Type u} [inst: Preorder l] [OrderTop l] [OrderBot l] : Prop -> l := fun p =>
+noncomputable def Loom.Order.embed {l : Type u} [inst: Loom.Order.LE l] [OrderTop l] [OrderBot l] : Prop -> l := fun p =>
   if p then ⊤ₗ else ⊥ₗ
 
 macro "⌜" p:term "⌝" : term => `(Loom.Order.embed $p)
@@ -20,21 +20,21 @@ macro "⌜" p:term "⌝" : term => `(Loom.Order.embed $p)
   | _ => throw ()
 
 @[simp]
-theorem trueE (l : Type v) [inst: Preorder l] [OrderTop l] [OrderBot l] : ⌜True⌝ = (⊤ₗ : l) := by
+theorem trueE (l : Type v) [inst: Loom.Order.LE l] [OrderTop l] [OrderBot l] : ⌜True⌝ = (⊤ₗ : l) := by
   simp [Loom.Order.embed]
 
 @[simp]
-theorem falseE (l : Type v) [inst: Preorder l] [OrderTop l] [OrderBot l] : ⌜False⌝ = (⊥ₗ : l) := by
+theorem falseE (l : Type v) [inst: Loom.Order.LE l] [OrderTop l] [OrderBot l] : ⌜False⌝ = (⊥ₗ : l) := by
   simp [Loom.Order.embed]
 
 open Classical in
-theorem Loom.Order.embed_imp {l : Type u} [inst: Preorder l] [OrderTop l] [OrderBot l]
+theorem Loom.Order.embed_imp {l : Type u} [inst: Loom.Order.LE l] [OrderTop l] [OrderBot l]
   (p₁ p₂ : Prop) : (p₁ -> p₂) -> ⌜p₁⌝ ⊑ₗ (⌜p₂⌝ : l) := by
   intro h
   by_cases h₁ : p₁ <;> by_cases h₂ : p₂ <;> simp_all [Loom.Order.embed]
 
 @[simp]
-theorem Loom.Order.embed_intro {l : Type u} [inst: Preorder l] [OrderTop l] [OrderBot l]
+theorem Loom.Order.embed_intro {l : Type u} [inst: Loom.Order.LE l] [OrderTop l] [OrderBot l]
   (p : Prop) (h : l) : (⌜p⌝ ⊑ₗ h) = (p -> ⊤ₗ ⊑ₗ h) := by
     by_cases hp : p <;> simp [Loom.Order.embed, hp]
 

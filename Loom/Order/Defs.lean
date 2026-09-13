@@ -6,21 +6,29 @@ namespace Loom.Order
 
 universe u
 
-class Preorder (α : Type u) where
+/-- An assertion relation, without reflexivity or transitivity assumptions. -/
+class LE (α : Type u) where
   le : α → α → Prop
+
+class Preorder (α : Type u) extends LE α where
   le_refl : ∀ a, le a a
   le_trans : ∀ {a b c}, le a b → le b c → le a c
 
-scoped infix:50 " ⊑ₗ " => Preorder.le
+-- Keep the previous qualified spelling available after moving the field to LE.
+namespace Preorder
+export LE (le)
+end Preorder
+
+scoped infix:50 " ⊑ₗ " => LE.le
 
 class PartialOrder (α : Type u) extends Preorder α where
   le_antisymm : ∀ {a b : α}, a ⊑ₗ b → b ⊑ₗ a → a = b
 
-class OrderTop (α : Type u) [Preorder α] where
+class OrderTop (α : Type u) [LE α] where
   top : α
   le_top : ∀ a, a ⊑ₗ top
 
-class OrderBot (α : Type u) [Preorder α] where
+class OrderBot (α : Type u) [LE α] where
   bot : α
   bot_le : ∀ a, bot ⊑ₗ a
 

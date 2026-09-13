@@ -26,11 +26,11 @@ def MAlgExcept (ε : Type u) (df : ε -> Prop) (l : Type u) (m : Type u -> Type 
     solve_by_elim [MAlgOrdered.μ_ord_pure]
   μ_ord_bind := by
     intros α f g
-    simp +instances [Function.comp, Loom.Order.piPreorder]; intros le x
+    simp +instances [Function.comp, Loom.Order.piLE]; intros le x
     have leM := @inst.μ_ord_bind (Except ε α)
       (fun x => Except.getD (⌜df ·⌝) <$> Except.bind' x f)
       (fun x => Except.getD (⌜df ·⌝) <$> Except.bind' x g)
-    simp +instances only [Function.comp, Loom.Order.piPreorder, <-map_bind, Except.bind'_bind] at leM
+    simp +instances only [Function.comp, Loom.Order.piLE, <-map_bind, Except.bind'_bind] at leM
     apply leM; rintro (e | p) <;> simp +instances [Except.bind', ExceptT.instMonad, ExceptT.bind, ExceptT.bindCont]
     apply le
 

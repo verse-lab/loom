@@ -9,6 +9,22 @@ namespace LoomMathlib
 universe u
 
 @[implicit_reducible]
+def leOfMathlib (α : Type u) [LE α] : Loom.Order.LE α where
+  le := (· ≤ ·)
+
+@[implicit_reducible]
+def orderTopOfMathlib (α : Type u) [LE α] [OrderTop α] :
+    @Loom.Order.OrderTop α (leOfMathlib α) := by
+  letI := leOfMathlib α
+  exact { top := ⊤, le_top := fun _ => le_top }
+
+@[implicit_reducible]
+def orderBotOfMathlib (α : Type u) [LE α] [OrderBot α] :
+    @Loom.Order.OrderBot α (leOfMathlib α) := by
+  letI := leOfMathlib α
+  exact { bot := ⊥, bot_le := fun _ => bot_le }
+
+@[implicit_reducible]
 def preorderOfMathlib (α : Type u) [Preorder α] : Loom.Order.Preorder α where
   le := (· ≤ ·)
   le_refl := le_refl
