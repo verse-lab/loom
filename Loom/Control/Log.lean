@@ -7,24 +7,34 @@ noncommutative; the order of events is observable. -/
 class LogMonoid (ω : Type u) where
   empty : ω
   append : ω → ω → ω
-  append_assoc : ∀ a b c, append (append a b) c = append a (append b c)
-  empty_append : ∀ a, append empty a = a
-  append_empty : ∀ a, append a empty = a
+  [toAssociative : Std.Associative append]
+  [toLawfulIdentity : Std.LawfulIdentity append empty]
 
-attribute [simp] LogMonoid.empty_append LogMonoid.append_empty
+attribute [instance] LogMonoid.toAssociative LogMonoid.toLawfulIdentity
+
+namespace LogMonoid
+variable [LogMonoid ω]
+
+theorem append_assoc (a b c : ω) : append (append a b) c = append a (append b c) :=
+  Std.Associative.assoc a b c
+
+@[simp] theorem empty_append (a : ω) : append empty a = a :=
+  Std.LawfulLeftIdentity.left_id a
+
+@[simp] theorem append_empty (a : ω) : append a empty = a :=
+  Std.LawfulRightIdentity.right_id a
+end LogMonoid
 
 instance : LogMonoid (List α) where
   empty := []
   append := List.append
-  append_assoc := List.append_assoc
-  empty_append := List.nil_append
-  append_empty := List.append_nil
+  toAssociative := inferInstanceAs (Std.Associative (fun a b : List α => a ++ b))
+  toLawfulIdentity := inferInstanceAs (Std.LawfulIdentity (fun a b : List α => a ++ b) [])
 
 instance : LogMonoid Unit where
   empty := ()
   append := fun _ _ => ()
-  append_assoc := by intros; rfl
-  empty_append := by rintro ⟨⟩; rfl
-  append_empty := by rintro ⟨⟩; rfl
+  toAssociative := ⟨by intros; rfl⟩
+  toLawfulIdentity := { left_id := by rintro ⟨⟩; rfl, right_id := by rintro ⟨⟩; rfl }
 
 end Loom

@@ -30,3 +30,16 @@ def writerFailure : Loom.WriterT (List Nat) Option Nat := do
 #guard writerFailure.run == none
 
 end LoomTest.Control
+
+-- Standard operation laws are enough to construct a log model; no commutativity.
+example {ω : Type u} (empty : ω) (append : ω → ω → ω)
+    [Std.Associative append] [Std.LawfulIdentity append empty] : Loom.LogMonoid ω where
+  empty := empty
+  append := append
+  toAssociative := inferInstance
+  toLawfulIdentity := inferInstance
+
+example {ω : Type u} [Loom.LogMonoid ω] :
+    Std.Associative (Loom.LogMonoid.append (ω := ω)) := inferInstance
+example {ω : Type u} [Loom.LogMonoid ω] :
+    Std.LawfulIdentity (Loom.LogMonoid.append (ω := ω)) Loom.LogMonoid.empty := inferInstance

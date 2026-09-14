@@ -9,11 +9,11 @@ universe u v w
 instance propPreorder : Preorder Prop where
   le p q := p → q
   le_refl _ := id
-  le_trans h k := k ∘ h
+  le_trans _ _ _ h k := k ∘ h
 
 instance propPartialOrder : PartialOrder Prop where
   toPreorder := propPreorder
-  le_antisymm h k := propext ⟨h, k⟩
+  le_antisymm _ _ h k := propext ⟨h, k⟩
 
 instance propOrderTop : OrderTop Prop where
   top := True
@@ -25,14 +25,12 @@ instance propOrderBot : OrderBot Prop where
 
 instance propLattice : Lattice Prop where
   toPartialOrder := propPartialOrder
-  inf := And
-  sup := Or
-  inf_le_left _ _ := And.left
-  inf_le_right _ _ := And.right
-  le_inf h k x := ⟨h x, k x⟩
-  le_sup_left _ _ := Or.inl
-  le_sup_right _ _ := Or.inr
-  sup_le h k := fun x => Or.elim x h k
+  min := And
+  max := Or
+  le_min_iff _ _ _ := ⟨fun h => ⟨fun x => (h x).1, fun x => (h x).2⟩,
+    fun ⟨h, k⟩ x => ⟨h x, k x⟩⟩
+  max_le_iff _ _ _ := ⟨fun h => ⟨fun x => h (.inl x), fun x => h (.inr x)⟩,
+    fun ⟨h, k⟩ x => x.elim h k⟩
 
 instance propCompleteLattice : CompleteLattice Prop where
   toLattice := propLattice
@@ -73,12 +71,12 @@ instance piPreorder {ι : Type u} {α : ι → Type v} [∀ i, Preorder (α i)] 
     Preorder ((i : ι) → α i) where
   toLE := piLE
   le_refl _ _ := le_refl _
-  le_trans h k i := le_trans (h i) (k i)
+  le_trans _ _ _ h k i := le_trans (h i) (k i)
 
 instance piPartialOrder {ι : Type u} {α : ι → Type v} [∀ i, PartialOrder (α i)] :
     PartialOrder ((i : ι) → α i) where
   toPreorder := piPreorder
-  le_antisymm h k := funext fun i => le_antisymm (h i) (k i)
+  le_antisymm _ _ h k := funext fun i => le_antisymm (h i) (k i)
 
 instance piOrderTop {ι : Type u} {α : ι → Type v}
     [∀ i, LE (α i)] [∀ i, OrderTop (α i)] : OrderTop ((i : ι) → α i) where
@@ -93,14 +91,12 @@ instance piOrderBot {ι : Type u} {α : ι → Type v}
 instance piLattice {ι : Type u} {α : ι → Type v} [∀ i, Lattice (α i)] :
     Lattice ((i : ι) → α i) where
   toPartialOrder := piPartialOrder
-  inf f g i := f i ⊓ g i
-  sup f g i := f i ⊔ g i
-  inf_le_left _ _ _ := inf_le_left ..
-  inf_le_right _ _ _ := inf_le_right ..
-  le_inf h k i := le_inf (h i) (k i)
-  le_sup_left _ _ _ := le_sup_left ..
-  le_sup_right _ _ _ := le_sup_right ..
-  sup_le h k i := sup_le (h i) (k i)
+  min f g i := f i ⊓ g i
+  max f g i := f i ⊔ g i
+  le_min_iff _ _ _ := ⟨fun h => ⟨fun i => le_trans (h i) (inf_le_left ..),
+    fun i => le_trans (h i) (inf_le_right ..)⟩, fun ⟨h, k⟩ i => le_inf (h i) (k i)⟩
+  max_le_iff _ _ _ := ⟨fun h => ⟨fun i => le_trans (le_sup_left ..) (h i),
+    fun i => le_trans (le_sup_right ..) (h i)⟩, fun ⟨h, k⟩ i => sup_le (h i) (k i)⟩
 
 instance piCompleteLattice {ι : Type u} {α : ι → Type v} [∀ i, CompleteLattice (α i)] :
     CompleteLattice ((i : ι) → α i) where

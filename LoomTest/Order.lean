@@ -17,17 +17,19 @@ def rank : Chain → Nat
 instance : Lattice Chain where
   le a b := rank a ≤ rank b
   le_refl _ := Nat.le_refl _
-  le_trans := Nat.le_trans
+  le_trans _ _ _ := Nat.le_trans
   le_antisymm := by
     intro a b; cases a <;> cases b <;> simp_all [rank]
-  inf a b := if rank a ≤ rank b then a else b
-  sup a b := if rank a ≤ rank b then b else a
-  inf_le_left := by intro a b; cases a <;> cases b <;> decide
-  inf_le_right := by intro a b; cases a <;> cases b <;> decide
-  le_inf := by intro a b c; cases a <;> cases b <;> cases c <;> decide
-  le_sup_left := by intro a b; cases a <;> cases b <;> decide
-  le_sup_right := by intro a b; cases a <;> cases b <;> decide
-  sup_le := by intro a b c; cases a <;> cases b <;> cases c <;> decide
+  min a b := if rank a ≤ rank b then a else b
+  max a b := if rank a ≤ rank b then b else a
+  le_min_iff := by
+    intro a b c
+    change (rank _ ≤ rank _) ↔ (rank _ ≤ rank _) ∧ (rank _ ≤ rank _)
+    cases a <;> cases b <;> cases c <;> decide
+  max_le_iff := by
+    intro a b c
+    change (rank _ ≤ rank _) ↔ (rank _ ≤ rank _) ∧ (rank _ ≤ rank _)
+    cases a <;> cases b <;> cases c <;> decide
 
 instance (a b : Chain) : Decidable (a ≤ b) :=
   inferInstanceAs (Decidable (rank a ≤ rank b))
@@ -136,3 +138,26 @@ example [CompleteBooleanAlgebra α] (a : α) (f : Sort u → α) :
     a ⊔ iInf f = iInf (fun i => a ⊔ f i) := sup_iInf a f
 
 end LoomTest.Order
+
+-- Existing Std laws can be supplied directly, without reproving Loom copies.
+example {α : Type u} [r : _root_.LE α] [Std.IsPreorder α] : Loom.Order.Preorder α where
+  le := r.le
+  toIsPreorder := inferInstanceAs (Std.IsPreorder α)
+
+example {α : Type u} [r : _root_.LE α] [Std.IsPartialOrder α]
+    [Min α] [Max α] [Std.LawfulOrderInf α] [Std.LawfulOrderSup α] :
+    Loom.Order.Lattice α where
+  le := r.le
+  toIsPartialOrder := inferInstanceAs (Std.IsPartialOrder α)
+  toMin := inferInstance
+  toMax := inferInstance
+  toLawfulOrderInf := inferInstanceAs (Std.LawfulOrderInf α)
+  toLawfulOrderSup := inferInstanceAs (Std.LawfulOrderSup α)
+
+-- The inherited standard laws describe precisely the selected assertion operations.
+example {α : Type u} [Loom.Order.Lattice α] :
+    @Std.IsPartialOrder α ⟨Loom.Order.LE.le⟩ := inferInstance
+example {α : Type u} [Loom.Order.Lattice α] :
+    @Std.LawfulOrderInf α Loom.Order.Lattice.toMin ⟨Loom.Order.LE.le⟩ := inferInstance
+example {α : Type u} [Loom.Order.Lattice α] :
+    @Std.LawfulOrderSup α Loom.Order.Lattice.toMax ⟨Loom.Order.LE.le⟩ := inferInstance

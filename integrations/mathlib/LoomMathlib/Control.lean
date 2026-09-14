@@ -10,9 +10,8 @@ namespace LoomMathlib
 def logMonoidOfMonoid (ω : Type u) [Monoid ω] : Loom.LogMonoid ω where
   empty := 1
   append := (· * ·)
-  append_assoc := mul_assoc
-  empty_append := one_mul
-  append_empty := mul_one
+  toAssociative := ⟨mul_assoc⟩
+  toLawfulIdentity := { left_id := one_mul, right_id := mul_one }
 
 def contToLoom {r : Type u} {m : Type u → Type v} {α : Type w}
     (c : ContT r m α) : Loom.ContT r m α := c.run

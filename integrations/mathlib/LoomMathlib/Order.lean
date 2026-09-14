@@ -27,21 +27,16 @@ def orderBotOfMathlib (α : Type u) [LE α] [OrderBot α] :
 @[implicit_reducible]
 def preorderOfMathlib (α : Type u) [Preorder α] : Loom.Order.Preorder α where
   le := (· ≤ ·)
-  le_refl := le_refl
-  le_trans := le_trans
+  toIsPreorder := inferInstanceAs (Std.IsPreorder α)
 
 @[implicit_reducible]
 def latticeOfMathlib (α : Type u) [Lattice α] : Loom.Order.Lattice α where
-  toPreorder := preorderOfMathlib α
-  le_antisymm := le_antisymm
-  inf := (· ⊓ ·)
-  sup := (· ⊔ ·)
-  inf_le_left _ _ := inf_le_left
-  inf_le_right _ _ := inf_le_right
-  le_inf := le_inf
-  le_sup_left _ _ := le_sup_left
-  le_sup_right _ _ := le_sup_right
-  sup_le := sup_le
+  le := (· ≤ ·)
+  toIsPartialOrder := inferInstanceAs (Std.IsPartialOrder α)
+  min := (· ⊓ ·)
+  max := (· ⊔ ·)
+  le_min_iff := fun _ _ _ => le_inf_iff
+  max_le_iff := fun _ _ _ => sup_le_iff
 
 @[implicit_reducible]
 def completeLatticeOfMathlib (α : Type u) [CompleteLattice α] :

@@ -1,4 +1,4 @@
-import Init
+import Init.Data.Order.Lemmas
 
 /-! Assertion order, independent of both mathlib's `LE` and Lean's CCPO order. -/
 
@@ -6,7 +6,9 @@ namespace Loom.Order
 
 universe u
 
-/-- An assertion relation, without reflexivity or transitivity assumptions. -/
+/-- An assertion relation, without reflexivity or transitivity assumptions.
+This separate operation dictionary allows assertion and numeric/mathlib orders
+on the same type; the order laws themselves are supplied by `Std`. -/
 class LE (α : Type u) where
   le : α → α → Prop
 
@@ -25,17 +27,16 @@ scoped instance (priority := low) [h : _root_.LE α] : NotationLE α := ⟨h.le�
 -- The first spelling also supplies the pretty-printer for the bare relation.
 scoped infix:50 (priority := high) unicode(" ≤ ", " <= ") => LE.le
 
-class Preorder (α : Type u) extends LE α where
-  le_refl : ∀ a, le a a
-  le_trans : ∀ {a b c}, le a b → le b c → le a c
+/-- Bundle the assertion relation with the standard preorder laws. The explicit
+`LE` argument keeps these laws independent of an ambient numeric/mathlib order. -/
+class Preorder (α : Type u) extends LE α, @Std.IsPreorder α ⟨le⟩
 
 -- Keep the previous qualified spelling available after moving the field to LE.
 namespace Preorder
 export LE (le)
 end Preorder
 
-class PartialOrder (α : Type u) extends Preorder α where
-  le_antisymm : ∀ {a b : α}, a ≤ b → b ≤ a → a = b
+class PartialOrder (α : Type u) extends Preorder α, @Std.IsPartialOrder α ⟨le⟩
 
 class OrderTop (α : Type u) [LE α] where
   top : α
@@ -45,24 +46,57 @@ class OrderBot (α : Type u) [LE α] where
   bot : α
   bot_le : ∀ a, bot ≤ a
 
-class Lattice (α : Type u) extends PartialOrder α where
-  inf : α → α → α
-  sup : α → α → α
-  inf_le_left : ∀ a b, inf a b ≤ a
-  inf_le_right : ∀ a b, inf a b ≤ b
-  le_inf : ∀ {a b c : α}, a ≤ b → a ≤ c → a ≤ inf b c
-  le_sup_left : ∀ a b, a ≤ sup a b
-  le_sup_right : ∀ a b, b ≤ sup a b
-  sup_le : ∀ {a b c : α}, a ≤ c → b ≤ c → sup a b ≤ c
+/-- A lattice uses the standard operations and their universal-property laws.
+The operations are accessed explicitly, so importing Loom never installs a
+numeric/mathlib `Min` or `Max` instance. -/
+class Lattice (α : Type u) extends PartialOrder α, Min α, Max α,
+    @Std.LawfulOrderInf α toMin ⟨le⟩, @Std.LawfulOrderSup α toMax ⟨le⟩
 
-export Preorder (le_refl le_trans)
-export PartialOrder (le_antisymm)
+attribute [-instance] Lattice.toMin Lattice.toMax
+
+namespace Lattice
+def inf [self : Lattice α] : α → α → α := self.toMin.min
+def sup [self : Lattice α] : α → α → α := self.toMax.max
+end Lattice
+
+-- Retain Loom's implicit-argument theorem interface over the standard laws.
+theorem le_refl [Preorder α] (a : α) : a ≤ a :=
+  @Std.IsPreorder.le_refl α ⟨LE.le⟩ _ a
+
+theorem le_trans [Preorder α] {a b c : α} (h : a ≤ b) (k : b ≤ c) : a ≤ c :=
+  @Std.IsPreorder.le_trans α ⟨LE.le⟩ _ a b c h k
+
+theorem le_antisymm [PartialOrder α] {a b : α} (h : a ≤ b) (k : b ≤ a) : a = b :=
+  @Std.IsPartialOrder.le_antisymm α ⟨LE.le⟩ _ a b h k
+
 export OrderTop (top le_top)
 export OrderBot (bot bot_le)
-export Lattice (inf sup inf_le_left inf_le_right le_inf le_sup_left le_sup_right sup_le)
+export Lattice (inf sup)
 
 scoped infixl:70 (priority := high) " ⊓ " => inf
 scoped infixl:65 (priority := high) " ⊔ " => sup
+
+section StandardLattice
+variable [Lattice α]
+local instance : _root_.LE α := ⟨LE.le⟩
+local instance : Min α := Lattice.toMin
+local instance : Max α := Lattice.toMax
+
+@[simp] theorem le_inf_iff {a b c : α} : a ≤ b ⊓ c ↔ a ≤ b ∧ a ≤ c :=
+  Std.le_min_iff (α := α)
+
+@[simp] theorem sup_le_iff {a b c : α} : a ⊔ b ≤ c ↔ a ≤ c ∧ b ≤ c :=
+  Std.max_le_iff (α := α)
+
+theorem inf_le_left (a b : α) : a ⊓ b ≤ a := Std.min_le_left (α := α)
+theorem inf_le_right (a b : α) : a ⊓ b ≤ b := Std.min_le_right (α := α)
+theorem le_inf {a b c : α} (h : a ≤ b) (k : a ≤ c) : a ≤ b ⊓ c :=
+  (Std.le_min_iff (α := α)).mpr ⟨h, k⟩
+theorem le_sup_left (a b : α) : a ≤ a ⊔ b := Std.left_le_max (α := α)
+theorem le_sup_right (a b : α) : b ≤ a ⊔ b := Std.right_le_max (α := α)
+theorem sup_le {a b c : α} (h : a ≤ c) (k : b ≤ c) : a ⊔ b ≤ c :=
+  (Std.max_le_iff (α := α)).mpr ⟨h, k⟩
+end StandardLattice
 
 attribute [simp] le_refl le_top bot_le
 attribute [simp] inf_le_left inf_le_right le_sup_left le_sup_right
@@ -78,7 +112,8 @@ theorem ge_refl [Preorder α] (a : α) : ge a a := le_refl a
 theorem le_trans' [Preorder α] {a b c : α} (h : b ≤ c) (k : a ≤ b) : a ≤ c :=
   le_trans k h
 
-theorem le_of_eq [Preorder α] {a b : α} (h : a = b) : a ≤ b := h ▸ le_refl a
+theorem le_of_eq [Preorder α] {a b : α} (h : a = b) : a ≤ b :=
+  @Std.le_of_eq α ⟨LE.le⟩ _ a b h
 
 def Monotone [Preorder α] [Preorder β] (f : α → β) : Prop :=
   ∀ ⦃a b⦄, a ≤ b → f a ≤ f b
@@ -96,14 +131,6 @@ theorem eq_bot_iff [PartialOrder α] [OrderBot α] {a : α} :
 
 section
 variable [Lattice α] {a b c d : α}
-
-@[simp] theorem le_inf_iff : a ≤ b ⊓ c ↔ a ≤ b ∧ a ≤ c :=
-  ⟨fun h => ⟨le_trans h (inf_le_left ..), le_trans h (inf_le_right ..)⟩,
-    fun h => le_inf h.1 h.2⟩
-
-@[simp] theorem sup_le_iff : a ⊔ b ≤ c ↔ a ≤ c ∧ b ≤ c :=
-  ⟨fun h => ⟨le_trans (le_sup_left ..) h, le_trans (le_sup_right ..) h⟩,
-    fun h => sup_le h.1 h.2⟩
 
 theorem inf_mono (h : a ≤ b) (k : c ≤ d) : a ⊓ c ≤ b ⊓ d :=
   le_inf (le_trans (inf_le_left ..) h) (le_trans (inf_le_right ..) k)

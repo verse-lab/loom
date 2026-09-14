@@ -40,7 +40,7 @@ instance : MonadOrder EqBox where
   preord _ := {
     le := Eq
     le_refl := fun _ => rfl
-    le_trans := Eq.trans }
+    le_trans _ _ _ := Eq.trans }
   bind_le := by
     intro α β x y f g h k
     cases h

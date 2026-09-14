@@ -26,7 +26,7 @@ The familiar mathematical symbols are retained through `open scoped Loom.Order`.
 Within that scope, they select Loom's assertion operations, including when
 mathlib is imported. Numerical comparisons retain Lean's ordinary relation;
 comparison notation falls back to Lean's `LE` when Loom has no relation for
-the type. This does not install any conversion instances. In `change` patterns
+the type. This does not install global conversions of order operations. In `change` patterns
 with otherwise untyped holes, annotate an operand (for example,
 `change (_ : Nat) ≤ _`) so Lean can resolve the comparison.
 `DivM`, `PeDivM`, `W`, `wp`, `wlp`, the algebra interfaces, and extraction
@@ -67,3 +67,8 @@ conversion instances are installed. Complete-lattice, Boolean, and log
 adapters remain explicit. Lists already have a direct log instance.
 The adapter supplies `contToLoom`, `contFromLoom`, `writerToLoom`, and
 `writerFromLoom`, with round-trip and pure/bind preservation theorems.
+
+The standalone bundles now reuse Lean's standard order and operation-law
+classes. Custom model constructors should use the standard field names;
+see [the standard-library audit](stdlib-reuse-audit.md#constructor-migration)
+for the constructor changes and the reasons for the remaining Loom code.

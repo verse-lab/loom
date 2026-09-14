@@ -7,7 +7,7 @@ open Lean Meta Elab Tactic
 /-- Read the target without weak-head normalization. Reducing it here could
 inline the source join points that extraction needs to keep shared. -/
 def getMainTarget : TacticM Expr := do
-  return (← instantiateMVars (← (← getMainGoal).getType)).cleanupAnnotations
+  return (← Lean.Elab.Tactic.getMainTarget).cleanupAnnotations
 
 /-- Replace a zero-based application argument, keeping the other arguments.
 Out-of-bounds updates leave the expression unchanged. -/

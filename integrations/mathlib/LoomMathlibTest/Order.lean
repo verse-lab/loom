@@ -76,6 +76,17 @@ example : (0 : Nat) ≥ 1 := Nat.zero_le 1
 example : ¬ _root_.LE.le (1 : Nat) 0 := by decide
 end ScopePriority
 
+-- Inheriting Min/Max must not install those operations as ambient instances.
+section DistinctLatticeOperations
+local instance : Loom.Order.Lattice Nat := LoomMathlib.latticeOfMathlib (OrderDual Nat)
+example : ((1 : Nat) ⊓ 2) = 2 := rfl
+example : ((1 : Nat) ⊔ 2) = 1 := rfl
+example : _root_.Min.min (1 : Nat) 2 = 1 := rfl
+example : _root_.Max.max (1 : Nat) 2 = 2 := rfl
+example : (2 : Nat) ≤ 1 := Nat.le_succ 1
+example : _root_.LE.le (1 : Nat) 2 := Nat.le_succ 1
+end DistinctLatticeOperations
+
 -- Common symbols have unambiguous Loom meanings in a mixed import graph.
 example (p q : Prop) : (p ⊔ q) = (p ∨ q) := rfl
 example (p : Prop) : pᶜ = ¬p := rfl
