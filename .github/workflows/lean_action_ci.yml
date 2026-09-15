@@ -25,7 +25,9 @@ jobs:
           lake env lean --run scripts/AuditDependencies.lean /tmp/loom-audit
           ! grep -q '^Mathlib\.' /tmp/loom-audit/modules.txt
       - name: Test native consumer
-        run: lake -d tests/native exe smoke
+        run: |
+          lake -d tests/native exe smoke
+          ! nm tests/native/.lake/build/bin/smoke | grep -qE '_Lean_Elab_|evalExtractLetStep|ExtractAttr'
 
   mathlib-integration:
     runs-on: ubuntu-latest

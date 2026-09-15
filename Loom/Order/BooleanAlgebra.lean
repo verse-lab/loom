@@ -1,4 +1,8 @@
-import Loom.Order.CompleteLattice
+module
+
+public import Loom.Order.CompleteLattice
+
+@[expose] public section
 
 namespace Loom.Order
 

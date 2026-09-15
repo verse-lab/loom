@@ -1,6 +1,10 @@
-import Loom.Control.Log
-import Init.Control.Lawful
-import Lean.Elab.Tactic.Ext
+module
+
+public import Loom.Control.Log
+public import Init.Control.Lawful
+meta import Lean.Elab.Tactic.Ext
+
+@[expose] public section
 
 namespace Loom
 

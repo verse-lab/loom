@@ -1,4 +1,8 @@
-import Init.Control.Lawful
+module
+
+public import Init.Control.Lawful
+
+@[expose] public section
 
 /-! A computation returns a value or records divergence. Order/CCPO semantics
 are supplied separately by the algebra layer. -/

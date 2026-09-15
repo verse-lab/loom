@@ -1,4 +1,8 @@
-import Loom.Order.BooleanAlgebra
+module
+
+public import Loom.Order.BooleanAlgebra
+
+@[expose] public section
 
 namespace Loom.Order
 

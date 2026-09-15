@@ -1,9 +1,13 @@
-import Loom.MonadAlgebras.Defs
+module
 
-import Loom.MonadAlgebras.Instances.Basic
-import Loom.MonadAlgebras.Instances.ExceptT
-import Loom.MonadAlgebras.Instances.StateT
-import Loom.MonadAlgebras.Instances.ReaderT
+public import Loom.MonadAlgebras.Defs
+
+public import Loom.MonadAlgebras.Instances.Basic
+public import Loom.MonadAlgebras.Instances.ExceptT
+public import Loom.MonadAlgebras.Instances.StateT
+public import Loom.MonadAlgebras.Instances.ReaderT
+
+@[expose] public section
 
 open Loom Loom.Order
 

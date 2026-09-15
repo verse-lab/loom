@@ -1,6 +1,10 @@
-import Loom.MonadAlgebras.NonDetT'.ExtractList
+module
+
+public import Loom.MonadAlgebras.NonDetT'.ExtractList
 
 open MultiExtractor
+
+@[expose] public section
 
 abbrev NativeTarget (α : Type) := TsilT (PeDivM (List Unit)) α
 

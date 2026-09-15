@@ -1,4 +1,8 @@
-import Init.Control.Lawful
+module
+
+public import Init.Control.Lawful
+
+@[expose] public section
 
 universe u v w
 

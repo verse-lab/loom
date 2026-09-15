@@ -1,9 +1,12 @@
+module
 
-import Loom.MonadAlgebras.Defs
-import Loom.MonadAlgebras.WP.Basic
+public import Loom.MonadAlgebras.Defs
+public import Loom.MonadAlgebras.WP.Basic
 
-import Loom.MonadAlgebras.Instances.Basic
-import Loom.MonadAlgebras.Instances.ExceptT
+public import Loom.MonadAlgebras.Instances.Basic
+public import Loom.MonadAlgebras.Instances.ExceptT
+
+@[expose] public section
 
 open Loom Loom.Order
 

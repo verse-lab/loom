@@ -1,7 +1,11 @@
-import Loom.MonadAlgebras.NonDetT'.ExtractListBasic
-import Loom.Util.List
-import Loom.Control.Writer
-import Loom.Control.Persistent
+module
+
+public import Loom.MonadAlgebras.NonDetT'.ExtractListBasic
+public import Loom.Util.List
+public import Loom.Control.Writer
+public import Loom.Control.Persistent
+
+@[expose] public section
 
 open Loom Loom.Order
 

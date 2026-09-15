@@ -1,4 +1,8 @@
-import Init.Data.List.Lemmas
+module
+
+public import Init.Data.List.Lemmas
+
+@[expose] public section
 
 namespace Loom.List
 

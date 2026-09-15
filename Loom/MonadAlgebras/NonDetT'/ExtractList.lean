@@ -1,7 +1,14 @@
-import Loom.MonadAlgebras.NonDetT'.ExtractListCore
-import Loom.Util.Meta
+module
+
+public import Loom.MonadAlgebras.NonDetT'.ExtractListCore
+public meta import Loom.Util.Meta
+public meta import Loom.MonadAlgebras.WP.Attr
+meta import Lean.Elab.ConfigEval
+import all Init.Data.List.Control
 
 open Loom Loom.Order
+
+@[expose] public section
 
 namespace MultiExtractor
 
@@ -468,6 +475,18 @@ theorem extract_list_eq_wp
 
 end AngelicChoice
 
+end
+
+end MultiExtractor
+
+end
+
+public meta section
+
+namespace MultiExtractor
+
+open Lean.Order AngelicChoice
+
 section ExtractionTactic
 
 open Lean Meta Elab
@@ -780,6 +799,42 @@ macro_rules
         try (dsimp -$(mkIdent `zeta))))
 
 end ExtractionTactic
+
+end MultiExtractor
+
+end
+
+@[expose] public section
+
+namespace MultiExtractor
+
+section
+
+open Lean.Order
+
+variable
+  (κ : Type q)
+  (m : Type u → Type v) (m' : Type u → Type w)
+  [inst1 : Monad m']
+  [inst2 : MonadFlatMapGo m m']
+  [inst3 : MonadFlatMap' m']
+  [inst4 : MonadPersistentLog κ m']
+  {findable : {τ : Type u} → (τ → Prop) → Type u}
+  (findOf : ∀ {τ : Type u} (p : τ → Prop), ExtCandidates findable κ p → Unit → List τ)
+
+variable
+  [Monad m]
+  [CompleteBooleanAlgebra l]
+  [MAlgOrdered m l]
+  [LawfulMonad m]
+  [MAlgOrdered m' l]
+  [LawfulMonad m']
+  [LawfulMonadPersistentLog κ m' l]
+  {α : Type u} (s : NonDetT m α) (s' : m' α)
+  (h : ExtractConstraint κ m m' findOf s s')
+  (post : α → l)
+
+open AngelicChoice
 
 def NonDetT.extractList {α : Type u} (s : NonDetT m α)
   (h : ConstrainedExtractResult κ m m' (findOfCandidates κ) s := by extract_list_tactic)

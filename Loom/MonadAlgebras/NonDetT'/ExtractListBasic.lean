@@ -1,5 +1,8 @@
+module
 
-import Loom.MonadAlgebras.NonDetT'.Basic
+public import Loom.MonadAlgebras.NonDetT'.Basic
+
+@[expose] public section
 
 open Loom Loom.Order
 

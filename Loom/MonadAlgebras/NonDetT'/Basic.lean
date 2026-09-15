@@ -1,6 +1,9 @@
+module
 
-import Loom.MonadAlgebras.WP.Basic
-import Loom.MonadAlgebras.WP.Tactic
+public import Loom.MonadAlgebras.WP.Basic
+public import Loom.MonadAlgebras.WP.Tactic
+
+@[expose] public section
 
 open Loom Loom.Order
 

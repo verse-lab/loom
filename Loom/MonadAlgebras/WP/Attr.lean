@@ -1,5 +1,9 @@
-import Lean
-import Loom.MonadAlgebras.WP.Liberal
+module
+
+public meta import Lean
+public import Loom.MonadAlgebras.WP.Liberal
+
+public meta section
 
 -- This file is based on
 -- https://github.com/AeneasVerif/aeneas/blob/6ff714176180068bd3873af759d26a7053f4a795/backends/lean/Aeneas/Progress/Init.lean

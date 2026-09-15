@@ -1,4 +1,8 @@
-import Loom.Order.Defs
+module
+
+public import Loom.Order.Defs
+
+@[expose] public section
 
 namespace Loom.Order
 

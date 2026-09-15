@@ -1,5 +1,9 @@
-import Loom.Control.Div
-import Loom.Control.Log
+module
+
+public import Loom.Control.Div
+public import Loom.Control.Log
+
+@[expose] public section
 
 /-! Logs outside `DivM` survive divergence. Result and log universes are independent. -/
 

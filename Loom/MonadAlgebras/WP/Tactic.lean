@@ -1,4 +1,8 @@
-import Loom.MonadAlgebras.WP.Attr
+module
+
+public import Loom.MonadAlgebras.WP.Attr
+
+@[expose] public section
 
 open Loom Loom.Order
 

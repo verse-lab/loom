@@ -1,7 +1,11 @@
-import Loom.Order.Notation
+module
 
-import Loom.MonadUtil
-import Loom.SpecMonad
+public import Loom.Order.Notation
+
+public import Loom.MonadUtil
+public import Loom.SpecMonad
+
+@[expose] public section
 
 open Loom Loom.Order
 
@@ -15,7 +19,7 @@ noncomputable def Loom.Order.embed {l : Type u} [CompleteLattice l] : Prop -> l 
 
 macro "⌜" p:term "⌝" : term => `(Loom.Order.embed $p)
 
-@[app_unexpander Loom.Order.embed] def unexpandPure : Lean.PrettyPrinter.Unexpander
+@[app_unexpander Loom.Order.embed] meta def unexpandPure : Lean.PrettyPrinter.Unexpander
   | `($(_) $p:term) => `(⌜$p:term⌝)
   | _ => throw ()
 

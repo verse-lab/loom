@@ -1,5 +1,9 @@
-import Loom.MonadAlgebras.Defs
-import Loom.MonadAlgebras.Instances.Basic
+module
+
+public import Loom.MonadAlgebras.Defs
+public import Loom.MonadAlgebras.Instances.Basic
+
+@[expose] public section
 
 open Loom Loom.Order
 

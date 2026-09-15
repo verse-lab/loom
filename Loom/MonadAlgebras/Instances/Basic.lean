@@ -1,5 +1,9 @@
-import Loom.MonadAlgebras.Defs
-import Loom.Control.Div
+module
+
+public import Loom.MonadAlgebras.Defs
+public import Loom.Control.Div
+
+@[expose] public section
 
 open Loom Loom.Order
 universe u v w

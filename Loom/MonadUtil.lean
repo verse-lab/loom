@@ -1,5 +1,9 @@
-import Loom.Order.Control
+module
 
+public import Loom.Order.Control
+meta import Lean.Elab.Tactic.Ext
+
+@[expose] public section
 
 open scoped Loom.Order
 

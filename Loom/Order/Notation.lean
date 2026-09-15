@@ -1,5 +1,9 @@
-import Loom.Order.Instances
-import Lean
+module
+
+public import Loom.Order.Instances
+meta import Lean.Meta.Tactic.Rfl
+
+@[expose] public section
 
 namespace Loom.Order
 

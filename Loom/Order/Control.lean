@@ -1,5 +1,9 @@
-import Loom.Order.Instances
-import Loom.Control.Cont
+module
+
+public import Loom.Order.Instances
+public import Loom.Control.Cont
+
+@[expose] public section
 
 -- Instance search does not unfold `Id` and `ContT`.
 namespace Loom.Order

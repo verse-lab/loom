@@ -1,4 +1,8 @@
-import Init.Data.Order.Lemmas
+module
+
+public import Init.Data.Order.Lemmas
+
+@[expose] public section
 
 -- General-lattice facts over Lean's `LE`/`Min`/`Max` (Lean states most only for linear orders).
 

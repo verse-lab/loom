@@ -66,6 +66,13 @@ Assertions use Lean's `LE`, `Min`, and `Max` with the `Std.IsPartialOrder`,
 `CompleteLattice` and `CompleteBooleanAlgebra`, plus the scoped notation `⊤`,
 `⊥`, `⊓`, `⊔`, `⨅`, `⨆`, `⇨`, and `ᶜ`.
 `⌜p⌝` uses `Loom.Order.embed`; continuations use `Loom.Cont`/`Loom.ContT`.
+
+Loom uses Lean's module system. Definitions are exposed; tactics, attributes,
+and other metaprograms live in `meta` sections and import Lean only with
+`meta import`. Non-module files can import Loom unchanged. An executable whose
+import chain consists of modules therefore links no Lean elaborator code;
+`tests/native` checks this for the extraction pipeline.
+
 Existing consumers that import mathlib themselves must require it directly;
 Veil's companion migration and full downstream validation remain deferred.
 
