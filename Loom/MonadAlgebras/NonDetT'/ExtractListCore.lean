@@ -162,10 +162,10 @@ class LawfulMonadFlatMapGo (p : l → l → Prop)  -- what about equality? `≤`
   go_sound : ∀ α (a : m α) post,
     p (wp a post) (wp (inst.go a) post)
 
-instance [inst : LawfulMonadFlatMapGo m n l Eq] : LawfulMonadFlatMapGo m n l Loom.Order.Preorder.le where
+instance [inst : LawfulMonadFlatMapGo m n l Eq] : LawfulMonadFlatMapGo m n l LE.le where
   go_sound := by intro α a post ; rw [inst.go_sound α a post]
 
-instance [inst : LawfulMonadFlatMapGo m n l Eq] : LawfulMonadFlatMapGo m n l Loom.Order.ge where
+instance [inst : LawfulMonadFlatMapGo m n l Eq] : LawfulMonadFlatMapGo m n l GE.ge where
   go_sound := by intro α a post ; rw [inst.go_sound α a post]
 
 end
@@ -407,10 +407,10 @@ instance [MAlgOrdered m (a → l)] [instl : LawfulMonadFlatMapSup m (a → l) (r
 
 variable [MAlgOrdered m l] [instl : LawfulMonadFlatMapSup m l Eq]
 
-instance : LawfulMonadFlatMapSup m l Loom.Order.Preorder.le where
+instance : LawfulMonadFlatMapSup m l LE.le where
   sound := by intro α a post ; rw [instl.sound a post]
 
-instance : LawfulMonadFlatMapSup m l Loom.Order.ge where
+instance : LawfulMonadFlatMapSup m l GE.ge where
   sound := by intro α a post ; rw [instl.sound a post]
 
 end Basic

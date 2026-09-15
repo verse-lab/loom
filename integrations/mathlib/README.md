@@ -51,16 +51,10 @@ its former global `Monoid (List κ)` instance. Existing mathlib writer clients
 can use `writerToLoom` and apply the migrated `Loom.WriterT.wp_eq` theorem.
 The root package does not provide algebra instances for mathlib's `WriterT`.
 
-`import LoomMathlib.Order` exposes explicit conversions from mathlib preorders,
-lattices, complete lattices, Boolean algebras, and complete Boolean algebras.
-For example, use `letI := LoomMathlib.completeLatticeOfMathlib α` to apply a
-Loom order theorem to an existing mathlib model. All operations are preserved,
-including indexed bounds. Use `open scoped Loom.Order` for `≤`, `⊓`, and
-`⊔` (and the usual bound, implication, and complement notation). In this
-scope those symbols select Loom operations. Use qualified mathlib names such
-as `_root_.LE.le` or `_root_.Min.min` to compare the two hierarchies in one
-expression; outside the scope, mathlib notation is unchanged. Numeric
-comparisons continue to use their ordinary Lean relation.
+`import LoomMathlib.Order` exposes explicit conversions from mathlib complete
+lattices and complete Boolean algebras, e.g.
+`letI := LoomMathlib.completeLatticeOfMathlib α`. Loom uses Lean's `LE`, `Min`,
+and `Max`, which mathlib shares, so `≤`, `⊓`, and `⊔` are the same operations.
 
 `import LoomMathlib` exports all three integration modules. The adapters do
 not install global conversion instances.

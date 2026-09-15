@@ -61,12 +61,10 @@ use Loom's own control and assertion interfaces. Generic complete lattices and
 Boolean algebras remain supported, including proposition, dependent-function,
 and continuation instances. Computational fixed points still use `Lean.Order`.
 
-Open `Loom.Order` to use its classes and scoped assertion notation: `≤`, `≥`,
-`⊤`, `⊥`, `⊓`, `⊔`, `⨅`, `⨆`, `⇨`, and `ᶜ`. In files also using
-mathlib, prefer `open scoped Loom.Order` and qualified class names. The scope
-selects Loom's operations for these symbols; use qualified mathlib operations
-when both are needed in the same expression. Numeric comparisons still use
-Lean's usual relation.
+Assertions use Lean's `LE`, `Min`, and `Max` with the `Std.IsPartialOrder`,
+`Std.LawfulOrderInf`, and `Std.LawfulOrderSup` laws. `Loom.Order` adds only
+`CompleteLattice` and `CompleteBooleanAlgebra`, plus the scoped notation `⊤`,
+`⊥`, `⊓`, `⊔`, `⨅`, `⨆`, `⇨`, and `ᶜ`.
 `⌜p⌝` uses `Loom.Order.embed`; continuations use `Loom.Cont`/`Loom.ContT`.
 Existing consumers that import mathlib themselves must require it directly;
 Veil's companion migration and full downstream validation remain deferred.
@@ -86,7 +84,7 @@ See the [migration plan](docs/mathlib-removal-plan.md) and
 - `Loom/MonadUtil.lean` and `Loom/SpecMonad.lean`: shared monad utilities and
   specification monads.
 - `Loom/Control/`: standalone continuation, writer, and logging foundations.
-- `Loom/Order/`: standalone assertion order, lattices, Boolean laws, and models.
+- `Loom/Order/`: complete lattices and Boolean algebras over Lean's order classes.
 - `Loom/MonadAlgebras/Defs.lean` and `Instances/`: monad algebras and instances
   for the supported effects.
 - `Loom/MonadAlgebras/WP/`: weakest-precondition semantics, shared attributes,

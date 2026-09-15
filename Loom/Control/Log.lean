@@ -25,6 +25,7 @@ theorem append_assoc (a b c : ω) : append (append a b) c = append a (append b c
   Std.LawfulRightIdentity.right_id a
 end LogMonoid
 
+@[inline]
 instance : LogMonoid (List α) where
   empty := []
   append := List.append

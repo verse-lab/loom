@@ -3,8 +3,7 @@ import Lean
 
 namespace Loom.Order
 
-attribute [refl] le_refl ge_refl
-attribute [congr] iInf_congr_prop iSup_congr_prop
+attribute [scoped refl] Std.le_refl
 
 scoped notation (priority := high) "⊤" => top
 scoped notation (priority := high) "⊥" => bot

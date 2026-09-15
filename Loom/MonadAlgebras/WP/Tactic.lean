@@ -3,7 +3,7 @@ import Loom.MonadAlgebras.WP.Attr
 open Loom Loom.Order
 
 @[loomLogicSimp]
-theorem leE (l : Type u) [PartialOrder l] (a b : α -> l) : a ≤ b ↔ ∀ x, a x ≤ b x := by
+theorem leE (l : Type u) [CompleteLattice l] (a b : α -> l) : a ≤ b ↔ ∀ x, a x ≤ b x := by
   rfl
 @[loomLogicSimp]
 theorem lePropE (a b : Prop) : (a ≤ b) = (a → b) := by

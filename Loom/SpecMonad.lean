@@ -1,17 +1,10 @@
-import Loom.Order.Defs
 import Init.Control.Lawful
-
-open scoped Loom.Order
 
 universe u v w
 
 variable (m : Type u -> Type w) (w : Type u -> Type v)
 
-class PreOrderFunctor where preord : (α : Type u) -> Loom.Order.Preorder (w α)
-instance [inst: (α : Type u) -> Loom.Order.Preorder (w α)] : PreOrderFunctor w := ⟨inst⟩
-instance (α : Type u) [inst: PreOrderFunctor w] : Loom.Order.Preorder (w α) := inst.preord α
-
-class MonadOrder extends Monad w, PreOrderFunctor w where
+class MonadOrder [∀ α, LE (w α)] extends Monad w where
   bind_le {α : Type u} {β : Type u} (x y : w α) (f g : α -> w β) :
     x ≤ y → (∀ a, f a ≤ g a) → bind x f ≤ bind y g
 

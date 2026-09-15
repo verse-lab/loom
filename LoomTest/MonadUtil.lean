@@ -7,12 +7,12 @@ open scoped Loom.Order
 
 namespace LoomTest.MonadUtil
 
--- The utilities retain preorder-only assumptions and independent universes.
-example {t : Type v} [Loom.Order.Preorder t] : LawfulMonad (W t) := inferInstance
-example {t : Type v} {α : Type u} [Loom.Order.Preorder t] (a : α) : W t α := pure a
-example [Loom.Order.BooleanAlgebra t] (c : Loom.Cont t α) :
+-- The utilities need only a relation and allow independent universes.
+example {t : Type v} [LE t] : LawfulMonad (W t) := inferInstance
+example {t : Type v} {α : Type u} [LE t] (a : α) : W t α := pure a
+example [Loom.Order.CompleteBooleanAlgebra t] (c : Loom.Cont t α) :
     c.inv.inv = c := Loom.Cont.inv_inv c
-example [Loom.Order.BooleanAlgebra t] {c : Loom.Cont t α} (h : c.monotone) :
+example [Loom.Order.CompleteBooleanAlgebra t] {c : Loom.Cont t α} (h : c.monotone) :
     c.inv.monotone := Loom.Cont.monotone_inv h
 
 def both : W Prop Bool := ⟨fun p => p true ∧ p false,
@@ -35,12 +35,10 @@ instance : Monad EqBox where
   pure := id
   bind x f := f x
 
+instance : LE (EqBox α) := ⟨Eq⟩
+
 instance : MonadOrder EqBox where
   toMonad := inferInstance
-  preord _ := {
-    le := Eq
-    le_refl := fun _ => rfl
-    le_trans _ _ _ := Eq.trans }
   bind_le := by
     intro α β x y f g h k
     cases h

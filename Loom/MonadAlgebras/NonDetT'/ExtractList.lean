@@ -396,8 +396,8 @@ namespace AngelicChoice
 include h
 
 theorem extract_list_refines_wp
-  [instl : LawfulMonadFlatMapGo m m' l Loom.Order.ge]
-  [instl2 : LawfulMonadFlatMapSup m' l Loom.Order.ge]
+  [instl : LawfulMonadFlatMapGo m m' l GE.ge]
+  [instl2 : LawfulMonadFlatMapSup m' l GE.ge]
   (findOf_sound : ∀ {τ : Type u} (p : τ → Prop) (ec : ExtCandidates findable κ p) x,
     x ∈ findOf p ec () → p x) :
   wp s' post ≤ wp s post := by
@@ -406,7 +406,7 @@ theorem extract_list_refines_wp
   | @vis β x f f' h ih =>
     simp [NonDetT.wp_vis, wp_bind]
     have tmp := instl.go_sound _ x
-    simp only [Loom.Order.ge_iff_le] at tmp
+    simp only [ge_iff_le] at tmp
     apply le_trans (tmp _)
     exact wp_cons _ _ _ ih
   | @pickCont τ p f f' extcd h ih =>
@@ -415,7 +415,7 @@ theorem extract_list_refines_wp
     specialize findOf_sound p extcd
     generalize (findOf p extcd ()) = lis at findOf_sound ⊢
     have tmp := @instl2.sound
-    simp only [Loom.Order.ge_iff_le] at tmp
+    simp only [ge_iff_le] at tmp
     apply le_trans (tmp _ _) ; rw [iSup_list_map] ; simp only [wp_bind, LawfulMonadPersistentLog.log_sound]
     simp
     intro a hin ; apply le_trans (ih a)
@@ -425,12 +425,12 @@ theorem extract_list_refines_wp
     split <;> rename_i h
     · simpa [h] using ih
     · have tmp := @instl2.sound α [] post
-      simp [Loom.Order.ge_iff_le] at tmp
+      simp [ge_iff_le] at tmp
       rw [tmp] ; simp
 
 theorem wp_refines_extract_list
-  [instl : LawfulMonadFlatMapGo m m' l Loom.Order.Preorder.le]
-  [instl2 : LawfulMonadFlatMapSup m' l Loom.Order.Preorder.le]
+  [instl : LawfulMonadFlatMapGo m m' l LE.le]
+  [instl2 : LawfulMonadFlatMapSup m' l LE.le]
   (findOf_complete : ∀ {τ : Type u} (p : τ → Prop) (ec : ExtCandidates findable κ p) x,
     p x → x ∈ findOf p ec ()) :
   wp s post ≤ wp s' post := by

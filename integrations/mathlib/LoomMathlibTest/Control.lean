@@ -26,14 +26,12 @@ example [Monad m] [LawfulMonad m] :
 end GenericLog
 
 section GenericContinuation
-variable [BooleanAlgebra t]
-local instance : Loom.Order.BooleanAlgebra t := LoomMathlib.booleanAlgebraOfMathlib t
+variable [CompleteBooleanAlgebra t]
+local instance : Loom.Order.CompleteBooleanAlgebra t := LoomMathlib.completeBooleanAlgebraOfMathlib t
 
 example (c : Cont t α) (p : α → t) :
     Loom.Cont.inv (LoomMathlib.contToLoom c) p =
       @Compl.compl t _ (c (fun a => @Compl.compl t _ (p a))) := rfl
 end GenericContinuation
 
--- Importing both APIs leaves mathlib's ordinary relation and Loom's relation usable.
-example (p q : Prop) : (p ≤ q) = Loom.Order.Preorder.le p q := rfl
 example : LawfulMonad (W Prop) := inferInstance

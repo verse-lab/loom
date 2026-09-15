@@ -90,7 +90,7 @@ def divergingExtracted : ConstrainedExtractResult Bool DivM Target
 abbrev VeilTarget (κ ε ρ σ : Type) :=
   ReaderT ρ (ExceptT ε (StateT σ (TsilT (PeDivM (List κ)))))
 
-open AngelicChoice TotalCorrectness in
+open Loom.Order AngelicChoice TotalCorrectness in
 example {κ ε ρ σ : Type} {hd : ε → Prop} [IsHandler hd] :
     LawfulMonadPersistentLog κ (VeilTarget κ ε ρ σ) (ρ → σ → Prop) where
   log_sound := by

@@ -1,8 +1,7 @@
 import Loom.Order.Control
 
-open Loom.Order
-
 namespace LoomTest.Order
+open Loom.Order
 
 /-- A complete lattice whose middle element has no Boolean complement. -/
 inductive Chain where
@@ -14,7 +13,15 @@ namespace Chain
 def rank : Chain → Nat
   | low => 0 | middle => 1 | high => 2
 
-instance : Lattice Chain where
+noncomputable def meet (s : Chain → Prop) : Chain := by
+  classical
+  exact if s low then low else if s middle then middle else high
+
+noncomputable def join (s : Chain → Prop) : Chain := by
+  classical
+  exact if s high then high else if s middle then middle else low
+
+noncomputable instance : CompleteLattice Chain where
   le a b := rank a ≤ rank b
   le_refl _ := Nat.le_refl _
   le_trans _ _ _ := Nat.le_trans
@@ -30,24 +37,10 @@ instance : Lattice Chain where
     intro a b c
     change (rank _ ≤ rank _) ↔ (rank _ ≤ rank _) ∧ (rank _ ≤ rank _)
     cases a <;> cases b <;> cases c <;> decide
-
-instance (a b : Chain) : Decidable (a ≤ b) :=
-  inferInstanceAs (Decidable (rank a ≤ rank b))
-
-noncomputable def meet (s : Chain → Prop) : Chain := by
-  classical
-  exact if s low then low else if s middle then middle else high
-
-noncomputable def join (s : Chain → Prop) : Chain := by
-  classical
-  exact if s high then high else if s middle then middle else low
-
-noncomputable instance : CompleteLattice Chain where
-  toLattice := inferInstance
   top := high
   bot := low
-  le_top := by intro a; cases a <;> decide
-  bot_le := by intro a; cases a <;> decide
+  le_top := by intro a; show rank a ≤ 2; cases a <;> decide
+  bot_le := by intro a; show 0 ≤ rank a; cases a <;> decide
   sInf := meet
   sSup := join
   sInf_le := by
@@ -92,25 +85,30 @@ example : ¬ ∃ c : Chain, middle ⊓ c = bot ∧ middle ⊔ c = top := by
 example : iSup (fun b : Bool => if b then middle else low) = middle := by
   apply le_antisymm
   · apply iSup_le
-    intro b; cases b <;> decide
+    intro b; show rank _ ≤ rank middle; cases b <;> decide
   · exact le_iSup (fun b : Bool => if b then middle else low) true
 
 example : iInf (fun _ : Empty => middle) = high := iInf_of_empty Empty.elim _
 
 end Chain
 
--- Small assumptions remain enough for wrapper instances.
-example [Preorder α] : Preorder (Loom.Cont α Nat) := inferInstance
-example [BooleanAlgebra α] : BooleanAlgebra (Loom.Cont α Nat) := inferInstance
+-- Wrapper instances, and the standard laws describe Loom's operations.
+example [LE α] : LE (Id α) := inferInstance
+example [CompleteLattice α] : CompleteLattice (Id α) := inferInstance
+example [CompleteBooleanAlgebra α] : CompleteBooleanAlgebra (Id α) := inferInstance
 example [CompleteLattice α] : CompleteLattice (Loom.Cont α Nat) := inferInstance
+example [CompleteBooleanAlgebra α] : CompleteBooleanAlgebra (Loom.Cont α Nat) := inferInstance
+example [CompleteLattice α] : Std.IsPartialOrder α := inferInstance
+example [CompleteLattice α] : Std.LawfulOrderInf α := inferInstance
+example [CompleteLattice α] : Std.LawfulOrderSup α := inferInstance
 
--- Both parent paths preserve precisely the same operations and order.
-example (h : CompleteBooleanAlgebra α) :
-    h.toCompleteLattice.toLattice = h.toBooleanAlgebra.toLattice := rfl
-example (h : CompleteBooleanAlgebra α) :
-    h.toCompleteLattice.toOrderTop = h.toBooleanAlgebra.toOrderTop := rfl
-example (h : CompleteBooleanAlgebra α) :
-    h.toCompleteLattice.toOrderBot = h.toBooleanAlgebra.toOrderBot := rfl
+-- Every instance path yields the same operations.
+example {β : Nat → Type} [∀ i, CompleteBooleanAlgebra (β i)] :
+    (piCompleteBooleanAlgebra (α := β)).toCompleteLattice = piCompleteLattice := rfl
+example [CompleteLattice α] :
+    (inferInstance : LE (Id α)) = (inferInstance : CompleteLattice (Id α)).toLE := rfl
+example [CompleteBooleanAlgebra α] : (inferInstance : CompleteLattice (Loom.Cont α Nat)) =
+    (inferInstance : CompleteBooleanAlgebra (Loom.Cont α Nat)).toCompleteLattice := rfl
 
 -- Nested state/reader predicates and genuinely dependent carrier families.
 example : CompleteBooleanAlgebra (Nat → Bool → Prop) := inferInstance
@@ -139,25 +137,8 @@ example [CompleteBooleanAlgebra α] (a : α) (f : Sort u → α) :
 
 end LoomTest.Order
 
--- Existing Std laws can be supplied directly, without reproving Loom copies.
-example {α : Type u} [r : _root_.LE α] [Std.IsPreorder α] : Loom.Order.Preorder α where
-  le := r.le
-  toIsPreorder := inferInstanceAs (Std.IsPreorder α)
-
-example {α : Type u} [r : _root_.LE α] [Std.IsPartialOrder α]
-    [Min α] [Max α] [Std.LawfulOrderInf α] [Std.LawfulOrderSup α] :
-    Loom.Order.Lattice α where
-  le := r.le
-  toIsPartialOrder := inferInstanceAs (Std.IsPartialOrder α)
-  toMin := inferInstance
-  toMax := inferInstance
-  toLawfulOrderInf := inferInstanceAs (Std.LawfulOrderInf α)
-  toLawfulOrderSup := inferInstanceAs (Std.LawfulOrderSup α)
-
--- The inherited standard laws describe precisely the selected assertion operations.
-example {α : Type u} [Loom.Order.Lattice α] :
-    @Std.IsPartialOrder α ⟨Loom.Order.LE.le⟩ := inferInstance
-example {α : Type u} [Loom.Order.Lattice α] :
-    @Std.LawfulOrderInf α Loom.Order.Lattice.toMin ⟨Loom.Order.LE.le⟩ := inferInstance
-example {α : Type u} [Loom.Order.Lattice α] :
-    @Std.LawfulOrderSup α Loom.Order.Lattice.toMax ⟨Loom.Order.LE.le⟩ := inferInstance
+-- Order simp lemmas, including Lean's `min`/`max` laws, need `open Loom.Order`.
+example {α : Type} [Loom.Order.CompleteLattice α] (a b c : α) :
+    a ≤ min b c ↔ a ≤ b ∧ a ≤ c := by
+  fail_if_success simp
+  exact Std.le_min_iff

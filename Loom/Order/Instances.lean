@@ -2,51 +2,29 @@ import Loom.Order.BooleanAlgebra
 
 namespace Loom.Order
 
-local infix:50 (priority := high + 2) " ≤ " => LE.le
-
 universe u v w
 
-instance propPreorder : Preorder Prop where
+instance propCompleteBooleanAlgebra : CompleteBooleanAlgebra Prop where
   le p q := p → q
   le_refl _ := id
   le_trans _ _ _ h k := k ∘ h
-
-instance propPartialOrder : PartialOrder Prop where
-  toPreorder := propPreorder
   le_antisymm _ _ h k := propext ⟨h, k⟩
-
-instance propOrderTop : OrderTop Prop where
-  top := True
-  le_top _ _ := True.intro
-
-instance propOrderBot : OrderBot Prop where
-  bot := False
-  bot_le _ := False.elim
-
-instance propLattice : Lattice Prop where
-  toPartialOrder := propPartialOrder
   min := And
   max := Or
   le_min_iff _ _ _ := ⟨fun h => ⟨fun x => (h x).1, fun x => (h x).2⟩,
     fun ⟨h, k⟩ x => ⟨h x, k x⟩⟩
   max_le_iff _ _ _ := ⟨fun h => ⟨fun x => h (.inl x), fun x => h (.inr x)⟩,
     fun ⟨h, k⟩ x => x.elim h k⟩
-
-instance propCompleteLattice : CompleteLattice Prop where
-  toLattice := propLattice
-  toOrderTop := propOrderTop
-  toOrderBot := propOrderBot
+  top := True
+  bot := False
+  le_top _ _ := True.intro
+  bot_le _ := False.elim
   sInf s := ∀ p, s p → p
   sSup s := ∃ p, s p ∧ p
   sInf_le h k := k _ h
   le_sInf h ha p hp := h p hp ha
   le_sSup h ha := ⟨_, h, ha⟩
   sSup_le h := fun ⟨p, hp, ha⟩ => h p hp ha
-
-instance propBooleanAlgebra : BooleanAlgebra Prop where
-  toLattice := propLattice
-  toOrderTop := propOrderTop
-  toOrderBot := propOrderBot
   compl := Not
   himp p q := p → q
   inf_sup_left _ _ _ := propext and_or_left
@@ -60,49 +38,22 @@ instance propBooleanAlgebra : BooleanAlgebra Prop where
     · intro h hp
       exact h.elim (fun hn => (hn hp).elim) id
 
-instance propCompleteBooleanAlgebra : CompleteBooleanAlgebra Prop :=
-  { propCompleteLattice, propBooleanAlgebra with }
-
-instance piLE {ι : Type u} {α : ι → Type v} [∀ i, LE (α i)] :
-    LE ((i : ι) → α i) where
-  le f g := ∀ i, f i ≤ g i
-
-instance piPreorder {ι : Type u} {α : ι → Type v} [∀ i, Preorder (α i)] :
-    Preorder ((i : ι) → α i) where
-  toLE := piLE
-  le_refl _ _ := le_refl _
-  le_trans _ _ _ h k i := le_trans (h i) (k i)
-
-instance piPartialOrder {ι : Type u} {α : ι → Type v} [∀ i, PartialOrder (α i)] :
-    PartialOrder ((i : ι) → α i) where
-  toPreorder := piPreorder
-  le_antisymm _ _ h k := funext fun i => le_antisymm (h i) (k i)
-
-instance piOrderTop {ι : Type u} {α : ι → Type v}
-    [∀ i, LE (α i)] [∀ i, OrderTop (α i)] : OrderTop ((i : ι) → α i) where
-  top _ := top
-  le_top _ _ := le_top _
-
-instance piOrderBot {ι : Type u} {α : ι → Type v}
-    [∀ i, LE (α i)] [∀ i, OrderBot (α i)] : OrderBot ((i : ι) → α i) where
-  bot _ := bot
-  bot_le _ _ := bot_le _
-
-instance piLattice {ι : Type u} {α : ι → Type v} [∀ i, Lattice (α i)] :
-    Lattice ((i : ι) → α i) where
-  toPartialOrder := piPartialOrder
-  min f g i := f i ⊓ g i
-  max f g i := f i ⊔ g i
-  le_min_iff _ _ _ := ⟨fun h => ⟨fun i => le_trans (h i) (inf_le_left ..),
-    fun i => le_trans (h i) (inf_le_right ..)⟩, fun ⟨h, k⟩ i => le_inf (h i) (k i)⟩
-  max_le_iff _ _ _ := ⟨fun h => ⟨fun i => le_trans (le_sup_left ..) (h i),
-    fun i => le_trans (le_sup_right ..) (h i)⟩, fun ⟨h, k⟩ i => sup_le (h i) (k i)⟩
-
 instance piCompleteLattice {ι : Type u} {α : ι → Type v} [∀ i, CompleteLattice (α i)] :
     CompleteLattice ((i : ι) → α i) where
-  toLattice := piLattice
-  toOrderTop := piOrderTop
-  toOrderBot := piOrderBot
+  le f g := ∀ i, f i ≤ g i
+  le_refl _ _ := le_refl _
+  le_trans _ _ _ h k i := le_trans (h i) (k i)
+  le_antisymm _ _ h k := funext fun i => le_antisymm (h i) (k i)
+  min f g i := f i ⊓ g i
+  max f g i := f i ⊔ g i
+  le_min_iff _ _ _ := ⟨fun h => ⟨fun i => (Std.le_min_iff.mp (h i)).1,
+    fun i => (Std.le_min_iff.mp (h i)).2⟩, fun ⟨h, k⟩ i => le_inf (h i) (k i)⟩
+  max_le_iff _ _ _ := ⟨fun h => ⟨fun i => (Std.max_le_iff.mp (h i)).1,
+    fun i => (Std.max_le_iff.mp (h i)).2⟩, fun ⟨h, k⟩ i => sup_le (h i) (k i)⟩
+  top _ := top
+  bot _ := bot
+  le_top _ _ := le_top _
+  bot_le _ _ := bot_le _
   sInf s i := sInf (fun a => ∃ f, s f ∧ f i = a)
   sSup s i := sSup (fun a => ∃ f, s f ∧ f i = a)
   sInf_le h _ := sInf_le ⟨_, h, rfl⟩
@@ -110,11 +61,9 @@ instance piCompleteLattice {ι : Type u} {α : ι → Type v} [∀ i, CompleteLa
   le_sSup h _ := le_sSup ⟨_, h, rfl⟩
   sSup_le h i := sSup_le fun _ ⟨f, hf, hi⟩ => hi ▸ h f hf i
 
-instance piBooleanAlgebra {ι : Type u} {α : ι → Type v} [∀ i, BooleanAlgebra (α i)] :
-    BooleanAlgebra ((i : ι) → α i) where
-  toLattice := piLattice
-  toOrderTop := piOrderTop
-  toOrderBot := piOrderBot
+instance piCompleteBooleanAlgebra {ι : Type u} {α : ι → Type v}
+    [∀ i, CompleteBooleanAlgebra (α i)] : CompleteBooleanAlgebra ((i : ι) → α i) where
+  toCompleteLattice := piCompleteLattice
   compl f i := compl (f i)
   himp f g i := himp (f i) (g i)
   inf_sup_left _ _ _ := funext fun _ => inf_sup_left ..
@@ -122,50 +71,47 @@ instance piBooleanAlgebra {ι : Type u} {α : ι → Type v} [∀ i, BooleanAlge
   sup_compl_eq_top _ := funext fun _ => sup_compl_eq_top _
   himp_eq _ _ := funext fun _ => himp_eq ..
 
-instance piCompleteBooleanAlgebra {ι : Type u} {α : ι → Type v}
-    [∀ i, CompleteBooleanAlgebra (α i)] : CompleteBooleanAlgebra ((i : ι) → α i) :=
-  { piCompleteLattice, piBooleanAlgebra with }
+@[scoped simp] theorem prop_le (p q : Prop) : (p ≤ q) = (p → q) := rfl
+@[scoped simp] theorem prop_inf (p q : Prop) : (p ⊓ q) = (p ∧ q) := rfl
+@[scoped simp] theorem prop_sup (p q : Prop) : (p ⊔ q) = (p ∨ q) := rfl
+@[scoped simp] theorem prop_himp (p q : Prop) : himp p q = (p → q) := rfl
+@[scoped simp] theorem prop_compl (p : Prop) : compl p = ¬p := rfl
+@[scoped simp] theorem prop_top : (top : Prop) = True := rfl
+@[scoped simp] theorem prop_bot : (bot : Prop) = False := rfl
 
-@[simp] theorem prop_le (p q : Prop) : (p ≤ q) = (p → q) := rfl
-
-theorem pi_le_iff {ι : Type u} {α : ι → Type v} [∀ i, Preorder (α i)]
-    (f g : (i : ι) → α i) : (f ≤ g) ↔ ∀ i, f i ≤ g i := Iff.rfl
-@[simp] theorem prop_inf (p q : Prop) : (p ⊓ q) = (p ∧ q) := rfl
-@[simp] theorem prop_sup (p q : Prop) : (p ⊔ q) = (p ∨ q) := rfl
-@[simp] theorem prop_himp (p q : Prop) : himp p q = (p → q) := rfl
-@[simp] theorem prop_compl (p : Prop) : compl p = ¬p := rfl
-@[simp] theorem prop_top : (top : Prop) = True := rfl
-@[simp] theorem prop_bot : (bot : Prop) = False := rfl
-
-@[simp] theorem prop_iInf {ι : Sort u} (f : ι → Prop) : iInf f = (∀ i, f i) := by
+@[scoped simp] theorem prop_iInf {ι : Sort u} (f : ι → Prop) : iInf f = (∀ i, f i) := by
   apply propext
   exact ⟨fun h i => h _ ⟨i, rfl⟩, fun h _ ⟨i, hi⟩ => hi ▸ h i⟩
 
-@[simp] theorem prop_iSup {ι : Sort u} (f : ι → Prop) : iSup f = (∃ i, f i) := by
+@[scoped simp] theorem prop_iSup {ι : Sort u} (f : ι → Prop) : iSup f = (∃ i, f i) := by
   apply propext
   exact ⟨fun ⟨_, ⟨i, hi⟩, h⟩ => ⟨i, hi.symm ▸ h⟩, fun ⟨i, h⟩ => ⟨_, ⟨i, rfl⟩, h⟩⟩
 
-@[simp] theorem pi_inf_apply {ι : Type u} {α : ι → Type v} [∀ i, Lattice (α i)]
-    (f g : (i : ι) → α i) (i : ι) : (f ⊓ g) i = f i ⊓ g i := rfl
+section Pi
+variable {ι : Type u} {α : ι → Type v}
 
-@[simp] theorem pi_sup_apply {ι : Type u} {α : ι → Type v} [∀ i, Lattice (α i)]
-    (f g : (i : ι) → α i) (i : ι) : (f ⊔ g) i = f i ⊔ g i := rfl
+theorem pi_le_iff [∀ i, CompleteLattice (α i)] (f g : (i : ι) → α i) :
+    (f ≤ g) ↔ ∀ i, f i ≤ g i := Iff.rfl
 
-@[simp] theorem pi_compl_apply {ι : Type u} {α : ι → Type v} [∀ i, BooleanAlgebra (α i)]
-    (f : (i : ι) → α i) (i : ι) : compl f i = compl (f i) := rfl
+@[scoped simp] theorem pi_inf_apply [∀ i, CompleteLattice (α i)] (f g : (i : ι) → α i) (i : ι) :
+    (f ⊓ g) i = f i ⊓ g i := rfl
 
-@[simp] theorem pi_himp_apply {ι : Type u} {α : ι → Type v} [∀ i, BooleanAlgebra (α i)]
-    (f g : (i : ι) → α i) (i : ι) : himp f g i = himp (f i) (g i) := rfl
+@[scoped simp] theorem pi_sup_apply [∀ i, CompleteLattice (α i)] (f g : (i : ι) → α i) (i : ι) :
+    (f ⊔ g) i = f i ⊔ g i := rfl
 
-@[simp] theorem pi_top_apply {ι : Type u} {α : ι → Type v}
-    [∀ i, LE (α i)] [∀ i, OrderTop (α i)] (i : ι) :
+@[scoped simp] theorem pi_top_apply [∀ i, CompleteLattice (α i)] (i : ι) :
     (top : (i : ι) → α i) i = top := rfl
 
-@[simp] theorem pi_bot_apply {ι : Type u} {α : ι → Type v}
-    [∀ i, LE (α i)] [∀ i, OrderBot (α i)] (i : ι) :
+@[scoped simp] theorem pi_bot_apply [∀ i, CompleteLattice (α i)] (i : ι) :
     (bot : (i : ι) → α i) i = bot := rfl
 
-@[simp] theorem pi_iInf_apply {ι : Type u} {α : ι → Type v} [∀ i, CompleteLattice (α i)]
+@[scoped simp] theorem pi_compl_apply [∀ i, CompleteBooleanAlgebra (α i)] (f : (i : ι) → α i) (i : ι) :
+    compl f i = compl (f i) := rfl
+
+@[scoped simp] theorem pi_himp_apply [∀ i, CompleteBooleanAlgebra (α i)] (f g : (i : ι) → α i) (i : ι) :
+    himp f g i = himp (f i) (g i) := rfl
+
+@[scoped simp] theorem pi_iInf_apply [∀ i, CompleteLattice (α i)]
     {κ : Sort w} (f : κ → (i : ι) → α i) (i : ι) :
     iInf f i = iInf (fun k => f k i) := by
   apply le_antisymm
@@ -175,7 +121,7 @@ theorem pi_le_iff {ι : Type u} {α : ι → Type v} [∀ i, Preorder (α i)]
     rintro a ⟨g, ⟨k, rfl⟩, rfl⟩
     exact iInf_le (fun k => f k i) k
 
-@[simp] theorem pi_iSup_apply {ι : Type u} {α : ι → Type v} [∀ i, CompleteLattice (α i)]
+@[scoped simp] theorem pi_iSup_apply [∀ i, CompleteLattice (α i)]
     {κ : Sort w} (f : κ → (i : ι) → α i) (i : ι) :
     iSup f i = iSup (fun k => f k i) := by
   apply le_antisymm
@@ -184,5 +130,7 @@ theorem pi_le_iff {ι : Type u} {α : ι → Type v} [∀ i, Preorder (α i)]
     rintro a ⟨g, ⟨k, rfl⟩, rfl⟩
     exact le_iSup (fun k => f k i) k
   · exact iSup_le fun k => le_iSup f k i
+
+end Pi
 
 end Loom.Order

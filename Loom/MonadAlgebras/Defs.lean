@@ -10,7 +10,7 @@ universe u v w
 /- Prop embedding into PartialOrder -/
 
 open Classical in
-noncomputable def Loom.Order.embed {l : Type u} [inst: Loom.Order.LE l] [OrderTop l] [OrderBot l] : Prop -> l := fun p =>
+noncomputable def Loom.Order.embed {l : Type u} [CompleteLattice l] : Prop -> l := fun p =>
   if p then ⊤ else ⊥
 
 macro "⌜" p:term "⌝" : term => `(Loom.Order.embed $p)
@@ -20,21 +20,21 @@ macro "⌜" p:term "⌝" : term => `(Loom.Order.embed $p)
   | _ => throw ()
 
 @[simp]
-theorem trueE (l : Type v) [inst: Loom.Order.LE l] [OrderTop l] [OrderBot l] : ⌜True⌝ = (⊤ : l) := by
+theorem trueE (l : Type v) [CompleteLattice l] : ⌜True⌝ = (⊤ : l) := by
   simp [Loom.Order.embed]
 
 @[simp]
-theorem falseE (l : Type v) [inst: Loom.Order.LE l] [OrderTop l] [OrderBot l] : ⌜False⌝ = (⊥ : l) := by
+theorem falseE (l : Type v) [CompleteLattice l] : ⌜False⌝ = (⊥ : l) := by
   simp [Loom.Order.embed]
 
 open Classical in
-theorem Loom.Order.embed_imp {l : Type u} [inst: Loom.Order.LE l] [OrderTop l] [OrderBot l]
+theorem Loom.Order.embed_imp {l : Type u} [CompleteLattice l]
   (p₁ p₂ : Prop) : (p₁ -> p₂) -> ⌜p₁⌝ ≤ (⌜p₂⌝ : l) := by
   intro h
   by_cases h₁ : p₁ <;> by_cases h₂ : p₂ <;> simp_all [Loom.Order.embed]
 
 @[simp]
-theorem Loom.Order.embed_intro {l : Type u} [inst: Loom.Order.LE l] [OrderTop l] [OrderBot l]
+theorem Loom.Order.embed_intro {l : Type u} [CompleteLattice l]
   (p : Prop) (h : l) : (⌜p⌝ ≤ h) = (p -> ⊤ ≤ h) := by
     by_cases hp : p <;> simp [Loom.Order.embed, hp]
 
@@ -86,7 +86,7 @@ class MAlgOrdered (l : outParam (Type v)) [Monad m] [CompleteLattice l] where
 instance OfMAlgPartialOrdered {m : Type u -> Type v} {l : Type u} [Monad m] [CompleteLattice l] [mprop : MAlgOrdered m l] : MAlg m l where
   μ := MAlgOrdered.μ
   pure := MAlgOrdered.μ_ord_pure
-  bind := by intros; apply PartialOrder.le_antisymm
+  bind := by intros; apply le_antisymm
     <;> apply MAlgOrdered.μ_ord_bind
     <;> simp_all only [le_refl]
 

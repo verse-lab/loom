@@ -13,9 +13,9 @@ instance (σ : Type u) (l : Type u) (m : Type u -> Type v)
     solve_by_elim [MAlgOrdered.μ_ord_pure]
   μ_ord_bind := by
     intros α f g
-    simp +instances [Loom.Order.piLE]; intros le x r
+    simp [pi_le_iff]; intros le x r
     have leM := @inst.μ_ord_bind (α) (fun a => (· r) <$> f a r) (fun a => (· r) <$> g a r)
-    simp +instances only [Loom.Order.piLE, <-map_bind] at leM
+    simp only [pi_le_iff, <-map_bind] at leM
     apply leM; intro; apply le
 
 

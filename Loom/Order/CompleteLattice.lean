@@ -2,13 +2,15 @@ import Loom.Order.Defs
 
 namespace Loom.Order
 
-local infix:50 (priority := high + 2) " ≤ " => LE.le
-
 universe u v w
 
-/-- Bounds of arbitrary predicate-defined subsets. Indexed operations below
-use ranges, so their index sorts need not live in the carrier universe. -/
-class CompleteLattice (α : Type u) extends Lattice α, OrderTop α, OrderBot α where
+/-- Explicit bound operations keep concrete models such as `Prop` definitionally reducible. -/
+class CompleteLattice (α : Type u) extends LE α, Min α, Max α,
+    Std.IsPartialOrder α, Std.LawfulOrderInf α, Std.LawfulOrderSup α where
+  top : α
+  bot : α
+  le_top : ∀ a : α, a ≤ top
+  bot_le : ∀ a : α, bot ≤ a
   sInf : (α → Prop) → α
   sSup : (α → Prop) → α
   sInf_le : ∀ {s a}, s a → sInf s ≤ a
@@ -16,9 +18,49 @@ class CompleteLattice (α : Type u) extends Lattice α, OrderTop α, OrderBot α
   le_sSup : ∀ {s a}, s a → a ≤ sSup s
   sSup_le : ∀ {s a}, (∀ b, s b → b ≤ a) → sSup s ≤ a
 
-export CompleteLattice (sInf sSup sInf_le le_sInf le_sSup sSup_le)
+export CompleteLattice (top bot le_top bot_le sInf sSup sInf_le le_sInf le_sSup sSup_le)
+
+attribute [scoped simp] le_top bot_le
 
 variable {α : Type u} [CompleteLattice α]
+
+section Bounds
+variable {a : α}
+
+@[scoped simp] theorem top_le_iff : top ≤ a ↔ a = top :=
+  ⟨fun h => le_antisymm (le_top _) h, fun h => h ▸ le_refl _⟩
+
+@[scoped simp] theorem le_bot_iff : a ≤ bot ↔ a = bot :=
+  ⟨fun h => le_antisymm h (bot_le _), fun h => h ▸ le_refl _⟩
+
+theorem eq_top_iff : a = top ↔ top ≤ a := top_le_iff.symm
+theorem eq_bot_iff : a = bot ↔ a ≤ bot := le_bot_iff.symm
+
+@[scoped simp] theorem inf_top (a : α) : a ⊓ top = a :=
+  le_antisymm Std.min_le_left (le_inf (le_refl _) (le_top _))
+
+@[scoped simp] theorem top_inf (a : α) : top ⊓ a = a := by
+  rw [inf_comm, inf_top]
+
+@[scoped simp] theorem sup_bot (a : α) : a ⊔ bot = a :=
+  le_antisymm (sup_le (le_refl _) (bot_le _)) Std.left_le_max
+
+@[scoped simp] theorem bot_sup (a : α) : bot ⊔ a = a := by
+  rw [sup_comm, sup_bot]
+
+@[scoped simp] theorem inf_bot (a : α) : a ⊓ bot = bot :=
+  le_antisymm Std.min_le_right (bot_le _)
+
+@[scoped simp] theorem bot_inf (a : α) : bot ⊓ a = bot := by
+  rw [inf_comm, inf_bot]
+
+@[scoped simp] theorem sup_top (a : α) : a ⊔ top = top :=
+  le_antisymm (le_top _) Std.right_le_max
+
+@[scoped simp] theorem top_sup (a : α) : top ⊔ a = top := by
+  rw [sup_comm, sup_top]
+
+end Bounds
 
 def iInf {ι : Sort v} (f : ι → α) : α := sInf (fun a => ∃ i, f i = a)
 def iSup {ι : Sort v} (f : ι → α) : α := sSup (fun a => ∃ i, f i = a)
@@ -37,11 +79,11 @@ theorem iSup_le {ι : Sort v} {f : ι → α} {a : α}
     (h : ∀ i, f i ≤ a) : iSup f ≤ a :=
   sSup_le fun _ ⟨i, hi⟩ => hi ▸ h i
 
-@[simp] theorem le_iInf_iff {ι : Sort v} {f : ι → α} {a : α} :
+@[scoped simp] theorem le_iInf_iff {ι : Sort v} {f : ι → α} {a : α} :
     a ≤ iInf f ↔ ∀ i, a ≤ f i :=
   ⟨fun h i => le_trans h (iInf_le f i), le_iInf⟩
 
-@[simp] theorem iSup_le_iff {ι : Sort v} {f : ι → α} {a : α} :
+@[scoped simp] theorem iSup_le_iff {ι : Sort v} {f : ι → α} {a : α} :
     iSup f ≤ a ↔ ∀ i, f i ≤ a :=
   ⟨fun h i => le_trans (le_iSup f i) h, iSup_le⟩
 
@@ -52,10 +94,10 @@ theorem le_iSup_of_le {ι : Sort v} {f : ι → α} (i : ι) {a : α}
     (h : a ≤ f i) : a ≤ iSup f := le_trans h (le_iSup f i)
 
 theorem iInf_mono {ι : Sort v} {f g : ι → α} (h : ∀ i, f i ≤ g i) :
-    iInf f ≤ iInf g := le_iInf fun i => iInf_le_of_le (f := f) i (h i)
+    iInf f ≤ iInf g := le_iInf fun i => iInf_le_of_le i (h i)
 
 theorem iSup_mono {ι : Sort v} {f g : ι → α} (h : ∀ i, f i ≤ g i) :
-    iSup f ≤ iSup g := iSup_le fun i => le_iSup_of_le (f := g) i (h i)
+    iSup f ≤ iSup g := iSup_le fun i => le_iSup_of_le i (h i)
 
 theorem iInf_congr {ι : Sort v} {f g : ι → α} (h : ∀ i, f i = g i) :
     iInf f = iInf g := congrArg iInf (funext h)
@@ -63,38 +105,28 @@ theorem iInf_congr {ι : Sort v} {f g : ι → α} (h : ∀ i, f i = g i) :
 theorem iSup_congr {ι : Sort v} {f g : ι → α} (h : ∀ i, f i = g i) :
     iSup f = iSup g := congrArg iSup (funext h)
 
-/-- Congruence for proposition indices lets simplification rewrite bounded
-quantifier domains, including list membership and assumptions. -/
-theorem iInf_congr_prop {p q : Prop} {f : p → α} {g : q → α}
+@[scoped congr] theorem iInf_congr_prop {p q : Prop} {f : p → α} {g : q → α}
     (hpq : p ↔ q) (h : ∀ hq, f (hpq.mpr hq) = g hq) : iInf f = iInf g := by
   obtain rfl := propext hpq
   exact iInf_congr h
 
-theorem iSup_congr_prop {p q : Prop} {f : p → α} {g : q → α}
+@[scoped congr] theorem iSup_congr_prop {p q : Prop} {f : p → α} {g : q → α}
     (hpq : p ↔ q) (h : ∀ hq, f (hpq.mpr hq) = g hq) : iSup f = iSup g := by
   obtain rfl := propext hpq
   exact iSup_congr h
 
-theorem le_iInf₂ {ι : Sort v} {κ : ι → Sort w} {f : (i : ι) → κ i → α} {a : α}
-    (h : ∀ i j, a ≤ f i j) : a ≤ iInf (fun i => iInf (f i)) :=
-  le_iInf fun i => le_iInf (h i)
-
-theorem iSup_le₂ {ι : Sort v} {κ : ι → Sort w} {f : (i : ι) → κ i → α} {a : α}
-    (h : ∀ i j, f i j ≤ a) : iSup (fun i => iSup (f i)) ≤ a :=
-  iSup_le fun i => iSup_le (h i)
-
-@[simp] theorem iInf_top {ι : Sort v} : iInf (fun (_ : ι) => (top : α)) = top :=
+@[scoped simp] theorem iInf_top {ι : Sort v} : iInf (fun (_ : ι) => (top : α)) = top :=
   le_antisymm (le_top _) (le_iInf fun _ => le_refl _)
 
-@[simp] theorem iSup_bot {ι : Sort v} : iSup (fun (_ : ι) => (bot : α)) = bot :=
+@[scoped simp] theorem iSup_bot {ι : Sort v} : iSup (fun (_ : ι) => (bot : α)) = bot :=
   le_antisymm (iSup_le fun _ => le_refl _) (bot_le _)
 
-@[simp] theorem iInf_const {ι : Sort v} [Nonempty ι] (a : α) :
+@[scoped simp] theorem iInf_const {ι : Sort v} [Nonempty ι] (a : α) :
     iInf (fun (_ : ι) => a) = a := by
   obtain ⟨i⟩ := ‹Nonempty ι›
   exact le_antisymm (iInf_le _ i) (le_iInf fun _ => le_refl _)
 
-@[simp] theorem iSup_const {ι : Sort v} [Nonempty ι] (a : α) :
+@[scoped simp] theorem iSup_const {ι : Sort v} [Nonempty ι] (a : α) :
     iSup (fun (_ : ι) => a) = a := by
   obtain ⟨i⟩ := ‹Nonempty ι›
   exact le_antisymm (iSup_le fun _ => le_refl _) (le_iSup (fun (_ : ι) => a) i)
@@ -105,54 +137,45 @@ theorem iInf_of_empty {ι : Sort v} (empty : ι → False) (f : ι → α) : iIn
 theorem iSup_of_empty {ι : Sort v} (empty : ι → False) (f : ι → α) : iSup f = bot :=
   le_antisymm (iSup_le fun i => (empty i).elim) (bot_le _)
 
-@[simp] theorem iInf_bool_eq (f : Bool → α) : iInf f = f false ⊓ f true := by
+@[scoped simp] theorem iInf_of_pos {p : Prop} (hp : p) (f : p → α) : iInf f = f hp :=
+  le_antisymm (iInf_le f hp) (le_iInf fun _ => le_refl _)
+
+@[scoped simp] theorem iSup_of_pos {p : Prop} (hp : p) (f : p → α) : iSup f = f hp :=
+  le_antisymm (iSup_le fun _ => le_refl _) (le_iSup f hp)
+
+@[scoped simp] theorem iInf_of_neg {p : Prop} (hp : ¬p) (f : p → α) : iInf f = top :=
+  iInf_of_empty hp f
+
+@[scoped simp] theorem iSup_of_neg {p : Prop} (hp : ¬p) (f : p → α) : iSup f = bot :=
+  iSup_of_empty hp f
+
+@[scoped simp] theorem iInf_bool_eq (f : Bool → α) : iInf f = f false ⊓ f true := by
   apply le_antisymm
   · exact le_inf (iInf_le f false) (iInf_le f true)
-  · exact le_iInf fun b => by cases b; exact inf_le_left ..; exact inf_le_right ..
+  · exact le_iInf fun b => by cases b; exact Std.min_le_left; exact Std.min_le_right
 
-@[simp] theorem iSup_bool_eq (f : Bool → α) : iSup f = f false ⊔ f true := by
+@[scoped simp] theorem iSup_bool_eq (f : Bool → α) : iSup f = f false ⊔ f true := by
   apply le_antisymm
-  · exact iSup_le fun b => by cases b; exact le_sup_left ..; exact le_sup_right ..
+  · exact iSup_le fun b => by cases b; exact Std.left_le_max; exact Std.right_le_max
   · exact sup_le (le_iSup f false) (le_iSup f true)
 
-@[simp] theorem iInf_ulift {ι : Type v} (f : ULift.{w} ι → α) :
+@[scoped simp] theorem iInf_ulift {ι : Type v} (f : ULift.{w} ι → α) :
     iInf f = iInf (fun i => f (.up i)) := by
   apply le_antisymm
   · exact le_iInf fun i => iInf_le f (.up i)
   · exact le_iInf fun ⟨i⟩ => iInf_le (fun i => f (.up i)) i
 
-@[simp] theorem iSup_ulift {ι : Type v} (f : ULift.{w} ι → α) :
+@[scoped simp] theorem iSup_ulift {ι : Type v} (f : ULift.{w} ι → α) :
     iSup f = iSup (fun i => f (.up i)) := by
   apply le_antisymm
   · exact iSup_le fun ⟨i⟩ => le_iSup (fun i => f (.up i)) i
   · exact iSup_le fun i => le_iSup f (.up i)
 
-@[simp] theorem iInf_of_pos {p : Prop} (hp : p) (f : p → α) : iInf f = f hp :=
-  le_antisymm (iInf_le f hp) (le_iInf fun _ => le_refl _)
-
-@[simp] theorem iSup_of_pos {p : Prop} (hp : p) (f : p → α) : iSup f = f hp :=
-  le_antisymm (iSup_le fun _ => le_refl _) (le_iSup f hp)
-
-@[simp] theorem iInf_of_neg {p : Prop} (hp : ¬p) (f : p → α) : iInf f = top :=
-  iInf_of_empty hp f
-
-@[simp] theorem iSup_of_neg {p : Prop} (hp : ¬p) (f : p → α) : iSup f = bot :=
-  iSup_of_empty hp f
-
-@[simp] theorem iInf_punit (f : PUnit.{v} → α) : iInf f = f .unit :=
-  le_antisymm (iInf_le f .unit) (le_iInf fun ⟨⟩ => le_refl _)
-
-@[simp] theorem iSup_punit (f : PUnit.{v} → α) : iSup f = f .unit :=
+@[scoped simp] theorem iSup_punit (f : PUnit.{v} → α) : iSup f = f .unit :=
   le_antisymm (iSup_le fun ⟨⟩ => le_refl _) (le_iSup f .unit)
 
-@[simp] theorem iSup_eq {ι : Sort v} (b : ι) (f : ι → α) :
+@[scoped simp] theorem iSup_eq {ι : Sort v} (b : ι) (f : ι → α) :
     iSup (fun a => iSup (fun (_ : a = b) => f a)) = f b := by
-  apply le_antisymm
-  · exact iSup_le fun a => iSup_le fun h => h ▸ le_refl _
-  · exact le_iSup_of_le b (le_iSup_of_le rfl (le_refl _))
-
-@[simp] theorem iSup_eq' {ι : Sort v} (b : ι) (f : ι → α) :
-    iSup (fun a => iSup (fun (_ : b = a) => f a)) = f b := by
   apply le_antisymm
   · exact iSup_le fun a => iSup_le fun h => h ▸ le_refl _
   · exact le_iSup_of_le b (le_iSup_of_le rfl (le_refl _))
@@ -173,19 +196,13 @@ theorem iSup_sup_eq {ι : Sort v} (f g : ι → α) :
   apply le_antisymm
   · exact iSup_le fun i => sup_mono (le_iSup f i) (le_iSup g i)
   · exact sup_le
-      (iSup_le fun i => le_iSup_of_le i (le_sup_left (f i) (g i)))
-      (iSup_le fun i => le_iSup_of_le i (le_sup_right (f i) (g i)))
+      (iSup_le fun i => le_iSup_of_le i Std.left_le_max)
+      (iSup_le fun i => le_iSup_of_le i Std.right_le_max)
 
 theorem iInf_comm {ι : Sort v} {κ : Sort w} (f : ι → κ → α) :
     iInf (fun i => iInf (f i)) = iInf (fun j => iInf (fun i => f i j)) := by
   apply le_antisymm
   · exact le_iInf fun j => le_iInf fun i => le_trans (iInf_le _ i) (iInf_le _ j)
   · exact le_iInf fun i => le_iInf fun j => le_trans (iInf_le _ j) (iInf_le _ i)
-
-theorem iSup_comm {ι : Sort v} {κ : Sort w} (f : ι → κ → α) :
-    iSup (fun i => iSup (f i)) = iSup (fun j => iSup (fun i => f i j)) := by
-  apply le_antisymm
-  · exact iSup_le fun i => iSup_le fun j => le_trans (le_iSup (fun i => f i j) i) (le_iSup (fun j => iSup (fun i => f i j)) j)
-  · exact iSup_le fun j => iSup_le fun i => le_trans (le_iSup (f i) j) (le_iSup (fun i => iSup (f i)) i)
 
 end Loom.Order
