@@ -760,6 +760,24 @@ instance-- {m : Type u → Type v} {l ε : Type u}
 
 -- TODO is generalization to `Loom.WriterT` possible?
 
+/-- `ys.map (PeDivM.prepend k1)`, but a single result, the common case, is not traversed with
+`List.mapTR`, and gets `k1` as it is if it has no log of its own, rather than `k1` appended
+with an empty log. This folds away when the result is statically known, such as the `pure`
+after a log entry. Several results mostly come from a pick with logs of their own. -/
+@[inline_if_reduce]
+def PeDivM.prependAll [LogMonoid κ] (k1 : κ) (ys : List (PeDivM κ α)) : List (PeDivM κ α) :=
+  match ys with
+  | [(k', a)] => [(if LogMonoid.isEmpty k' then k1 else LogMonoid.append k1 k', a)]
+  | _ => ys.map (PeDivM.prepend k1)
+
+theorem PeDivM.prependAll_eq [LogMonoid κ] (k1 : κ) (ys : List (PeDivM κ α)) :
+  PeDivM.prependAll k1 ys = ys.map (PeDivM.prepend k1) := by
+  unfold PeDivM.prependAll ; split
+  · simp only [List.map_cons, List.map_nil, PeDivM.prepend] ; split
+    · rename_i h ; rw [LogMonoid.eq_empty_of_isEmpty _ h, LogMonoid.append_empty]
+    · rfl
+  · rfl
+
 @[always_inline]
 instance [LogMonoid κ] : TsilTCore (PeDivM κ) where
   op := fun (k1, mx) f =>
@@ -771,7 +789,7 @@ instance [LogMonoid κ] : TsilTCore (PeDivM κ) where
     -- `ys` is bound first so that `f x` is not duplicated into both branches.
     | DivM.res x =>
       let ys := f x
-      if LogMonoid.isEmpty k1 then ys else ys.map (PeDivM.prepend k1)
+      if LogMonoid.isEmpty k1 then ys else PeDivM.prependAll k1 ys
 
 theorem PeDivM.tsilTCore_op_div [LogMonoid κ] (k1 : κ) (f : α → TsilT (PeDivM κ) β) :
   TsilTCore.op (m := PeDivM κ) (k1, DivM.div) f = [(k1, DivM.div)] := rfl
@@ -779,11 +797,11 @@ theorem PeDivM.tsilTCore_op_div [LogMonoid κ] (k1 : κ) (f : α → TsilT (PeDi
 /-- The fast path of `TsilTCore (PeDivM κ)` does not change the result. -/
 theorem PeDivM.tsilTCore_op_res [LogMonoid κ] (k1 : κ) (x : α) (f : α → TsilT (PeDivM κ) β) :
   TsilTCore.op (m := PeDivM κ) (k1, DivM.res x) f = (f x).map (PeDivM.prepend k1) := by
-  show (if LogMonoid.isEmpty k1 then f x else _) = _
+  show (if LogMonoid.isEmpty k1 then f x else PeDivM.prependAll k1 (f x)) = _
   split
   · rename_i h ; rw [LogMonoid.eq_empty_of_isEmpty k1 h]
     symm ; apply List.map_id'' ; rintro ⟨k2, y⟩ ; simp [PeDivM.prepend]
-  · rfl
+  · exact PeDivM.prependAll_eq k1 (f x)
 
 instance [LogMonoid κ] : LawfulTsilTCore (PeDivM κ) where
   op_single := by
