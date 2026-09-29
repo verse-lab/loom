@@ -766,37 +766,59 @@ instance [LogMonoid κ] : TsilTCore (PeDivM κ) where
     match mx with
     | DivM.div => [(k1, DivM.div)]
     -- TODO give this a definition
-    -- TODO an optimization: if `k1 = 1`, then no need to prepend
-    | DivM.res x => f x |>.map (PeDivM.prepend k1)
+    -- Skip prepending an empty log, which would traverse all results of `f x`. The test
+    -- folds away when `k1` is statically empty, as after `MonadFlatMapGo.go` or `pure`.
+    -- `ys` is bound first so that `f x` is not duplicated into both branches.
+    | DivM.res x =>
+      let ys := f x
+      if LogMonoid.isEmpty k1 then ys else ys.map (PeDivM.prepend k1)
+
+theorem PeDivM.tsilTCore_op_div [LogMonoid κ] (k1 : κ) (f : α → TsilT (PeDivM κ) β) :
+  TsilTCore.op (m := PeDivM κ) (k1, DivM.div) f = [(k1, DivM.div)] := rfl
+
+/-- The fast path of `TsilTCore (PeDivM κ)` does not change the result. -/
+theorem PeDivM.tsilTCore_op_res [LogMonoid κ] (k1 : κ) (x : α) (f : α → TsilT (PeDivM κ) β) :
+  TsilTCore.op (m := PeDivM κ) (k1, DivM.res x) f = (f x).map (PeDivM.prepend k1) := by
+  show (if LogMonoid.isEmpty k1 then f x else _) = _
+  split
+  · rename_i h ; rw [LogMonoid.eq_empty_of_isEmpty k1 h]
+    symm ; apply List.map_id'' ; rintro ⟨k2, y⟩ ; simp [PeDivM.prepend]
+  · rfl
 
 instance [LogMonoid κ] : LawfulTsilTCore (PeDivM κ) where
   op_single := by
-    intro α β x f ; simp [pure, TsilTCore.op, Functor.map, PeDivM.prepend]
-    rcases x with ⟨k1, x | _⟩ <;> rfl
+    intro α β x f
+    rcases x with ⟨k1, x | _⟩
+    · simp [PeDivM.tsilTCore_op_res, pure, Functor.map, PeDivM.prepend]
+    · rfl
   pure_op := by
-    intro α β x f ; simp [TsilTCore.op]
+    intro α β x f ; simp only [pure, PeDivM.tsilTCore_op_res]
     apply List.map_id'' ; rintro ⟨k1, x⟩ ; simp [PeDivM.prepend]
   op_assoc := by
-    intro α β γ x f g ; simp [TsilTCore.op]
+    intro α β γ x f g
     rcases x with ⟨k1, x | _⟩ <;> try rfl
-    dsimp
+    simp only [PeDivM.tsilTCore_op_res]
     rw [List.map_flatMap, List.flatMap_map]
-    apply Loom.List.flatMap_congr ; rintro ⟨k2, y | _⟩ _ <;> simp [PeDivM.prepend]
-    rintro ⟨k3, z⟩ _; simp only [LogMonoid.append_assoc]
+    apply Loom.List.flatMap_congr ; rintro ⟨k2, y | _⟩ _
+    · simp [PeDivM.prepend, PeDivM.tsilTCore_op_res]
+      rintro ⟨k3, z⟩ _; simp only [LogMonoid.append_assoc]
+    · rfl
 
 instance [LogMonoid κ] : LawfulTsilTCore' (PeDivM κ) where
   op_fmap_commute := by
-    intro α β γ x f h ; simp [TsilTCore.op]
-    rcases x with ⟨k1, x | _⟩ <;> simp [Functor.map]
-    rintro ⟨k2, y | _⟩ _ <;> simp [PeDivM.prepend]
+    intro α β γ x f h
+    rcases x with ⟨k1, x | _⟩
+    · simp [PeDivM.tsilTCore_op_res, Functor.map]
+      rintro ⟨k2, y | _⟩ _ <;> simp [PeDivM.prepend]
+    · rfl
 
 instance [LogMonoid κ] [CompleteLattice l] [inst : MAlgOrdered DivM l]  -- only rely on the second component
   : LawfulTsilTCoreMAlgSup (PeDivM κ) l where
   sup := by
     intro α f g h x
-    simp only [TsilTCore.op, pointwiseSup, MAlgOrdered.μ] at h ⊢
+    simp only [pointwiseSup, MAlgOrdered.μ] at h ⊢
     rcases x with ⟨k1, x | _⟩ <;> try trivial
-    dsimp
+    simp only [PeDivM.tsilTCore_op_res]
     repeat rw [iSup_list_map]
     apply h
 
