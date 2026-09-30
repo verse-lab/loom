@@ -85,6 +85,38 @@ def divergingExtracted : ConstrainedExtractResult Bool DivM Target
 #guard observe divergingExtracted.val ==
   [([true], none), ([false], none), ([true], none)]
 
+-- A pick followed by its continuation, extracted with the continuation inside each
+-- candidate's computation: the same results, logs and order as binding the pick's results.
+def negated : NonDetT DivM Bool := do
+  let y ← pickBool
+  pure (!y)
+
+def negatedExtracted : ConstrainedExtractResult Bool DivM Target
+    (findOfCandidates Bool) negated := by
+  unfold negated pickBool
+  extract_list_tactic
+
+def negatedPickBind : ConstrainedExtractResult Bool DivM Target
+    (findOfCandidates Bool) negated := by
+  unfold negated pickBool
+  apply ConstrainedExtractResult.pickList_bind
+  extract_list_tactic
+
+def negatedAny : NonDetT DivM Bool := do
+  let y ← MonadNonDet.pick Bool
+  pure (!y)
+
+def negatedAnyPickBind : ConstrainedExtractResult Bool DivM Target
+    (findOfCandidates Bool) negatedAny := by
+  unfold negatedAny
+  apply ConstrainedExtractResult.pick_bind
+  extract_list_tactic
+
+#guard observe negatedExtracted.val ==
+  [([true], some false), ([false], some true), ([true], some false)]
+#guard observe negatedPickBind.val == observe negatedExtracted.val
+#guard observe negatedAnyPickBind.val == observe negatedExtracted.val
+
 -- Veil's executable stack, including its proof that logging preserves WP.
 -- This checks the downstream simplification pattern affected by LogMonoid.
 abbrev VeilTarget (κ ε ρ σ : Type) :=

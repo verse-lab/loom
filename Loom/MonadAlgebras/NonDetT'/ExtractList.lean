@@ -98,10 +98,26 @@ def ConstrainedExtractResult.assume (p : Prop) [decp : Decidable p] :
 
 def ConstrainedExtractResult.pickList (p : τ → Prop) [instec : ExtCandidates findable κ p] :
   ConstrainedExtractResult κ m m' findOf (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) where
-  val := (inst3.op (findOf p instec () |>.map (fun x => inst1.bind
+  val := inst3.opMap (findOf p instec ()) fun x => inst1.bind
       (inst4.log (ExtCandidates.rep findable p (self := instec) x))
-      (fun _ => inst1.pure x))))
-  proof := by apply ExtractConstraint.pickCont ; intros ; constructor
+      (fun _ => inst1.pure x)
+  proof := by
+    rw [MonadFlatMap'.opMap_eq] ; apply ExtractConstraint.pickCont ; intros ; constructor
+
+/-- A pick followed by `f`, with `f`'s extraction inside each candidate's computation, which is
+the target of `ExtractConstraint.pickCont` itself. Extracting the pick and then `bind`ing its
+results instead would collect all candidates' results into one computation first, only for the
+`bind` to take them apart again. -/
+def ConstrainedExtractResult.pickList_bind {α : Type u} (p : τ → Prop)
+  [instec : ExtCandidates findable κ p] {f : τ → NonDetT m α}
+  (hf : ∀ x, ConstrainedExtractResult κ m m' findOf (f x)) :
+  ConstrainedExtractResult κ m m' findOf (MonadNonDet.pickSuchThat (m := NonDetT m) τ p >>= f) where
+  val := inst3.opMap (findOf p instec ()) fun x => inst1.bind
+      (inst4.log (ExtCandidates.rep findable p (self := instec) x))
+      (fun _ => (hf x).val)
+  proof := by
+    rw [MonadFlatMap'.opMap_eq]
+    exact ExtractConstraint.pickCont τ p f _ fun x => (hf x).proof
 
 def ConstrainedExtractResult.liftM [LawfulMonad m'] (x : m α) :
   ConstrainedExtractResult κ m m' findOf (liftM (n := NonDetT m) x) where
@@ -113,10 +129,23 @@ def ConstrainedExtractResult.liftM [LawfulMonad m'] (x : m α) :
 
 def ConstrainedExtractResult.pick [instec : ExtCandidates findable κ (fun (_ : τ) => True)] :
   ConstrainedExtractResult κ m m' findOf (MonadNonDet.pick (m := NonDetT m) τ) where
-  val := (inst3.op (findOf (fun _ => True) instec () |>.map (fun x => inst1.bind
+  val := inst3.opMap (findOf (fun _ => True) instec ()) fun x => inst1.bind
       (inst4.log (ExtCandidates.rep findable (fun _ => True) (self := instec) x))
-      (fun _ => inst1.pure x))))
-  proof := by apply ExtractConstraint.pickCont ; intros ; constructor
+      (fun _ => inst1.pure x)
+  proof := by
+    rw [MonadFlatMap'.opMap_eq] ; apply ExtractConstraint.pickCont ; intros ; constructor
+
+/-- `pickList_bind` for `MonadNonDet.pick`. -/
+def ConstrainedExtractResult.pick_bind {α : Type u}
+  [instec : ExtCandidates findable κ (fun (_ : τ) => True)] {f : τ → NonDetT m α}
+  (hf : ∀ x, ConstrainedExtractResult κ m m' findOf (f x)) :
+  ConstrainedExtractResult κ m m' findOf (MonadNonDet.pick (m := NonDetT m) τ >>= f) where
+  val := inst3.opMap (findOf (fun _ => True) instec ()) fun x => inst1.bind
+      (inst4.log (ExtCandidates.rep findable (fun _ => True) (self := instec) x))
+      (fun _ => (hf x).val)
+  proof := by
+    rw [MonadFlatMap'.opMap_eq]
+    exact ExtractConstraint.pickCont τ (fun _ => True) f _ fun x => (hf x).proof
 
 def ConstrainedExtractResult.ite {α : Type u} (p : Prop)
   (dec : Decidable p)   -- disallow synthesizing

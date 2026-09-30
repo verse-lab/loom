@@ -377,6 +377,12 @@ variable (m : Type u → Type v) (l : Type u) [Monad m] [CompleteLattice l]
 
 class MonadFlatMap' where
   op : ∀ {α}, List (m α) → m α
+  /-- `op (xs.map f)`: one computation per element of `xs`, combined as `op` combines them. An
+  instance can compute this directly, without building the list of computations that `op` then
+  takes apart again; the extraction of a pick followed by its continuation uses it. -/
+  opMap : ∀ {α τ : Type u}, List τ → (τ → m α) → m α := fun xs f => op (xs.map f)
+  opMap_eq : ∀ {α τ : Type u} (xs : List τ) (f : τ → m α), opMap xs f = op (xs.map f) := by
+    intros; rfl
 
 -- TODO maybe also generalize over `⊔`?
 /-- Typeclass relating the result of `MonadFlatMap'.op` to the `⊔` of results
@@ -427,6 +433,11 @@ variable (m : Type u → Type v) (l : Type u) [Monad m] [CompleteLattice l]
 @[always_inline]
 instance : MonadFlatMap' (ReaderT ρ m) where
   op := fun l r => inst.op <| l.map (· r)
+  opMap := fun xs f r => inst.opMap xs (f · r)
+  opMap_eq xs f := funext fun r => by
+    show inst.opMap xs (f · r) = inst.op ((xs.map f).map (· r))
+    rw [MonadFlatMap'.opMap_eq, List.map_map]
+    rfl
 
 instance (p : l → l → Prop) [instl : LawfulMonadFlatMapSup m l p]
   : LawfulMonadFlatMapSup (ReaderT ρ m) (ρ → l) (relLift p)
@@ -454,6 +465,11 @@ instance [MonadFlatMap'BindDistributive m] : MonadFlatMap'BindDistributive (Read
 @[always_inline]
 instance : MonadFlatMap' (StateT σ m) where
   op := fun l r => inst.op <| l.map (· r)
+  opMap := fun xs f s => inst.opMap xs (f · s)
+  opMap_eq xs f := funext fun s => by
+    show inst.opMap xs (f · s) = inst.op ((xs.map f).map (· s))
+    rw [MonadFlatMap'.opMap_eq, List.map_map]
+    rfl
 
 instance (p : l → l → Prop) [instl : LawfulMonadFlatMapSup m l p]
   : LawfulMonadFlatMapSup (StateT σ m) (σ → l) (relLift p)
@@ -479,6 +495,8 @@ instance [MonadFlatMap'BindDistributive m] : MonadFlatMap'BindDistributive (Stat
 @[always_inline]
 instance : MonadFlatMap' (ExceptT ε m) where
   op := inst.op
+  opMap := inst.opMap
+  opMap_eq := inst.opMap_eq
 
 set_option backward.isDefEq.respectTransparency false in
 instance {hd : ε → Prop} [IsHandler hd]
@@ -524,6 +542,7 @@ abbrev TsilT (m : Type u → Type v) (α : Type u) := List (m α)
 @[always_inline]
 instance : MonadFlatMap' (TsilT m) where
   op := List.flatten
+  opMap xs f := xs.flatMap f
 
 -- well ... to account for the logging construct
 instance : MonadLift m (TsilT m) where
