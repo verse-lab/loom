@@ -197,6 +197,25 @@ def ConstrainedExtractResult.filterAuxM
       · apply (h x).proof
       · rintro ⟨_ | _⟩ <;> dsimp <;> apply ih
 
+def ConstrainedExtractResult.bind_pure
+  [LawfulMonad m']
+  [MonadFlatMap'BindDistributive m']
+  {α} {s : NonDetT m α}
+  (hs : ConstrainedExtractResult κ m m' findOf s) :
+  ConstrainedExtractResult κ m m' findOf (s >>= Pure.pure) where
+  val := hs.val
+  proof := by
+    rw [← _root_.bind_pure (x := hs.val)]
+    exact ExtractConstraint.bind _ _ _ _ hs.proof fun _ => ExtractConstraint.pure
+
+def ConstrainedExtractResult.bind_pure_unit
+  [LawfulMonad m']
+  [MonadFlatMap'BindDistributive m']
+  {s : NonDetT m PUnit}
+  (hs : ConstrainedExtractResult κ m m' findOf s) :
+  ConstrainedExtractResult κ m m' findOf (s >>= fun _ => Pure.pure PUnit.unit) :=
+  ConstrainedExtractResult.bind_pure _ _ _ _ hs
+
 /-! ## Sharing `let`s during extraction
 
 Loom's extraction rules are indexed by the shape of the source program, and
