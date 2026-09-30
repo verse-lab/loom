@@ -523,6 +523,9 @@ structure ExtractAttr.Entry where
   kind : ExtractAttr.EntryKind
   /-- The declaration name of the theorem or structure. -/
   name : Name
+  /-- Entries that match a goal are tried in decreasing order of priority, as given by
+  `@[multiextracted prio]`. -/
+  priority : Nat := eval_prio default
 deriving Inhabited, BEq
 
 structure ExtractAttr where
@@ -549,6 +552,7 @@ initialize extractAttr : ExtractAttr ← do
       -- TODO: use the attribute kind
       unless attrKind == AttributeKind.global do
         throwError "Invalid attribute 'multiextracted', must be global"
+      let priority ← Attribute.Builtin.getPrio stx
       let env ← getEnv
       -- Ignore some auxiliary definitions (see the comments for attrIgnoreMutRec)
       attrIgnoreAuxDef declName (pure ()) do
@@ -560,14 +564,20 @@ initialize extractAttr : ExtractAttr ← do
             | throwError "Declaration {declName} does not have a valid type for 'multiextracted' attribute"
           let key ← DiscrTree.mkPath s
           return (key, kind)
-        let env := ext.addEntry env ⟨key, ⟨kind, declName⟩⟩
+        let env := ext.addEntry env ⟨key, { kind, name := declName, priority }⟩
         setEnv env
   }
   registerBuiltinAttribute attrImpl
   pure { attr := attrImpl, ext := ext }
 
+/-- The entries whose subject matches `e`, in decreasing order of priority. `getMatch` returns
+the matches through `*` edges first, so without priorities a generic rule such as
+`ConstrainedExtractResult.bind` always comes before a more specific one. The sort is stable,
+keeping that order among entries of equal priority; like `simp` and `mvcgen`, it is an insertion
+sort, since there are only a few candidates. -/
 def ExtractAttr.find? (s : ExtractAttr) (e : Expr) : MetaM (Array ExtractAttr.Entry) := do
-  (s.ext.getState (← getEnv)).getMatch e
+  let entries ← (s.ext.getState (← getEnv)).getMatch e
+  return entries.insertionSort (·.priority > ·.priority)
 
 section ExtractionForLet
 
