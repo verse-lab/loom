@@ -767,16 +767,15 @@ after a log entry. Several results mostly come from a pick with logs of their ow
 @[inline_if_reduce]
 def PeDivM.prependAll [LogMonoid κ] (k1 : κ) (ys : List (PeDivM κ α)) : List (PeDivM κ α) :=
   match ys with
+  | [] => []
   | [(k', a)] => [(if LogMonoid.isEmpty k' then k1 else LogMonoid.append k1 k', a)]
   | _ => ys.map (PeDivM.prepend k1)
 
 theorem PeDivM.prependAll_eq [LogMonoid κ] (k1 : κ) (ys : List (PeDivM κ α)) :
   PeDivM.prependAll k1 ys = ys.map (PeDivM.prepend k1) := by
-  unfold PeDivM.prependAll ; split
-  · simp only [List.map_cons, List.map_nil, PeDivM.prepend] ; split
-    · rename_i h ; rw [LogMonoid.eq_empty_of_isEmpty _ h, LogMonoid.append_empty]
-    · rfl
-  · rfl
+  unfold PeDivM.prependAll ; split <;> try rfl
+  simp only [List.map_cons, List.map_nil, PeDivM.prepend] ; split <;> try rfl
+  rename_i h ; rw [LogMonoid.eq_empty_of_isEmpty _ h, LogMonoid.append_empty]
 
 @[always_inline]
 instance [LogMonoid κ] : TsilTCore (PeDivM κ) where
