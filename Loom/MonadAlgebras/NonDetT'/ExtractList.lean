@@ -187,7 +187,7 @@ def ConstrainedExtractResult.assumeSubtype (p : Prop) [decp : Decidable p] :
 
 /-- Candidates for the subtype `{x // p x}`, made from the candidates for `p`. The proofs come
 from `Candidates.find_iff`, so `p` is not decided again; `attachWith` is `O(1)` at runtime. -/
-@[reducible] def ExtCandidates.subtype {κ : Type q} {τ : Type u} {p : τ → Prop}
+@[inline, reducible] def ExtCandidates.subtype {κ : Type q} {τ : Type u} {p : τ → Prop}
     (instec : ExtCandidates Candidates κ p) :
     ExtCandidates Candidates κ (fun (_ : {x // p x}) => True) where
   core := {
