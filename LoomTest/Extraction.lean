@@ -117,6 +117,71 @@ def negatedAnyPickBind : ConstrainedExtractResult Bool DivM Target
 #guard observe negatedPickBind.val == observe negatedExtracted.val
 #guard observe negatedAnyPickBind.val == observe negatedExtracted.val
 
+/-! ### Choices that return proofs -/
+
+private def smallIdx (i : Nat) : Prop := i < 3
+
+-- Complete, in a noncanonical order, as above.
+private instance : Candidates smallIdx where
+  find := fun _ => [2, 0, 1]
+  find_iff := by intro x; simp [smallIdx]; omega
+
+private instance : ExtCandidates Candidates Nat smallIdx where
+  core := inferInstance
+  rep := id
+
+abbrev NatTarget (α : Type) := TsilT (PeDivM (List Nat)) α
+
+def observeNat (xs : NatTarget α) : List (List Nat × Option α) :=
+  xs.map fun (log, result) => (log, match result with | .res a => some a | .div => none)
+
+def items : List Nat := [10, 20, 30]
+
+-- The proof that `pickSubtype` returns makes the indexing total. The picks are logged
+-- as `pickSuchThat` logs them.
+def pickItem : NonDetT DivM Nat := do
+  let i ← MonadNonDet.pickSubtype Nat smallIdx
+  pure (items[i.1]'i.2)
+
+def pickItemExtracted : ConstrainedExtractResult Nat DivM NatTarget
+    (findOfCandidates Nat) pickItem := by
+  unfold pickItem
+  extract_list_tactic
+
+def pickItemPickBind : ConstrainedExtractResult Nat DivM NatTarget
+    (findOfCandidates Nat) pickItem := by
+  unfold pickItem
+  apply ConstrainedExtractResult.pickSubtype_bind
+  extract_list_tactic
+
+#guard observeNat pickItemExtracted.val == [([2], some 30), ([0], some 10), ([1], some 20)]
+#guard observeNat pickItemPickBind.val == observeNat pickItemExtracted.val
+
+-- `assumeSubtype` returns the proof of the assumption, and logs nothing.
+def headOf (xs : List Nat) : NonDetT DivM Nat := do
+  let h ← MonadNonDet.assumeSubtype (xs ≠ [])
+  pure (xs.head h.2)
+
+def headOfExtracted (xs : List Nat) : ConstrainedExtractResult Nat DivM NatTarget
+    (findOfCandidates Nat) (headOf xs) := by
+  unfold headOf
+  extract_list_tactic
+
+#guard observeNat (headOfExtracted [7, 8]).val == [([], some 7)]
+#guard (observeNat (headOfExtracted []).val).isEmpty
+
+-- A dependent `if`, whose branch uses the hypothesis.
+def headOrZero (xs : List Nat) : NonDetT DivM Nat :=
+  if h : xs ≠ [] then pure (xs.head h) else pure 0
+
+def headOrZeroExtracted (xs : List Nat) : ConstrainedExtractResult Nat DivM NatTarget
+    (findOfCandidates Nat) (headOrZero xs) := by
+  unfold headOrZero
+  extract_list_tactic
+
+#guard observeNat (headOrZeroExtracted [7, 8]).val == [([], some 7)]
+#guard observeNat (headOrZeroExtracted []).val == [([], some 0)]
+
 -- Veil's executable stack, including its proof that logging preserves WP.
 -- This checks the downstream simplification pattern affected by LogMonoid.
 abbrev VeilTarget (κ ε ρ σ : Type) :=
