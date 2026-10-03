@@ -60,6 +60,24 @@ class MonadNonDet (m : Type u → Type v) where
 
 export MonadNonDet (pick assume pickSuchThat)
 
+/-- `pickSuchThat` that also returns the proof that the picked value satisfies `p`.
+`pickSuchThat` cannot provide it: the continuation of `NonDetT.pickCont` receives only
+the value. -/
+def MonadNonDet.pickSubtype {m : Type u → Type v} [MonadNonDet m] (τ : Type u) (p : τ → Prop) :
+    m {x // p x} :=
+  MonadNonDet.pick _
+
+/-- A proof of `p` as a value of `Type u`; unlike `PLift p`, which is in `Type`, it fits
+monads at every universe. -/
+abbrev NonDetT.Holds (p : Prop) : Type u := {_u : PUnit.{u+1} // p}
+
+/-- `assume` that also returns the proof of the assumption. -/
+def MonadNonDet.assumeSubtype {m : Type u → Type v} [MonadNonDet m] (as : Prop) :
+    m (NonDetT.Holds as) :=
+  MonadNonDet.pick _
+
+export MonadNonDet (pickSubtype assumeSubtype)
+
 
 instance : MonadNonDet (NonDetT m) where
   pick   := .pick
@@ -155,6 +173,14 @@ theorem MonadNonDet.wp_assume {as : Prop} post : _root_.wp (MonadNonDet.assume (
 theorem MonadNonDet.wp_pickSuchThat {τ : Type u} (p : τ → Prop) post :
   _root_.wp (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) post = ⨅ a, ⌜p a⌝ ⇨ post a := by
   simp [MonadNonDet.pickSuchThat, NonDetT.pickSuchThat]
+
+theorem MonadNonDet.wp_pickSubtype {τ : Type u} (p : τ → Prop) post :
+  _root_.wp (MonadNonDet.pickSubtype (m := NonDetT m) τ p) post = ⨅ a, ⨅ h : p a, post ⟨a, h⟩ := by
+  rw [MonadNonDet.pickSubtype, MonadNonDet.wp_pick, iInf_subtype]
+
+theorem MonadNonDet.wp_assumeSubtype {as : Prop} post :
+  _root_.wp (MonadNonDet.assumeSubtype (m := NonDetT m) as) post = ⨅ h : as, post ⟨.unit, h⟩ := by
+  rw [MonadNonDet.assumeSubtype, MonadNonDet.wp_pick, iInf_subtype, iInf_punit]
 
 theorem NonDetT.wp_iInf {ι : Type u} {α : Type u} {l : Type u} [CompleteBooleanAlgebra l] [MAlgOrdered m l] [MAlgDet m l] [Nonempty ι]
   (x : NonDetT m α) (post : ι -> α -> l) :
@@ -270,6 +296,14 @@ theorem MonadNonDet.wp_assume {as : Prop} post : _root_.wp (MonadNonDet.assume (
 theorem MonadNonDet.wp_pickSuchThat {τ : Type u} (p : τ → Prop) post :
   _root_.wp (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) post = ⨆ a, ⌜p a⌝ ⊓ post a := by
   simp [MonadNonDet.pickSuchThat, NonDetT.pickSuchThat]
+
+theorem MonadNonDet.wp_pickSubtype {τ : Type u} (p : τ → Prop) post :
+  _root_.wp (MonadNonDet.pickSubtype (m := NonDetT m) τ p) post = ⨆ a, ⨆ h : p a, post ⟨a, h⟩ := by
+  rw [MonadNonDet.pickSubtype, MonadNonDet.wp_pick, iSup_subtype]
+
+theorem MonadNonDet.wp_assumeSubtype {as : Prop} post :
+  _root_.wp (MonadNonDet.assumeSubtype (m := NonDetT m) as) post = ⨆ h : as, post ⟨.unit, h⟩ := by
+  rw [MonadNonDet.assumeSubtype, MonadNonDet.wp_pick, iSup_subtype, iSup_punit]
 
 noncomputable
 scoped

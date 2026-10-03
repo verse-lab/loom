@@ -51,6 +51,14 @@ inductive ExtractConstraint : {α : Type u} → (s : NonDetT m α) → m' α →
       (inst3.op (findOf p instec () |>.map (fun x => inst1.bind
         (inst4.log (ExtCandidates.rep findable p (self := instec) x))
         (fun _ => f' x))))
+
+  -- NOTE: `assumeCont` and `assumeSubtypeCont` are constructors, not rules derived from
+  -- `pickCont`: they decide the proposition with `Decidable` instead of going through `findOf`,
+  -- and log nothing. The target of `pickCont` logs every candidate and combines them with `op`,
+  -- so it is not equal to theirs (a log is invisible to `wp`, but not to `=`). Deriving them
+  -- would need picks that can skip the log, an `op [x] = x` law for `MonadFlatMap'`, and
+  -- rules for a concrete `findOf`, since nothing is known about it here.
+
   -- NOTE: without `.{u+1}`, some weird universe level will pop up
   -- NOTE: due to unknown reason, using this instead of `.assume` might cause
   -- unification failure in some cases
@@ -59,6 +67,13 @@ inductive ExtractConstraint : {α : Type u} → (s : NonDetT m α) → m' α →
     (ExtractConstraint (f .unit) (f' .unit)) →
     ExtractConstraint (NonDetT.pickCont PUnit p f)
       (if p .unit then f' .unit else inst3.op [])
+  /-- `assumeCont` for `MonadNonDet.assumeSubtype`, whose continuation receives the proof.
+  `pickCont` would apply too, but logs a choice for every assumption. -/
+  | assumeSubtypeCont {α : Type u} (p : Prop) (f : NonDetT.Holds.{u} p → NonDetT m α)
+    (f' : NonDetT.Holds.{u} p → m' α) [Decidable p] :
+    (∀ h : p, ExtractConstraint (f ⟨.unit, h⟩) (f' ⟨.unit, h⟩)) →
+    ExtractConstraint (NonDetT.pickCont (NonDetT.Holds p) (fun _ => True) f)
+      (if h : p then f' ⟨.unit, h⟩ else inst3.op [])
 
 /-- A "boxed" version of `ExtractConstraint`, to carry both the extracted
 value and the proof that it satisfies the constraint. Used in making
@@ -156,6 +171,56 @@ def ConstrainedExtractResult.ite {α : Type u} (p : Prop)
   val := (@_root_.ite _ p dec h1.val h2.val)
   proof := by split ; exact h1.proof ; exact h2.proof
 
+def ConstrainedExtractResult.dite {α : Type u} (p : Prop)
+  (dec : Decidable p)   -- disallow synthesizing
+  {s1 : p → NonDetT m α} {s2 : ¬p → NonDetT m α}
+  (h1 : ∀ h, ConstrainedExtractResult κ m m' findOf (s1 h))
+  (h2 : ∀ h, ConstrainedExtractResult κ m m' findOf (s2 h)) :
+  ConstrainedExtractResult κ m m' findOf (@_root_.dite _ p dec s1 s2) where
+  val := @_root_.dite _ p dec (fun h => (h1 h).val) (fun h => (h2 h).val)
+  proof := by split <;> rename_i h <;> first | exact (h1 h).proof | exact (h2 h).proof
+
+def ConstrainedExtractResult.assumeSubtype (p : Prop) [decp : Decidable p] :
+  ConstrainedExtractResult κ m m' findOf (MonadNonDet.assumeSubtype (m := NonDetT m) p) where
+  val := if h : p then inst1.pure ⟨.unit, h⟩ else inst3.op []
+  proof := ExtractConstraint.assumeSubtypeCont p Pure.pure (fun x => inst1.pure x) fun _ => .pure
+
+/-- Candidates for the subtype `{x // p x}`, made from the candidates for `p`. The proofs come
+from `Candidates.find_iff`, so `p` is not decided again; `attachWith` is `O(1)` at runtime. -/
+@[reducible] def ExtCandidates.subtype {κ : Type q} {τ : Type u} {p : τ → Prop}
+    (instec : ExtCandidates Candidates κ p) :
+    ExtCandidates Candidates κ (fun (_ : {x // p x}) => True) where
+  core := {
+    find := fun _ => instec.core.find () |>.attachWith p fun x hx => (instec.core.find_iff x).mp hx
+    find_iff := fun x => by
+      simp only [List.mem_attachWith, iff_true]
+      exact (instec.core.find_iff x.1).mpr x.2 }
+  rep := fun x => instec.rep x.1
+
+/-- `pickList` for `MonadNonDet.pickSubtype`: the pick on the subtype, with the candidates for
+`p` (see `ExtCandidates.subtype`). For `Candidates` only, like `ExtCandidates.subtype`. -/
+def ConstrainedExtractResult.pickSubtype (p : τ → Prop) [instec : ExtCandidates Candidates κ p] :
+  ConstrainedExtractResult κ m m' (findOfCandidates κ) (MonadNonDet.pickSubtype (m := NonDetT m) τ p) where
+  val := inst3.opMap (instec.subtype.core.find ()) fun x => inst1.bind
+      (inst4.log (instec.rep x.1))
+      (fun _ => inst1.pure x)
+  proof := by
+    rw [MonadFlatMap'.opMap_eq]
+    exact ExtractConstraint.pickCont _ (fun _ => True) Pure.pure _ (instec := instec.subtype) fun _ => .pure
+
+/-- `pickList_bind` for `MonadNonDet.pickSubtype`. -/
+def ConstrainedExtractResult.pickSubtype_bind {α : Type u} (p : τ → Prop)
+  [instec : ExtCandidates Candidates κ p] {f : {x // p x} → NonDetT m α}
+  (hf : ∀ x, ConstrainedExtractResult κ m m' (findOfCandidates κ) (f x)) :
+  ConstrainedExtractResult κ m m' (findOfCandidates κ)
+    (MonadNonDet.pickSubtype (m := NonDetT m) τ p >>= f) where
+  val := inst3.opMap (instec.subtype.core.find ()) fun x => inst1.bind
+      (inst4.log (instec.rep x.1))
+      (fun _ => (hf x).val)
+  proof := by
+    rw [MonadFlatMap'.opMap_eq]
+    exact ExtractConstraint.pickCont _ (fun _ => True) f _ (instec := instec.subtype) fun x => (hf x).proof
+
 -- TODO remove this repetition
 theorem ExtractConstraint.bind
   [LawfulMonad m']
@@ -185,6 +250,15 @@ theorem ExtractConstraint.bind
     -- some very weird unification failure happens here, so need to provide arguments explicitly
     apply ExtractConstraint.assumeCont (p := p) (f' := (fun _ => g' PUnit.unit >>= f'))
     apply ih ; assumption
+  | @assumeSubtypeCont p g g' _ _ ih =>
+    simp [Bind.bind, NonDetT.bind]
+    have eq : ((if hp : p then g' ⟨PUnit.unit, hp⟩ else MonadFlatMap'.op []) >>= f') =
+      ((if hp : p then g' ⟨PUnit.unit, hp⟩ >>= f' else MonadFlatMap'.op [])) := by
+      split <;> try rfl
+      rw [← MonadFlatMap'BindDistributive.bind_distrib] ; rfl
+    rw [eq] ; clear eq
+    apply ExtractConstraint.assumeSubtypeCont (p := p) (f' := (fun x => g' x >>= f'))
+    intro hp ; apply ih ; assumption
 
 def ConstrainedExtractResult.bind
   [LawfulMonad m']
@@ -482,6 +556,13 @@ theorem extract_list_refines_wp
     · have tmp := @instl2.sound α [] post
       simp [ge_iff_le] at tmp
       rw [tmp] ; simp
+  | @assumeSubtypeCont p f f' _ _ ih =>
+    simp [NonDetT.wp_pickCont]
+    split <;> rename_i hp
+    · exact le_trans (ih hp) (le_iSup_of_le ⟨.unit, hp⟩ (le_refl _))
+    · have tmp := @instl2.sound α [] post
+      simp [ge_iff_le] at tmp
+      rw [tmp] ; simp
 
 theorem wp_refines_extract_list
   [instl : LawfulMonadFlatMapGo m m' l LE.le]
@@ -508,6 +589,9 @@ theorem wp_refines_extract_list
   | @assumeCont p f f' _ h ih =>
     simp [NonDetT.wp_pickCont]
     intro hp ; simp [hp] ; apply ih
+  | @assumeSubtypeCont p f f' _ _ ih =>
+    simp [NonDetT.wp_pickCont]
+    rintro ⟨⟩ hp ; simp [hp] ; apply ih
 
 omit findOf h in
 theorem extract_list_eq_wp
@@ -828,11 +912,15 @@ macro "extract_list_step_fallback" : tactic =>
       | apply $(Lean.mkIdent ``ConstrainedExtractResult.bind)
       | apply $(Lean.mkIdent ``ConstrainedExtractResult.liftM)
       | apply $(Lean.mkIdent ``ConstrainedExtractResult.assume) _ _ _ ($(Lean.mkIdent `decp) := by first | find_local_decidable_and_apply | infer_instance)
+      -- before `pickList`, which also matches these picks on subtypes
+      | apply $(Lean.mkIdent ``ConstrainedExtractResult.assumeSubtype) _ _ _ ($(Lean.mkIdent `decp) := by first | find_local_decidable_and_apply | infer_instance)
+      | apply $(Lean.mkIdent ``ConstrainedExtractResult.pickSubtype)
       | apply $(Lean.mkIdent ``ConstrainedExtractResult.pickList)
       | apply $(Lean.mkIdent ``ExtractConstraint.toConstrainedExtractResult) <;> any_goals apply $(Lean.mkIdent ``ExtractConstraint.vis)
       | apply $(Lean.mkIdent ``ConstrainedExtractResult.pure)
       | apply $(Lean.mkIdent ``ExtractConstraint.toConstrainedExtractResult) <;> any_goals apply $(Lean.mkIdent ``ExtractConstraint.pickCont)
       | apply $(Lean.mkIdent ``ConstrainedExtractResult.ite)
+      | apply $(Lean.mkIdent ``ConstrainedExtractResult.dite)
     )
 
 -- NOTE: The order of tactics in `extract_list_step` matters;

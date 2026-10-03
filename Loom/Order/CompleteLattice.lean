@@ -178,6 +178,22 @@ theorem iSup_of_empty {ι : Sort v} (empty : ι → False) (f : ι → α) : iSu
 @[scoped simp] theorem iSup_punit (f : PUnit.{v} → α) : iSup f = f .unit :=
   le_antisymm (iSup_le fun ⟨⟩ => le_refl _) (le_iSup f .unit)
 
+theorem iInf_punit (f : PUnit.{v} → α) : iInf f = f .unit :=
+  le_antisymm (iInf_le f .unit) (le_iInf fun ⟨⟩ => le_refl _)
+
+theorem iInf_subtype {ι : Sort v} {p : ι → Prop} (f : Subtype p → α) :
+    iInf f = iInf (fun i => iInf (fun (h : p i) => f ⟨i, h⟩)) := by
+  apply le_antisymm
+  · exact le_iInf fun i => le_iInf fun h => iInf_le f ⟨i, h⟩
+  · exact le_iInf fun ⟨i, h⟩ => le_trans (iInf_le _ i) (iInf_le (fun (h : p i) => f ⟨i, h⟩) h)
+
+theorem iSup_subtype {ι : Sort v} {p : ι → Prop} (f : Subtype p → α) :
+    iSup f = iSup (fun i => iSup (fun (h : p i) => f ⟨i, h⟩)) := by
+  apply le_antisymm
+  · exact iSup_le fun ⟨i, h⟩ =>
+      le_trans (le_iSup (fun (h : p i) => f ⟨i, h⟩) h) (le_iSup (fun i => iSup fun (h : p i) => f ⟨i, h⟩) i)
+  · exact iSup_le fun i => iSup_le fun h => le_iSup f ⟨i, h⟩
+
 @[scoped simp] theorem iSup_eq {ι : Sort v} (b : ι) (f : ι → α) :
     iSup (fun a => iSup (fun (_ : a = b) => f a)) = f b := by
   apply le_antisymm
