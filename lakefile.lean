@@ -3,6 +3,7 @@ open Lake DSL
 
 package Loom where
   leanOptions := #[⟨`pp.unicode.fun, true⟩] -- pretty-prints `fun a ↦ b`
+  precompileModules := true
 
 @[default_target]
 lean_lib Loom where
