@@ -96,28 +96,33 @@ def ConstrainedExtractResult.assume (p : Prop) [decp : Decidable p] :
   val := (if p then inst1.pure .unit else inst3.op [])
   proof := by apply ExtractConstraint.assumeCont ; constructor
 
-def ConstrainedExtractResult.pickList (p : τ → Prop) [instec : ExtCandidates findable κ p] :
-  ConstrainedExtractResult κ m m' findOf (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) where
-  val := inst3.opMap (findOf p instec ()) fun x => inst1.bind
-      (inst4.log (ExtCandidates.rep findable p (self := instec) x))
+/-- A pick. Each candidate is logged together with the `name` of the pick, if it has one: the
+instance of `ExtractConstraint.pickCont` is `instec.named name`, which only changes the log. -/
+def ConstrainedExtractResult.pickList (p : τ → Prop) {name : Option String}
+  [instec : ExtCandidates findable κ p] [NamedRep κ] :
+  ConstrainedExtractResult κ m m' findOf (MonadNonDet.pickSuchThat (m := NonDetT m) τ p name) where
+  val := inst3.opMap (findOf p (instec.named name) ()) fun x => inst1.bind
+      (inst4.log (ExtCandidates.rep findable p (self := instec.named name) x))
       (fun _ => inst1.pure x)
   proof := by
-    rw [MonadFlatMap'.opMap_eq] ; apply ExtractConstraint.pickCont ; intros ; constructor
+    rw [MonadFlatMap'.opMap_eq]
+    apply ExtractConstraint.pickCont (instec := instec.named name) ; intros ; constructor
 
 /-- A pick followed by `f`, with `f`'s extraction inside each candidate's computation, which is
 the target of `ExtractConstraint.pickCont` itself. Extracting the pick and then `bind`ing its
 results instead would collect all candidates' results into one computation first, only for the
-`bind` to take them apart again. -/
-def ConstrainedExtractResult.pickList_bind {α : Type u} (p : τ → Prop)
-  [instec : ExtCandidates findable κ p] {f : τ → NonDetT m α}
+`bind` to take them apart again. Candidates are logged as by `pickList`. -/
+def ConstrainedExtractResult.pickList_bind {α : Type u} (p : τ → Prop) {name : Option String}
+  [instec : ExtCandidates findable κ p] [NamedRep κ] {f : τ → NonDetT m α}
   (hf : ∀ x, ConstrainedExtractResult κ m m' findOf (f x)) :
-  ConstrainedExtractResult κ m m' findOf (MonadNonDet.pickSuchThat (m := NonDetT m) τ p >>= f) where
-  val := inst3.opMap (findOf p instec ()) fun x => inst1.bind
-      (inst4.log (ExtCandidates.rep findable p (self := instec) x))
+  ConstrainedExtractResult κ m m' findOf
+    (MonadNonDet.pickSuchThat (m := NonDetT m) τ p name >>= f) where
+  val := inst3.opMap (findOf p (instec.named name) ()) fun x => inst1.bind
+      (inst4.log (ExtCandidates.rep findable p (self := instec.named name) x))
       (fun _ => (hf x).val)
   proof := by
     rw [MonadFlatMap'.opMap_eq]
-    exact ExtractConstraint.pickCont τ p f _ fun x => (hf x).proof
+    exact ExtractConstraint.pickCont τ p f _ (instec := instec.named name) fun x => (hf x).proof
 
 def ConstrainedExtractResult.liftM [LawfulMonad m'] (x : m α) :
   ConstrainedExtractResult κ m m' findOf (liftM (n := NonDetT m) x) where
@@ -127,25 +132,29 @@ def ConstrainedExtractResult.liftM [LawfulMonad m'] (x : m α) :
     rw [← bind_pure (MonadFlatMapGo.go x)]
     apply ExtractConstraint.vis ; intros ; constructor
 
-def ConstrainedExtractResult.pick [instec : ExtCandidates findable κ (fun (_ : τ) => True)] :
-  ConstrainedExtractResult κ m m' findOf (MonadNonDet.pick (m := NonDetT m) τ) where
-  val := inst3.opMap (findOf (fun _ => True) instec ()) fun x => inst1.bind
-      (inst4.log (ExtCandidates.rep findable (fun _ => True) (self := instec) x))
+/-- `pickList` for `MonadNonDet.pick`. -/
+def ConstrainedExtractResult.pick {name : Option String}
+  [instec : ExtCandidates findable κ (fun (_ : τ) => True)] [NamedRep κ] :
+  ConstrainedExtractResult κ m m' findOf (MonadNonDet.pick (m := NonDetT m) τ name) where
+  val := inst3.opMap (findOf (fun _ => True) (instec.named name) ()) fun x => inst1.bind
+      (inst4.log (ExtCandidates.rep findable (fun _ => True) (self := instec.named name) x))
       (fun _ => inst1.pure x)
   proof := by
-    rw [MonadFlatMap'.opMap_eq] ; apply ExtractConstraint.pickCont ; intros ; constructor
+    rw [MonadFlatMap'.opMap_eq]
+    apply ExtractConstraint.pickCont (instec := instec.named name) ; intros ; constructor
 
 /-- `pickList_bind` for `MonadNonDet.pick`. -/
-def ConstrainedExtractResult.pick_bind {α : Type u}
-  [instec : ExtCandidates findable κ (fun (_ : τ) => True)] {f : τ → NonDetT m α}
+def ConstrainedExtractResult.pick_bind {α : Type u} {name : Option String}
+  [instec : ExtCandidates findable κ (fun (_ : τ) => True)] [NamedRep κ] {f : τ → NonDetT m α}
   (hf : ∀ x, ConstrainedExtractResult κ m m' findOf (f x)) :
-  ConstrainedExtractResult κ m m' findOf (MonadNonDet.pick (m := NonDetT m) τ >>= f) where
-  val := inst3.opMap (findOf (fun _ => True) instec ()) fun x => inst1.bind
-      (inst4.log (ExtCandidates.rep findable (fun _ => True) (self := instec) x))
+  ConstrainedExtractResult κ m m' findOf (MonadNonDet.pick (m := NonDetT m) τ name >>= f) where
+  val := inst3.opMap (findOf (fun _ => True) (instec.named name) ()) fun x => inst1.bind
+      (inst4.log (ExtCandidates.rep findable (fun _ => True) (self := instec.named name) x))
       (fun _ => (hf x).val)
   proof := by
     rw [MonadFlatMap'.opMap_eq]
-    exact ExtractConstraint.pickCont τ (fun _ => True) f _ fun x => (hf x).proof
+    exact ExtractConstraint.pickCont τ (fun _ => True) f _ (instec := instec.named name)
+      fun x => (hf x).proof
 
 def ConstrainedExtractResult.ite {α : Type u} (p : Prop)
   (dec : Decidable p)   -- disallow synthesizing
@@ -821,14 +830,20 @@ elab "extract_list_use_extracted" : tactic => withMainContext do
   throwError "No applicable extracted result found for the goal"
 
 /-- The fallback case for extraction, where the goal cannot be recognized by
-`extract_list_use_extracted`. -/
+`extract_list_use_extracted`.
+
+The rules for picks are applied up to reducible unfolding only, so that each applies to its own
+primitive. `MonadNonDet.pick` and `MonadNonDet.pickSuchThat` unfold to the same `NonDetT` node
+without the name of the pick; a rule unified with the other primitive through it would leave the
+name as a goal. -/
 macro "extract_list_step_fallback" : tactic =>
   `(tactic|
     first
       | apply $(Lean.mkIdent ``ConstrainedExtractResult.bind)
       | apply $(Lean.mkIdent ``ConstrainedExtractResult.liftM)
       | apply $(Lean.mkIdent ``ConstrainedExtractResult.assume) _ _ _ ($(Lean.mkIdent `decp) := by first | find_local_decidable_and_apply | infer_instance)
-      | apply $(Lean.mkIdent ``ConstrainedExtractResult.pickList)
+      | with_reducible apply $(Lean.mkIdent ``ConstrainedExtractResult.pickList)
+      | with_reducible apply $(Lean.mkIdent ``ConstrainedExtractResult.pick)
       | apply $(Lean.mkIdent ``ExtractConstraint.toConstrainedExtractResult) <;> any_goals apply $(Lean.mkIdent ``ExtractConstraint.vis)
       | apply $(Lean.mkIdent ``ConstrainedExtractResult.pure)
       | apply $(Lean.mkIdent ``ExtractConstraint.toConstrainedExtractResult) <;> any_goals apply $(Lean.mkIdent ``ExtractConstraint.pickCont)

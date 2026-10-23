@@ -135,4 +135,60 @@ example {κ ε ρ σ : Type} {hd : ε → Prop} [IsHandler hd] :
       MonadPersistentLog.log, MonadLift.monadLift, StateT.lift, ExceptT.lift,
       PeDivM.prependAll_eq, PeDivM.log, PeDivM.prepend, pure, bind, Loom.Order.embed]
 
+/-! ## Names of picks in the log
+
+A pick may carry the name of the variable that it is bound to, as Veil's frontend would give it.
+Each candidate is then logged together with the name, which `Std.Format` entries show as `x = v`.
+Picks without a name are logged as before, as the tests above check for `Bool` entries. -/
+
+/-- The candidates satisfying a decidable predicate, out of all values listed in `all`. -/
+@[reducible] private def candidatesOf (all : List α) (complete : ∀ a, a ∈ all) (p : α → Prop)
+    [DecidablePred p] : Candidates p where
+  find := fun _ => all.filter (decide <| p ·)
+  find_iff := by intro x; simp [complete]
+
+-- `low`, so that `pick Bool` keeps the candidates above, with their duplicate
+private instance (priority := low) {p : Bool → Prop} [DecidablePred p] : Candidates p :=
+  candidatesOf [true, false] (by decide) p
+
+abbrev FormatTarget (α : Type) := TsilT (PeDivM (List Std.Format)) α
+
+def logs (xs : FormatTarget α) : List (List String) :=
+  xs.map fun (log, _) => log.map toString
+
+-- Extracted pick by pick: `pick` would also match `pickSuchThat … (fun _ => True)` by unfolding,
+-- and the other way round, losing the name; the fallback has to tell them apart.
+def namedPicks : NonDetT DivM Bool := do
+  let a ← MonadNonDet.pick Bool (name := "a")
+  let b ← MonadNonDet.pickSuchThat Bool (fun c => c = !a) (name := "b")
+  pure (a && b)
+
+def namedPicksExtracted : ConstrainedExtractResult Std.Format DivM FormatTarget
+    (findOfCandidates Std.Format) namedPicks := by
+  unfold namedPicks
+  extract_list_tactic
+
+#guard logs namedPicksExtracted.val ==
+  [["a = true", "b = false"], ["a = false", "b = true"], ["a = true", "b = false"]]
+
+-- The same log, with the first pick extracted together with its continuation, as Veil does.
+def namedPicksPickBind : ConstrainedExtractResult Std.Format DivM FormatTarget
+    (findOfCandidates Std.Format) namedPicks := by
+  unfold namedPicks
+  apply ConstrainedExtractResult.pick_bind
+  extract_list_tactic
+
+#guard logs namedPicksPickBind.val == logs namedPicksExtracted.val
+
+def unnamedPick : NonDetT DivM Bool := do
+  let x ← MonadNonDet.pick Bool
+  pure x
+
+def unnamedPickExtracted : ConstrainedExtractResult Std.Format DivM FormatTarget
+    (findOfCandidates Std.Format) unnamedPick := by
+  unfold unnamedPick
+  extract_list_tactic
+
+#guard logs unnamedPickExtracted.val == [["true"], ["false"], ["true"]]
+
 end LoomTest.Extraction

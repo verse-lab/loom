@@ -53,18 +53,21 @@ def NonDetT.assume (as : Prop) : NonDetT m PUnit :=
 def NonDetT.pickSuchThat (τ : Type u) (p : τ → Prop) : NonDetT m τ :=
   NonDetT.pickCont τ p pure
 
+/-- Nondeterministic choice. A choice may carry the `name` of the variable that it is bound to, so
+that an execution which logs its choices logs each with its name (see `ExtCandidates.named`).
+The name is no part of what a choice means: `NonDetT` ignores it. -/
 class MonadNonDet (m : Type u → Type v) where
-  pick : (τ : Type u) →  m τ
-  pickSuchThat : (τ : Type u) → (τ → Prop) → m τ
+  pick (τ : Type u) (name : Option String := none) : m τ
+  pickSuchThat (τ : Type u) (p : τ → Prop) (name : Option String := none) : m τ
   assume : Prop → m PUnit.{u+1}
 
 export MonadNonDet (pick assume pickSuchThat)
 
 
 instance : MonadNonDet (NonDetT m) where
-  pick   := .pick
+  pick τ _ := .pick τ
   assume := .assume
-  pickSuchThat := .pickSuchThat
+  pickSuchThat τ p _ := .pickSuchThat τ p
 
 -- namespace PartialCorrectness
 namespace DemonicChoice
@@ -145,15 +148,15 @@ theorem NonDetT.wp_pickCont {τ : Type u} p (f : τ → NonDetT m α) post :
 theorem NonDetT.wp_pure (x : α) post :
   _root_.wp (NonDetT.pure (m := m) x) post = post x := by erw [_root_.wp_pure]
 
-theorem MonadNonDet.wp_pick {τ : Type u} post :
-  _root_.wp (MonadNonDet.pick (m := NonDetT m) τ) post = iInf post := by
+theorem MonadNonDet.wp_pick {τ : Type u} {name : Option String} post :
+  _root_.wp (MonadNonDet.pick (m := NonDetT m) τ name) post = iInf post := by
   simp [MonadNonDet.pick, NonDetT.pick]
 
 theorem MonadNonDet.wp_assume {as : Prop} post : _root_.wp (MonadNonDet.assume (m := NonDetT m) as) post = ⌜as⌝ ⇨ post .unit := by
   simp [MonadNonDet.assume, NonDetT.assume, iInf_const]
 
-theorem MonadNonDet.wp_pickSuchThat {τ : Type u} (p : τ → Prop) post :
-  _root_.wp (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) post = ⨅ a, ⌜p a⌝ ⇨ post a := by
+theorem MonadNonDet.wp_pickSuchThat {τ : Type u} (p : τ → Prop) {name : Option String} post :
+  _root_.wp (MonadNonDet.pickSuchThat (m := NonDetT m) τ p name) post = ⨅ a, ⌜p a⌝ ⇨ post a := by
   simp [MonadNonDet.pickSuchThat, NonDetT.pickSuchThat]
 
 theorem NonDetT.wp_iInf {ι : Type u} {α : Type u} {l : Type u} [CompleteBooleanAlgebra l] [MAlgOrdered m l] [MAlgDet m l] [Nonempty ι]
@@ -260,15 +263,15 @@ theorem NonDetT.wp_pickCont {τ : Type u} p (f : τ → NonDetT m α) post :
 theorem NonDetT.wp_pure (x : α) post :
   _root_.wp (NonDetT.pure (m := m) x) post = post x := by erw [_root_.wp_pure]
 
-theorem MonadNonDet.wp_pick {τ : Type u} post :
-  _root_.wp (MonadNonDet.pick (m := NonDetT m) τ) post = iSup post := by
+theorem MonadNonDet.wp_pick {τ : Type u} {name : Option String} post :
+  _root_.wp (MonadNonDet.pick (m := NonDetT m) τ name) post = iSup post := by
   simp [MonadNonDet.pick, NonDetT.pick]
 
 theorem MonadNonDet.wp_assume {as : Prop} post : _root_.wp (MonadNonDet.assume (m := NonDetT m) as) post = ⌜as⌝ ⊓ post .unit := by
   simp [MonadNonDet.assume, NonDetT.assume, iSup_const]
 
-theorem MonadNonDet.wp_pickSuchThat {τ : Type u} (p : τ → Prop) post :
-  _root_.wp (MonadNonDet.pickSuchThat (m := NonDetT m) τ p) post = ⨆ a, ⌜p a⌝ ⊓ post a := by
+theorem MonadNonDet.wp_pickSuchThat {τ : Type u} (p : τ → Prop) {name : Option String} post :
+  _root_.wp (MonadNonDet.pickSuchThat (m := NonDetT m) τ p name) post = ⨆ a, ⌜p a⌝ ⊓ post a := by
   simp [MonadNonDet.pickSuchThat, NonDetT.pickSuchThat]
 
 noncomputable

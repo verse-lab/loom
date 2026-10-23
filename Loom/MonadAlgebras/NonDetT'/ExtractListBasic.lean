@@ -67,4 +67,29 @@ instance [inst : c p] : ExtCandidates c (Sigma id) p where
   core := inst
   rep := fun a => ⟨_, a⟩
 
+/-! ## Names of choices in the log
+
+A choice may carry the name of the variable that it is bound to (the `name` of `MonadNonDet.pick`
+and `MonadNonDet.pickSuchThat`). Extraction logs each candidate together with that name, in one
+log entry, so that the log stays the sequence of choices of an execution. How a name and a
+candidate make one entry depends on the type `κ` of the entries. -/
+
+/-- How a log entry of type `κ` records the name of the variable that a choice is bound to. -/
+class NamedRep (κ : Type w) where
+  withName : String → κ → κ
+
+/-- By default, the name is dropped, so the log is the same as without names. -/
+instance (priority := low) : NamedRep κ where
+  withName _ k := k
+
+instance : NamedRep Std.Format where
+  withName n f := .text n ++ " = " ++ f
+
+/-- `ec`, with each candidate logged together with the name `n` of the variable it is bound to,
+if there is one. The candidates are those of `ec.core`, as before. -/
+abbrev ExtCandidates.named {c : {τ : Type u} → (τ → Prop) → Type u} {κ : Type w} {α : Type u}
+    {p : α → Prop} [NamedRep κ] : Option String → ExtCandidates c κ p → ExtCandidates c κ p
+  | none, ec => ec
+  | some n, ec => { core := ec.core, rep := fun a => NamedRep.withName n (ec.rep a) }
+
 end MultiExtractor
