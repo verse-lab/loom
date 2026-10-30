@@ -325,6 +325,10 @@ variable {M : Type u → Type v} {ω l : Type u}
 instance : MonadPersistentLog ω (Loom.WriterT ω M) where
   log := fun w => Loom.WriterT.mk <| pure (⟨⟩, w)
 
+/-- Log entries of type `κ` into a log `List κ`. -/
+instance {κ : Type u} : MonadPersistentLog κ (Loom.WriterT (List κ) M) where
+  log k := Loom.WriterT.tell [k]
+
 @[always_inline]
 instance : MonadFlatMapGo M (Loom.WriterT ω M) where
   go x := Functor.map (f := M) (fun a => (a, LogMonoid.empty)) x
