@@ -30,6 +30,13 @@ class CCPOBot (m : Type u -> Type v)  where
 --   prop {α} [Lean.Order.PartialOrder (m α)] : ∀ (c : (m α) → Prop), Lean.Order.is_sup c <| CCPOBot.compBot (m := m) (α := α)
 
 noncomputable instance : Lean.Order.CCPO (DivM α) := inferInstanceAs (Lean.Order.CCPO (Lean.Order.FlatOrder .div))
+
+/-- The bottom computation in the flat order is divergence. -/
+theorem DivM.bot_eq : (Lean.Order.bot : DivM α) = .div := by
+  apply Lean.Order.PartialOrder.rel_antisymm
+  · exact Lean.Order.bot_le _
+  · exact Lean.Order.FlatOrder.rel.bot
+
 instance : CCPOBot DivM where
   compBot := .div
 
@@ -41,6 +48,24 @@ instance : Lean.Order.MonoBind DivM where
     rintro _ _ (_|_) _ _ (_|_) <;> solve_by_elim
   bind_mono_right := by
     rintro _ _ (_|_) <;> solve_by_elim
+
+/-- Results keep their value; divergence is `⊥`. This is a definition because `l` is an
+`outParam` of `MAlgOrdered`: install it as an instance for a chosen value lattice. -/
+@[implicit_reducible]
+def DivM.total (l : Type u) [CompleteLattice l] : MAlgOrdered DivM l where
+  μ
+    | .res a => a
+    | .div => ⊥
+  μ_ord_pure _ := rfl
+  μ_ord_bind _ _ h x := by cases x <;> simp [bind]; exact h _
+
+instance DivM.instMAlgTotalTotal (l : Type u) [CompleteLattice l] :
+    @MAlgTotal l DivM _ _ _ (DivM.total l) := by
+  letI := DivM.total l
+  constructor
+  intro α post
+  rw [DivM.bot_eq]
+  exact le_refl _
 
 namespace PartialCorrectness
 
@@ -77,23 +102,12 @@ end PartialCorrectness
 
 namespace TotalCorrectness
 
-scoped instance : MAlgOrdered DivM Prop where
-  μ := fun x => match x with
-    | .res x => ⌜x⌝
-    | .div => ⊥
-  μ_ord_pure := by simp [Loom.Order.embed, pure]
-  μ_ord_bind {α} f g := by
-    rintro h (_|_) <;> solve_by_elim
+scoped instance : MAlgOrdered DivM Prop := DivM.total Prop
 
 scoped instance : MAlgDet DivM Prop where
   angelic := by
-    rintro _ _ (_|_) _ _ <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map, Loom.Order.embed]
+    rintro _ _ (_|_) _ _ <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map]
   demonic := by
-    rintro _ _ (_|_) _ _ <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map, Loom.Order.embed]
-
--- instance : MAlgTotal DivM where
---   bot_lift := by
---     rintro _ _; simp [MAlg.lift, MAlgOrdered.μ, Functor.map, Loom.Order.embed]
---     rw [<-CCPOBotLawful.prop]; simp
+    rintro _ _ (_|_) _ _ <;> simp [Id, MAlg.lift, MAlgOrdered.μ, Functor.map]
 
 end TotalCorrectness

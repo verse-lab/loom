@@ -71,4 +71,35 @@ example : ((1 : Nat) ⊓ 2) = min 1 2 := rfl
 example (n m : Nat) (h : n ≤ m) : n < m + 1 := by omega
 example (n m : Int) (h : n ≤ m) : n < m + 1 := by omega
 
+-- The generic total algebra works without Prop or a Boolean value lattice.
+example {l : Type u} [CompleteLattice l] :
+    letI := DivM.total l
+    MAlgTotal DivM (l := l) := by infer_instance
+
+section
+noncomputable local instance : MAlgOrdered DivM Order.Chain := DivM.total _
+
+example (x : DivM Nat) (post : Nat → Order.Chain) :
+    wp x post = match x with | .res a => post a | .div => .low := by
+  cases x <;> exact DivM.wp_eq _ post
+end
+
+-- Existing scopes keep their Prop behavior and select the appropriate totality law.
+open TotalCorrectness in
+example : MAlgTotal DivM (l := Prop) := inferInstance
+
+open TotalCorrectness in
+example (p : Prop) : wp (DivM.res p) id = p := rfl
+
+open TotalCorrectness in
+example : wp (DivM.div : DivM Nat) (fun _ => True) = False := rfl
+
+open PartialCorrectness in
+example : wp (DivM.div : DivM Nat) (fun _ => False) = True := rfl
+
+open PartialCorrectness in
+example : True := by
+  fail_if_success have : MAlgTotal DivM (l := Prop) := inferInstance
+  trivial
+
 end LoomTest.Algebras

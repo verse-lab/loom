@@ -6,6 +6,7 @@ public import Loom.MonadAlgebras.Instances.Basic
 public import Loom.MonadAlgebras.Instances.ExceptT
 public import Loom.MonadAlgebras.Instances.StateT
 public import Loom.MonadAlgebras.Instances.ReaderT
+public import Loom.MonadAlgebras.Instances.DivT
 
 @[expose] public section
 
@@ -384,14 +385,23 @@ theorem ExceptionAsFailure.ExceptT.wp_lift (c : m α) (post : α -> l) :
   apply ExceptT.wp_lift_hd
 
 /- WP for DivM in TotalCorrectness -/
+/-- Total correctness for `DivM`, over any value lattice and algebra satisfying `MAlgTotal`. -/
+theorem DivM.wp_eq {α l : Type u} [CompleteLattice l] [MAlgOrdered DivM l] [MAlgTotal DivM]
+    (x : DivM α) (post : α → l) :
+    wp x post = match x with | .res a => post a | .div => ⊥ := by
+  cases x with
+  | res a => exact wp_pure a post
+  | div =>
+    simpa only [DivM.bot_eq] using
+      congrFun (TotalCorrectness.wp_bot (m := DivM) (l := l) (α := α)) post
+
 open TotalCorrectness in
 theorem TotalCorrectness.DivM.wp_eq (α : Type) (x : DivM α) (post : α -> Prop) :
   wp x post =
     match x with
     | .div => False
     | .res r => post r := by
-  simp +instances [wp, liftM, monadLift, MAlg.lift, Functor.map, TotalCorrectness.instMAlgOrderedDivMProp, Id]
-  cases x <;> simp +instances [Loom.Order.embed]
+  cases x <;> exact _root_.DivM.wp_eq _ post
 
 /- WP for DivM in PartialCorrectness -/
 theorem PartialCorrectness.DivM.wp_eq (α : Type) (x : DivM α) (post : α -> Prop) :
@@ -423,6 +433,26 @@ theorem ReaderT.wp_eq (c : ReaderT σ m α) (post : α -> σ -> l) :
 theorem ReaderT.wp_lift (c : m α) (post : α -> σ -> l) :
   wp (liftM (n := ReaderT σ m) c) post = fun s => wp (m := m) c (post · s) := by
   simp [wp, liftM, monadLift, MAlg.lift_ReaderT, MonadLift.monadLift]
+
+/- WP for DivT in the underlying monad: a result is read by the algebra of `DivM` in scope -/
+theorem DivT.wp_eq [MAlgOrdered DivM l] (c : DivT m α) (post : α -> l) :
+  wp c post = wp (m := m) c.run (fun d => wp d post) := by
+  simp [wp, liftM, monadLift, MAlg.lift_DivT]
+
+/- WP for a converging result of DivM -/
+theorem DivM.wp_res [MAlgOrdered DivM l] (a : α) (post : α -> l) :
+  wp (DivM.res a) post = post a := wp_pure a post
+
+/- WP for lift to DivT -/
+theorem DivT.wp_lift [MAlgOrdered DivM l] (c : m α) (post : α -> l) :
+  wp (liftM (n := DivT m) c) post = wp c post := by
+  rw [DivT.wp_eq, DivT.run_liftM, wp_map]
+  exact congrArg (wp c) (funext fun a => DivM.wp_res a post)
+
+/- WP for a result of DivM lifted into DivT -/
+theorem DivT.wp_ofDivM [MAlgOrdered DivM l] (d : DivM α) (post : α -> l) :
+  wp (liftM (n := DivT m) d) post = wp d post := by
+  rw [DivT.wp_eq, DivT.run_liftM_DivM, wp_pure]
 
 /- WP lift from MAlgLift-/
 omit [LawfulMonad m] in

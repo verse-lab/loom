@@ -12,6 +12,7 @@ universe u
 inductive DivM (α : Type u) where
   | res (x : α)
   | div
+deriving Repr
 
 def DivM.run {α : Type u} [Inhabited α] : DivM α -> α
   | DivM.res x => x
