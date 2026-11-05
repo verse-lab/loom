@@ -11,7 +11,7 @@ namespace Loom
 universe u v
 
 /-- A writer computation returns the result followed by the accumulated log. -/
-def WriterT (ω : Type u) (m : Type u → Type v) (α : Type u) := m (α × ω)
+@[implicit_reducible] def WriterT (ω : Type u) (m : Type u → Type v) (α : Type u) := m (α × ω)
 
 abbrev Writer (ω : Type u) := WriterT ω Id
 

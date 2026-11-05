@@ -25,7 +25,7 @@ open Loom Loom.Order
 
 universe u v
 
-def DivT (m : Type u → Type v) (α : Type u) : Type v := m (DivM α)
+@[implicit_reducible] def DivT (m : Type u → Type v) (α : Type u) : Type v := m (DivM α)
 
 namespace DivT
 

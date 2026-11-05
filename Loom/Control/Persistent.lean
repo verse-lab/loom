@@ -10,7 +10,7 @@ public import Loom.Control.Log
 -- Keep explicit universe arguments in their original order: log, then result.
 universe w u
 
-def PeDivM (κ : Type w) (α : Type u) := κ × DivM α
+@[implicit_reducible] def PeDivM (κ : Type w) (α : Type u) := κ × DivM α
 
 @[inline, specialize inst]
 def PeDivM.prepend {κ : Type w} [inst : Loom.LogMonoid κ] {α : Type u} (k : κ) : PeDivM κ α → PeDivM κ α

@@ -153,7 +153,7 @@ class LogicLift (l : outParam (Type u)) ( k : Type u) [CompleteLattice l] [Compl
   lift_bot {α : Type u} :
     monadLift (m := Cont l) (n := Cont k) (fun (_ : α -> l) => ⊥) = ⊥
 
-@[implicit_reducible]
+@[instance_reducible]
 def LogicLift.refl [CompleteLattice l] : LogicLift l l where
   lift := by exact ⟨id⟩
   lift_top := rfl
@@ -207,7 +207,7 @@ class MAlgLift
     [cl : LogicLift l k]
     μ_lift (x : m α) : MAlg.lift (liftM (n := n) x) f = liftM (n := Cont k) (MAlg.lift x) f
 
-@[implicit_reducible]
+@[instance_reducible]
 def MAlgLift.mk_rep  (m : semiOutParam (Type u -> Type v)) (l : semiOutParam (Type u)) [Monad m] [CompleteLattice l] [MAlgOrdered m l]
   (n : (Type u -> Type w)) (σ : Type u) [LawfulMonad m] [Monad n] [LawfulMonad n] [CompleteLattice k] [MAlgOrdered n (σ -> l)]
   [MonadLiftT m n] [LawfulMonadLiftT m n]
@@ -220,7 +220,7 @@ def MAlgLift.mk_rep  (m : semiOutParam (Type u -> Type v)) (l : semiOutParam (Ty
     apply Eq.trans (μ_lift _)
     simp [Functor.map_map]; rfl
 
-@[implicit_reducible]
+@[instance_reducible]
 def MAlgLift.mk_id  (m : semiOutParam (Type u -> Type v)) (l : semiOutParam (Type u)) [Monad m] [CompleteLattice l] [MAlgOrdered m l]
   (n : (Type u -> Type w)) [LawfulMonad m] [Monad n] [LawfulMonad n] [CompleteLattice k] [MAlgOrdered n l]
   [MonadLiftT m n] [LawfulMonadLiftT m n]

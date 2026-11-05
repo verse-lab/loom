@@ -18,7 +18,7 @@ theorem Except.bind'_bind {m : Type u -> Type v} {ε α β} [Monad m] [LawfulMon
   (i >>= fun a => Except.bind' a f) = bind (m := ExceptT ε m) i f := by
   simp [Except.bind', bind, ExceptT.bind]; rfl
 
-@[implicit_reducible]
+@[instance_reducible]
 /- Ordered Monad Algebra instance for ExceptT -/
 noncomputable
 def MAlgExcept (ε : Type u) (df : ε -> Prop) (l : Type u) (m : Type u -> Type v)
@@ -135,7 +135,6 @@ instance [Loom.Order.CompleteLattice l]
       intros; simp [MAlg.lift_ExceptT];
       simp +instances [liftM, instMonadLiftTOfMonadLift, MonadLift.monadLift]
       simp [ExceptT.lift, ExceptT.mk, MAlg.lift]
-      rfl
 
 end ExeceptHandler
 

@@ -51,7 +51,7 @@ instance : Lean.Order.MonoBind DivM where
 
 /-- Results keep their value; divergence is `⊥`. This is a definition because `l` is an
 `outParam` of `MAlgOrdered`: install it as an instance for a chosen value lattice. -/
-@[implicit_reducible]
+@[instance_reducible]
 def DivM.total (l : Type u) [CompleteLattice l] : MAlgOrdered DivM l where
   μ
     | .res a => a

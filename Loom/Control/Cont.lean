@@ -11,7 +11,7 @@ universe u v w
 
 /-- Continuations with an underlying answer computation. The value universe
 is independent of both the answer and the underlying computation universes. -/
-def ContT (r : Type u) (m : Type u → Type v) (α : Type w) := (α → m r) → m r
+@[implicit_reducible] def ContT (r : Type u) (m : Type u → Type v) (α : Type w) := (α → m r) → m r
 
 abbrev Cont (r : Type u) (α : Type w) := ContT r Id α
 

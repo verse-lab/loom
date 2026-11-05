@@ -233,7 +233,7 @@ def ConstrainedExtractResult.filterAuxM
     | cons x l ih =>
       apply ExtractConstraint.bind
       · apply (h x).proof
-      · rintro ⟨_ | _⟩ <;> dsimp <;> apply ih
+      · rintro ⟨_ | _⟩ <;> (try dsimp) <;> apply ih
 
 def ConstrainedExtractResult.bind_pure
   [LawfulMonad m']
@@ -483,7 +483,7 @@ theorem extract_list_refines_wp
     apply le_trans (tmp _ _) ; rw [iSup_list_map] ; simp only [wp_bind, LawfulMonadPersistentLog.log_sound]
     simp
     intro a hin ; apply le_trans (ih a)
-    apply le_iSup_of_le a ; simp [findOf_sound _ hin]
+    apply Loom.Order.le_iSup_of_le a ; simp [findOf_sound _ hin]
   | @assumeCont p f f' _ h ih =>
     simp [NonDetT.wp_pickCont]
     split <;> rename_i h
@@ -513,7 +513,7 @@ theorem wp_refines_extract_list
     apply le_trans' (tmp _ _) ; rw [iSup_list_map] ; simp only [wp_bind, LawfulMonadPersistentLog.log_sound]
     simp
     intro a hin ; apply le_trans (ih a)
-    apply le_iSup_of_le a ; simp [findOf_complete, hin]
+    apply Loom.Order.le_iSup_of_le a ; simp [findOf_complete, hin]
   | @assumeCont p f f' _ h ih =>
     simp [NonDetT.wp_pickCont]
     intro hp ; simp [hp] ; apply ih
