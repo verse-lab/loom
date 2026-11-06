@@ -1,8 +1,12 @@
-import Loom.Order.Instances
-import Mathlib.Order.CompleteBooleanAlgebra
+module
+
+public import Loom.Order.Instances
+public import Mathlib.Order.CompleteBooleanAlgebra
 
 /-! Explicit conversions from mathlib's bundled orders. Loom shares Lean's
 `LE`/`Min`/`Max`, so only bounds, complement, and implication are supplied. -/
+
+@[expose] public section
 
 namespace LoomMathlib
 

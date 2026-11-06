@@ -223,7 +223,7 @@ instance {hd : ε → Prop} [IsHandler hd]
     simp [wp, liftM, monadLift] at tmp ⊢
     simp [MAlg.lift, Functor.map, ExceptT.map, ExceptT.mk] at tmp ⊢
     repeat rw [map_eq_pure_bind] at tmp
-    simp +instances only [OfMAlgPartialOrdered, OfHd, MAlgExcept, Id, map_bind]
+    simp +instances only [OfHd, MAlgExcept, Id, map_bind]
     -- not easy to rewrite
     have tmp1 : ∀ (a : Except ε α),
       ((pure

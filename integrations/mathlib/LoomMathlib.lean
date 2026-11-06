@@ -1,3 +1,5 @@
-import LoomMathlib.Candidates
-import LoomMathlib.Control
-import LoomMathlib.Order
+module
+
+public import LoomMathlib.Candidates
+public import LoomMathlib.Control
+public import LoomMathlib.Order

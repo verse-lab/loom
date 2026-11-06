@@ -1,8 +1,12 @@
-import Loom.Control.Cont
-import Loom.Control.Writer
-import Mathlib.Control.Monad.Cont
+module
+
+public import Loom.Control.Cont
+public import Loom.Control.Writer
+public import Mathlib.Control.Monad.Cont
 
 /-! Explicit bridges avoid introducing competing global typeclass instances. -/
+
+@[expose] public section
 
 namespace LoomMathlib
 

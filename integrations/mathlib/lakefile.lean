@@ -5,7 +5,7 @@ package LoomMathlib
 
 require Loom from "../.."
 require mathlib from git "https://github.com/leanprover-community/mathlib4" @
-  "81a5d257c8e410db227a6665ed08f64fea08e997" -- v4.32.0
+  "56a005855ea17e0b0958f73ec801ae140b0a1679" -- v4.35.0
 
 @[default_target]
 lean_lib LoomMathlib where
