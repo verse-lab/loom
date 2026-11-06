@@ -33,6 +33,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The Git adapter test fetches from this checkout as a local remote.
+          # Keep full history so Lake's fetch does not reject shallow-source refs.
+          fetch-depth: 0
       - uses: leanprover/lean-action@v1
         with:
           use-github-cache: false
