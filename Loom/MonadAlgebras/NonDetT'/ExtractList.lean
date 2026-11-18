@@ -59,6 +59,24 @@ inductive ExtractConstraint : {α : Type u} → (s : NonDetT m α) → m' α →
     (ExtractConstraint (f .unit) (f' .unit)) →
     ExtractConstraint (NonDetT.pickCont PUnit p f)
       (if p .unit then f' .unit else inst3.op [])
+  /-- Partial extraction may omit a path. This constructor is impossible for a
+  complete extractor because it requires a valid candidate that was skipped. -/
+  | missingChoice {α τ : Type u} {s : NonDetT m α} {p : τ → Prop}
+      (ec : ExtCandidates findable κ p) (x : τ) (holds : p x)
+      (missing : x ∉ findOf p ec ()) :
+      ExtractConstraint s (inst3.op [])
+
+/-- A branch left out of executable exploration. A pruned branch has a
+known omitted candidate. An unchecked branch has an undecided guard. -/
+inductive ExtractionCoverage : Type u where
+  | pruned
+  | unchecked
+
+def omittedCoverage {p : τ → Prop} (ec : ExtCandidates findable κ p) : m' ExtractionCoverage.{u} :=
+  match ec.omission () with
+  | some true => inst1.pure .pruned
+  | some false => inst3.op []
+  | none => inst1.pure .unchecked
 
 /-- A "boxed" version of `ExtractConstraint`, to carry both the extracted
 value and the proof that it satisfies the constraint. Used in making
@@ -66,6 +84,9 @@ extraction compositional. -/
 structure ConstrainedExtractResult {α : Type u} (s : NonDetT m α) where
   val : m' α
   proof : ExtractConstraint κ m m' findOf s val
+  /-- One result for each explored prefix where the extractor omitted
+  original choices or encountered an undecided guard. -/
+  coverage : m' ExtractionCoverage.{u} := inst3.op []
 
 def ConstrainedExtractResult.pure {α : Type u} (x : α) :
   ConstrainedExtractResult κ m m' findOf (pure x) where
@@ -73,7 +94,7 @@ def ConstrainedExtractResult.pure {α : Type u} (x : α) :
   proof := ExtractConstraint.pure
 
 def ExtractConstraint.toConstrainedExtractResult {α : Type u} {s : NonDetT m α} {s' : m' α}
-  (h : ExtractConstraint κ m m' findOf s s') : ConstrainedExtractResult κ m m' findOf s := ⟨s', h⟩
+  (h : ExtractConstraint κ m m' findOf s s') : ConstrainedExtractResult κ m m' findOf s := { val := s', proof := h }
 
 open Lean Meta Elab Tactic in
 /-- Try all `Decidable` instances in the context to find one to apply to
@@ -107,6 +128,7 @@ def ConstrainedExtractResult.pickList (p : τ → Prop) {name : Option String}
   proof := by
     rw [MonadFlatMap'.opMap_eq]
     apply ExtractConstraint.pickCont (instec := instec.named name) ; intros ; constructor
+  coverage := omittedCoverage κ m' (instec.named name)
 
 /-- A pick followed by `f`, with `f`'s extraction inside each candidate's computation, which is
 the target of `ExtractConstraint.pickCont` itself. Extracting the pick and then `bind`ing its
@@ -123,6 +145,9 @@ def ConstrainedExtractResult.pickList_bind {α : Type u} (p : τ → Prop) {name
   proof := by
     rw [MonadFlatMap'.opMap_eq]
     exact ExtractConstraint.pickCont τ p f _ (instec := instec.named name) fun x => (hf x).proof
+  coverage := inst3.op [
+    omittedCoverage κ m' (instec.named name),
+    inst3.opMap (findOf p (instec.named name) ()) fun x => (hf x).coverage]
 
 def ConstrainedExtractResult.liftM [LawfulMonad m'] (x : m α) :
   ConstrainedExtractResult κ m m' findOf (liftM (n := NonDetT m) x) where
@@ -142,6 +167,7 @@ def ConstrainedExtractResult.pick {name : Option String}
   proof := by
     rw [MonadFlatMap'.opMap_eq]
     apply ExtractConstraint.pickCont (instec := instec.named name) ; intros ; constructor
+  coverage := omittedCoverage κ m' (instec.named name)
 
 /-- `pickList_bind` for `MonadNonDet.pick`. -/
 def ConstrainedExtractResult.pick_bind {α : Type u} {name : Option String}
@@ -155,6 +181,9 @@ def ConstrainedExtractResult.pick_bind {α : Type u} {name : Option String}
     rw [MonadFlatMap'.opMap_eq]
     exact ExtractConstraint.pickCont τ (fun _ => True) f _ (instec := instec.named name)
       fun x => (hf x).proof
+  coverage := inst3.op [
+    omittedCoverage κ m' (instec.named name),
+    inst3.opMap (findOf (fun (_ : τ) => True) (instec.named name) ()) fun x => (hf x).coverage]
 
 def ConstrainedExtractResult.ite {α : Type u} (p : Prop)
   (dec : Decidable p)   -- disallow synthesizing
@@ -164,6 +193,50 @@ def ConstrainedExtractResult.ite {α : Type u} (p : Prop)
   ConstrainedExtractResult κ m m' findOf (@_root_.ite _ p dec s1 s2) where
   val := (@_root_.ite _ p dec h1.val h2.val)
   proof := by split ; exact h1.proof ; exact h2.proof
+  coverage := @_root_.ite _ p dec h1.coverage h2.coverage
+
+private theorem omittedConstraint (s : NonDetT m α) (logValue : κ) :
+    ExtractConstraint κ m m' (findOfPartialCandidates κ) s (inst3.op []) := by
+  let skipped : ExtCandidates PartialCandidates κ (fun _ : PUnit.{u+1} => True) :=
+    { core := { find := fun _ => [], find_then := fun _ _ => trivial }
+      rep := fun _ => logValue }
+  exact .missingChoice skipped PUnit.unit trivial (by change PUnit.unit ∉ ([] : List PUnit.{u+1}); simp)
+
+def ConstrainedExtractResult.assumePartial (p : Prop) (decision : Option (Decidable p))
+    (logValue : κ) :
+    ConstrainedExtractResult κ m m' (findOfPartialCandidates κ) (MonadNonDet.assume (m := NonDetT m) p) where
+  val := match decision with
+    | none => inst3.op []
+    | some dec => (@ConstrainedExtractResult.assume κ m m' _ _ _ _ _ (findOfPartialCandidates κ) p dec).val
+  proof := by
+    cases decision with
+    | none => exact omittedConstraint κ m m' _ logValue
+    | some dec => exact (@ConstrainedExtractResult.assume κ m m' _ _ _ _ _ (findOfPartialCandidates κ) p dec).proof
+  coverage := match decision with
+    | none => inst1.pure .unchecked
+    | some _ => inst3.op []
+
+/-- Compile a conditional with a proof-bearing decision that can be absent
+at runtime. The original decision is used only in the proof. -/
+def ConstrainedExtractResult.itePartial {α : Type u} (p : Prop) (original : Decidable p)
+    (decide? : Option (Decidable p)) (logValue : κ)
+    {s1 s2 : NonDetT m α}
+    (h1 : ConstrainedExtractResult κ m m' (findOfPartialCandidates κ) s1)
+    (h2 : ConstrainedExtractResult κ m m' (findOfPartialCandidates κ) s2) :
+    ConstrainedExtractResult κ m m' (findOfPartialCandidates κ) (@_root_.ite _ p original s1 s2) where
+  val := match decide? with
+    | none => inst3.op []
+    | some decision => @_root_.ite _ p decision h1.val h2.val
+  proof := by
+    cases decide? with
+    | none => exact omittedConstraint κ m m' _ logValue
+    | some decision =>
+      have same : decision = original := Subsingleton.elim _ _
+      subst decision
+      exact (ConstrainedExtractResult.ite κ m m' (findOfPartialCandidates κ) p original h1 h2).proof
+  coverage := match decide? with
+    | none => inst1.pure .unchecked
+    | some decision => @_root_.ite _ p decision h1.coverage h2.coverage
 
 -- TODO remove this repetition
 theorem ExtractConstraint.bind
@@ -194,6 +267,9 @@ theorem ExtractConstraint.bind
     -- some very weird unification failure happens here, so need to provide arguments explicitly
     apply ExtractConstraint.assumeCont (p := p) (f' := (fun _ => g' PUnit.unit >>= f'))
     apply ih ; assumption
+  | missingChoice ec x holds missing =>
+    rw [← MonadFlatMap'BindDistributive.bind_distrib]
+    exact .missingChoice ec x holds missing
 
 def ConstrainedExtractResult.bind
   [LawfulMonad m']
@@ -208,6 +284,7 @@ def ConstrainedExtractResult.bind
     apply ExtractConstraint.bind
     · exact hs.proof
     · intro x ; exact (hf x).proof
+  coverage := inst3.op [hs.coverage, inst1.bind hs.val (fun x => (hf x).coverage)]
 
 def ConstrainedExtractResult.filterAuxM
   (κ : Type q)
@@ -234,6 +311,9 @@ def ConstrainedExtractResult.filterAuxM
       apply ExtractConstraint.bind
       · apply (h x).proof
       · rintro ⟨_ | _⟩ <;> (try dsimp) <;> apply ih
+  coverage := l.foldr
+    (fun x next => inst3.op [(h x).coverage, inst1.bind (h x).val (fun _ => next)])
+    (inst3.op [])
 
 def ConstrainedExtractResult.bind_pure
   [LawfulMonad m']
@@ -245,6 +325,7 @@ def ConstrainedExtractResult.bind_pure
   proof := by
     rw [← _root_.bind_pure (x := hs.val)]
     exact ExtractConstraint.bind _ _ _ _ hs.proof fun _ => ExtractConstraint.pure
+  coverage := hs.coverage
 
 def ConstrainedExtractResult.bind_pure_unit
   [LawfulMonad m']
@@ -491,6 +572,11 @@ theorem extract_list_refines_wp
     · have tmp := @instl2.sound α [] post
       simp [ge_iff_le] at tmp
       rw [tmp] ; simp
+  | missingChoice ec x holds missing =>
+    have empty := @instl2.sound α [] post
+    simp [ge_iff_le] at empty
+    rw [empty]
+    simp
 
 theorem wp_refines_extract_list
   [instl : LawfulMonadFlatMapGo m m' l LE.le]
@@ -517,6 +603,8 @@ theorem wp_refines_extract_list
   | @assumeCont p f f' _ h ih =>
     simp [NonDetT.wp_pickCont]
     intro hp ; simp [hp] ; apply ih
+  | missingChoice ec x holds missing =>
+    exact (missing (findOf_complete _ ec x holds)).elim
 
 omit findOf h in
 theorem extract_list_eq_wp
@@ -619,21 +707,19 @@ def ExtractAttr.find? (s : ExtractAttr) (e : Expr) : MetaM (Array ExtractAttr.En
 
 section ExtractionForLet
 
-/-- Move `(let x := v; result).val` to `let x := v; result.val`.
-Keeping the binder avoids substituting v at every use; reducing the projection
-inside it then removes the extraction certificate from the executable term. -/
+/-- Move an executable projection through a shared value let so the
+extraction certificate and proof-only decisions disappear from runtime code. -/
 dsimproc_decl simpExtractedValueLet (_) := fun e => do
-  -- Unfolding `.val` can expose the kernel projection before this post-step.
-  let result? := match e with
-    | .proj ``MultiExtractor.ConstrainedExtractResult 0 result => some result
-    | _ => if e.isAppOfArity ``MultiExtractor.ConstrainedExtractResult.val 12 then
-        some e.appArg! else none
-  let some result := result? | return .continue
+  let projected? := match e with
+    | .proj ``MultiExtractor.ConstrainedExtractResult index result =>
+      if index == 0 || index == 2 then some (index, result) else none
+    | _ =>
+      if e.isAppOfArity ``MultiExtractor.ConstrainedExtractResult.val 12 then some (0, e.appArg!)
+      else if e.isAppOfArity ``MultiExtractor.ConstrainedExtractResult.coverage 12 then some (2, e.appArg!)
+      else none
+  let some (index, result) := projected? | return .continue
   let .letE nm ty val body nondep := result.consumeMData | return .continue
-  -- The kernel projection needs no source index or instance arguments. Moving
-  -- it under the binder leaves body's bound variables unchanged; revisiting
-  -- handles nested lets and reduces the projection once it reaches a constructor.
-  return .visit <| .letE nm ty val (.proj ``MultiExtractor.ConstrainedExtractResult 0 body) nondep
+  return .visit <| .letE nm ty val (.proj ``MultiExtractor.ConstrainedExtractResult index body) nondep
 
 /-- Construct a sharing rule for the join point's actual telescope, including
 the empty telescope. This is the term-level generalisation of `joinPoint` and
@@ -665,45 +751,55 @@ private def mkJoinPointSharingRule (goalType varTy val bodyE : Expr) : MetaM Exp
   --    targetType = ∀ xs, m' α
   -- Rebinding the same xs preserves dependencies between their types. For
   -- arity zero, applying and rebinding the empty telescope do nothing.
-  let (hjpType, targetType) ← forallTelescopeReducing varTy fun xs _ => do
-    return (← mkForallFVars xs (mkResultType (mkAppN val xs)),
-      ← mkForallFVars xs (mkApp params[2]! params[9]!))
+  let resultName := ``MultiExtractor.ConstrainedExtractResult
+  let (hjpType, targetType, uncheckedType) ← forallTelescopeReducing varTy fun xs _ => do
+    let source := mkAppN val xs
+    let dummy ← withLocalDeclD `extracted (mkResultType source) fun extracted =>
+      inferType (mkProj resultName 2 extracted)
+    return (← mkForallFVars xs (mkResultType source),
+      ← mkForallFVars xs (mkApp params[2]! params[9]!), ← mkForallFVars xs dummy)
 
   -- 2. State the body's premise for an opaque source/target pair, related at
   -- every argument list. Replacing bound variable 0 by jpS keeps jumps opaque
   -- during recursive extraction, so hrel must discharge them.
   let hbodyType ← withLocalDeclD `jpS varTy fun jpS =>
-    withLocalDeclD `jp' targetType fun jp' => do
+    withLocalDeclD `jp' targetType fun jp' =>
+    withLocalDeclD `jpUnchecked uncheckedType fun jpUnchecked => do
       let hrelType ← forallTelescopeReducing varTy fun xs _ => do
         mkForallFVars xs (← mkRelation (mkAppN jpS xs) (mkAppN jp' xs))
       withLocalDeclD `hrel hrelType fun hrel =>
-        mkForallFVars #[jpS, jp', hrel] (mkResultType (bodyE.instantiate1 jpS))
+        mkForallFVars #[jpS, jp', jpUnchecked, hrel] (mkResultType (bodyE.instantiate1 jpS))
 
   -- 3. Assume both premises and project the extracted continuation and its
   -- pointwise certificate from hjp. These are the concrete pair used below
   -- to instantiate hbody; no extraction is performed by this constructor.
   withLocalDeclD `hjp hjpType fun hjp =>
     withLocalDeclD `hbody hbodyType fun hbody => do
-  let (jp', hrel) ← forallTelescopeReducing varTy fun xs _ => do
+  let (jp', hrel, jpUnchecked) ← forallTelescopeReducing varTy fun xs _ => do
     let extracted := mkAppN hjp xs
-    return (← mkLambdaFVars xs (mkProj ``MultiExtractor.ConstrainedExtractResult 0 extracted),
-      ← mkLambdaFVars xs (mkProj ``MultiExtractor.ConstrainedExtractResult 1 extracted))
+    return (← mkLambdaFVars xs (mkProj resultName 0 extracted),
+      ← mkLambdaFVars xs (mkProj resultName 1 extracted),
+      ← mkLambdaFVars xs (mkProj resultName 2 extracted))
 
   -- 4. Build the executable value with one explicit target let. hbody's value
   -- refers to j at each jump, so later reduction retains the shared binding.
   -- hrel relates the source to j's defining value, not to an arbitrary j:
   -- this let must stay dependent so proof abstraction retains that equality.
   let target ← withLetDecl `jp' targetType jp' fun j => do
-    let body := mkProj ``MultiExtractor.ConstrainedExtractResult 0 (mkAppN hbody #[val, j, hrel])
+    let body := mkProj resultName 0 (mkAppN hbody #[val, j, jpUnchecked, hrel])
     mkLetFVars #[j] body (generalizeNondepLet := false)
 
   -- 5. The certificate uses the same hbody with the concrete target inlined.
   -- Its source is definitionally the original source let, and its target is
   -- definitionally the executable value above. Package both fields, then
   -- abstract the premises to return `fun hjp hbody => ⟨target, proof⟩`.
-  let proof := mkProj ``MultiExtractor.ConstrainedExtractResult 1 (mkAppN hbody #[val, jp', hrel])
+  let proof := mkProj resultName 1 (mkAppN hbody #[val, jp', jpUnchecked, hrel])
+  let unchecked ← withLetDecl `jp' targetType jp' fun j =>
+    withLetDecl `jpUnchecked uncheckedType jpUnchecked fun u => do
+      let body := mkProj resultName 2 (mkAppN hbody #[val, j, u, hrel])
+      mkLetFVars #[j, u] body (generalizeNondepLet := false)
   let result ← mkAppOptM ``MultiExtractor.ConstrainedExtractResult.mk
-    (params.map some ++ #[some goalType.appArg!, some target, some proof])
+    (params.map some ++ #[some goalType.appArg!, some target, some proof, some unchecked])
   mkLambdaFVars #[hjp, hbody] result
 
 /-- Configuration for the `let`-handling extraction step. -/
@@ -766,9 +862,17 @@ def evalExtractLetStep : Tactic := fun stx => withMainContext do
         let hType ← instantiateMVars (← inferType h)
         let_expr MultiExtractor.ExtractConstraint _ _ _ _ _ _ _ _ _ _ _ tgt := hType
           | throwError "hypothesis is not an extraction certificate"
+        -- The unchecked function is bound immediately before this certificate.
+        let mut preceding := none
+        for prior in ← getLCtx do
+          if prior.fvarId == ldecl.fvarId then break
+          preceding := some prior
+        let some uncheckedDecl := preceding
+          | throwError "missing the unchecked computation for this join point"
+        let unchecked ← mkAppOptM' uncheckedDecl.toExpr (args.map some)
         let e ← mkAppOptM ``MultiExtractor.ConstrainedExtractResult.mk
           #[some eκ, some em, some em', some e1, some e2, some e3, some e4,
-            some efindable, some efindOf, some eα, some subject, some tgt, some h]
+            some efindable, some efindOf, some eα, some subject, some tgt, some h, some unchecked]
         Tactic.closeMainGoal `extract_let_step e
       if result?.isSome then return
     throwError "no join-point extraction hypothesis applies to this jump"
@@ -916,6 +1020,10 @@ def NonDetT.extractList {α : Type u} (s : NonDetT m α)
 def NonDetT.extractPartialList {α : Type u} (s : NonDetT m α)
   (h : ConstrainedExtractResult κ m m' (findOfPartialCandidates κ) s := by extract_list_tactic)
   : m' α := h.val
+
+def NonDetT.extractPartialListWithCoverage {α : Type u} (s : NonDetT m α)
+    (h : ConstrainedExtractResult κ m m' (findOfPartialCandidates κ) s) :
+    m' α × m' ExtractionCoverage.{u} := (h.val, h.coverage)
 
 end
 

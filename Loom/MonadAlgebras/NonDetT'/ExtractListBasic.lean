@@ -15,6 +15,8 @@ class Candidates {α : Type u} (p : α → Prop) where
 class PartialCandidates {α : Type u} (p : α → Prop) where
   find : Unit → List α
   find_then : ∀ x, x ∈ find () → p x
+  /-- If decidable, whether the list leaves out an original witness. -/
+  omission : Unit → Option (Decidable (∃ x, p x ∧ x ∉ find ())) := fun _ => none
 
 -- class Representable (κ : Type u) (c : {τ : Type u} → (τ → Prop) → Type u) where
 --   rep : ∀ {τ} {p : τ → Prop}, c p → τ → κ
@@ -25,6 +27,8 @@ class PartialCandidates {α : Type u} (p : α → Prop) where
 class ExtCandidates (c : {τ : Type u} → (τ → Prop) → Type u) (κ : Type w) {α : Type u} (p : α → Prop) where
   core : c p
   rep : α → κ
+  /-- True for a known omission, false for complete coverage, and none when unknown. -/
+  omission : Unit → Option Bool := fun _ => some false
 
 -- def ExtCandidates (c : {τ : Type u} → (τ → Prop) → Type u) (κ : Type w) : {τ : Type u} → (τ → Prop) → Type _ :=
 --   fun {τ} p => (c p × (τ → κ))
@@ -38,6 +42,7 @@ class ExtCandidates (c : {τ : Type u} → (τ → Prop) → Type u) (κ : Type 
 instance PartialCandidates.of_Candidates {α : Type u} (p : α → Prop) [Candidates p] : PartialCandidates p where
   find := Candidates.find p
   find_then := by intro x hx ; rw [Candidates.find_iff] at hx ; exact hx
+  omission _ := some (.isFalse fun ⟨x, hp, hm⟩ => hm ((Candidates.find_iff x).mpr hp))
 
 
 -- FIXME: `PartialCandidates` can be sampled. maybe add one such construction?
@@ -90,6 +95,6 @@ if there is one. The candidates are those of `ec.core`, as before. -/
 abbrev ExtCandidates.named {c : {τ : Type u} → (τ → Prop) → Type u} {κ : Type w} {α : Type u}
     {p : α → Prop} [NamedRep κ] : Option String → ExtCandidates c κ p → ExtCandidates c κ p
   | none, ec => ec
-  | some n, ec => { core := ec.core, rep := fun a => NamedRep.withName n (ec.rep a) }
+  | some n, ec => { ec with rep := fun a => NamedRep.withName n (ec.rep a) }
 
 end MultiExtractor
