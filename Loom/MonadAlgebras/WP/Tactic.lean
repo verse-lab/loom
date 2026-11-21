@@ -64,4 +64,4 @@ attribute [loomLogicSimp]
   implies_true and_true true_and
   prop_iInf prop_iSup
   and_imp
-attribute [simp←] Nat.mul_add_one
+attribute [loomLogicSimp ←] Nat.mul_add_one

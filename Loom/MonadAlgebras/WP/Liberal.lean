@@ -149,7 +149,8 @@ notation "[totl|" t "]" => open ExceptionAsFailure in t
 set_option quotPrecheck false in
 notation "[part|" t "]" => open ExceptionAsSuccess in t
 set_option quotPrecheck false in
-notation "[handler" hd "|" t "]" => have : IsHandler hd := ⟨⟩; t
+macro "[" noWs &"handler " hd:term "|" t:term "]" : term =>
+  `(have : IsHandler $hd := ⟨⟩; $t)
 
 theorem wp_tot_part ε (c : ExceptT ε m α) post :
   [totl| wp c ⊤] ⊓ [part| wp c post] = [totl| wp c post] := by
